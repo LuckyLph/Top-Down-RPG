@@ -70,7 +70,7 @@ Validation, per clip:
 - every drawn layer blending normally, the one blend mode Generate draws, and every group around one blending normally at full opacity; no tilemap layer showing (hidden layers, layers in a hidden group and reference layers are left out);
 - the clip's feet pixel inside its canvas;
 - a lantern's layers: one of each name, each an image layer; a `LanternGlow` or `LanternLight` layer only beside a `Lantern` one; a `Lantern` layer with a `LanternLight` one, blending normally and under no drawn layer; one `LanternLight` pixel on every frame;
-- the clip names the character needs are present: its weapons' attack clips and its abilities' cast clips, for the player; a mob config's attack clip, for a mob (`CharacterPrefabTests` checks the same for the baked characters).
+- the clip names the character needs are present: its weapons' first attacks' clips and its abilities' cast clips, for the player (a weapon's other attacks are optional: without one's clip the first attack's plays, PlayerCharacter.md's Phase 4); a mob config's attack clip, for a mob (`CharacterPrefabTests` checks the same for the baked characters).
 
 Effects and projectiles (Phase 3) go the same way through recipes of their own:
 

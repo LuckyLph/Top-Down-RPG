@@ -36,17 +36,17 @@ MonoBehaviour:
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: SwordSlash
-    motion: {fileID: 11400000, guid: 9f6f96dcf9cbe064190a64b249d6f68b, type: 2}
+    motion: {fileID: 11400000, guid: 945aa2bcfb126934e8d6a342bf395be8, type: 2}
     weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: GreatswordCleave
-    motion: {fileID: 11400000, guid: 1efc7f4982c2d26479b2721cf11cd9b1, type: 2}
+    motion: {fileID: 11400000, guid: 504ba24ee2154b444bf044ac78377349, type: 2}
     weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
     frameSize: {x: 96, y: 96}
     pivot: {x: 48, y: 28}
   - name: BowShot
-    motion: {fileID: 11400000, guid: 19facfc2e6de46c4a9e20c8a06de277d, type: 2}
+    motion: {fileID: 11400000, guid: 3e749cad4a101f544962968c9c79e341, type: 2}
     weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
@@ -135,6 +135,21 @@ MonoBehaviour:
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
+  - name: SwordBackhand
+    motion: {fileID: 11400000, guid: 1850280a10cbd494daf37515af9b8c79, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: GreatswordSweep
+    motion: {fileID: 11400000, guid: 9dc91089c8e9ab841be92e0d754a63ed, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 96, y: 96}
+    pivot: {x: 48, y: 28}
+  - name: BowCantedShot
+    motion: {fileID: 11400000, guid: b7b1e90b2197f1c4f8474666ba011a67, type: 2}
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
   lantern: {fileID: 0}
   thigh: 5
   shin: 5

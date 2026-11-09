@@ -385,7 +385,7 @@ public class PlayerFeedbackTests
         player.AddComponent<PlayerController>();
         PlayerWeaponController weapon = player.AddComponent<PlayerWeaponController>();
         AbilityService service = TestCombat.CreateAbilityService(FixedGameAuthority.Authoritative);
-        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
+        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock, null);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 0.35f, 0.55f, new Vector2[4], weaponAbilities: weaponAbilities)));
         PlayerAbilities abilities = player.AddComponent<PlayerAbilities>();
         abilities.Construct(clock, service);

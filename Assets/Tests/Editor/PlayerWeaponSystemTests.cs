@@ -721,7 +721,7 @@ public class PlayerWeaponSystemTests
         ManualClock clock = new();
         PlayerWeaponController weaponController = CreatePlayer(clock, out _);
         ProjectileService projectiles = new(FixedGameAuthority.Authoritative, TestCombat.CreateHitService(FixedGameAuthority.Authoritative), TestCombat.Settings, clock, null);
-        weaponController.Construct(CreateAttackService(), projectiles, clock);
+        weaponController.Construct(CreateAttackService(), projectiles, clock, null);
         PlayerWeapon bow = Track(PlayerWeapon.Create(
             "Bow",
             3,
@@ -871,7 +871,7 @@ public class PlayerWeaponSystemTests
         playerController = root.AddComponent<PlayerController>();
         playerController.Construct(clock);
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
-        weaponController.Construct(CreateAttackService(), null, clock);
+        weaponController.Construct(CreateAttackService(), null, clock, null);
         settings = TestPlayerControlSettings.Create();
         TestPlayerControlSettings.Assign(playerController, settings);
         return weaponController;

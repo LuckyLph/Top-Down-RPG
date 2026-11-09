@@ -1,0 +1,2028 @@
+fileFormatVersion: 2
+guid: 6f01812c43c719c499efb1903d139657
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 6157074114572830276
+    second: Adventurer_BowCantedShot_0
+  - first:
+      213: 6293672104236676725
+    second: Adventurer_BowCantedShot_1
+  - first:
+      213: -5017918494027838923
+    second: Adventurer_BowCantedShot_2
+  - first:
+      213: -3502821708630914298
+    second: Adventurer_BowCantedShot_3
+  - first:
+      213: -4141582726606579487
+    second: Adventurer_BowCantedShot_4
+  - first:
+      213: 5759271310116203107
+    second: Adventurer_BowCantedShot_5
+  - first:
+      213: 3100166798083088539
+    second: Adventurer_BowCantedShot_6
+  - first:
+      213: -3591776572305795366
+    second: Adventurer_BowCantedShot_7
+  - first:
+      213: -2630482939938534408
+    second: Adventurer_BowCantedShot_8
+  - first:
+      213: -905889510935006507
+    second: Adventurer_BowCantedShot_9
+  - first:
+      213: 6770218435347998861
+    second: Adventurer_BowCantedShot_10
+  - first:
+      213: 2573964608213335367
+    second: Adventurer_BowCantedShot_11
+  - first:
+      213: 6761153532273918378
+    second: Adventurer_BowCantedShot_12
+  - first:
+      213: 3196143144327804377
+    second: Adventurer_BowCantedShot_13
+  - first:
+      213: -5400828675675488739
+    second: Adventurer_BowCantedShot_14
+  - first:
+      213: 4932386664824051605
+    second: Adventurer_BowCantedShot_15
+  - first:
+      213: 6348653970023492439
+    second: Adventurer_BowCantedShot_16
+  - first:
+      213: -9039996411620200920
+    second: Adventurer_BowCantedShot_17
+  - first:
+      213: 5743653387373160566
+    second: Adventurer_BowCantedShot_18
+  - first:
+      213: -989695566390473248
+    second: Adventurer_BowCantedShot_19
+  - first:
+      213: 3031777228279949626
+    second: Adventurer_BowCantedShot_20
+  - first:
+      213: 5947845161107914961
+    second: Adventurer_BowCantedShot_21
+  - first:
+      213: -9108823121776101723
+    second: Adventurer_BowCantedShot_22
+  - first:
+      213: -499178824298806858
+    second: Adventurer_BowCantedShot_23
+  - first:
+      213: -6923896123128057603
+    second: Adventurer_BowCantedShot_24
+  - first:
+      213: -246563015518896191
+    second: Adventurer_BowCantedShot_25
+  - first:
+      213: 3035057158180091583
+    second: Adventurer_BowCantedShot_26
+  - first:
+      213: 507230687522922686
+    second: Adventurer_BowCantedShot_27
+  - first:
+      213: 2437707283231934835
+    second: Adventurer_BowCantedShot_28
+  - first:
+      213: 634967976876383733
+    second: Adventurer_BowCantedShot_29
+  - first:
+      213: 378669011802181909
+    second: Adventurer_BowCantedShot_30
+  - first:
+      213: 4815614113836810033
+    second: Adventurer_BowCantedShot_31
+  - first:
+      213: -6182788082165379725
+    second: Adventurer_BowCantedShot_32
+  - first:
+      213: 3936916473468942237
+    second: Adventurer_BowCantedShot_33
+  - first:
+      213: 9005386952530328446
+    second: Adventurer_BowCantedShot_34
+  - first:
+      213: -126948781386868004
+    second: Adventurer_BowCantedShot_35
+  - first:
+      213: 4931206830698185235
+    second: Adventurer_BowCantedShot_36
+  - first:
+      213: -6324877910922054452
+    second: Adventurer_BowCantedShot_37
+  - first:
+      213: 7921400275474540591
+    second: Adventurer_BowCantedShot_38
+  - first:
+      213: 6217504762684732593
+    second: Adventurer_BowCantedShot_39
+  - first:
+      213: 5996347242981042548
+    second: Adventurer_BowCantedShot_40
+  - first:
+      213: 3614683318652633512
+    second: Adventurer_BowCantedShot_41
+  - first:
+      213: 4087684656275540211
+    second: Adventurer_BowCantedShot_42
+  - first:
+      213: 3689804372205052429
+    second: Adventurer_BowCantedShot_43
+  - first:
+      213: -7804342296241049011
+    second: Adventurer_BowCantedShot_44
+  - first:
+      213: -7123937951041138557
+    second: Adventurer_BowCantedShot_45
+  - first:
+      213: 4337133498970150374
+    second: Adventurer_BowCantedShot_46
+  - first:
+      213: -2031455469056041574
+    second: Adventurer_BowCantedShot_47
+  - first:
+      213: -3181667104573740693
+    second: Adventurer_BowCantedShot_48
+  - first:
+      213: 8176228592435540345
+    second: Adventurer_BowCantedShot_49
+  - first:
+      213: 108891800221023540
+    second: Adventurer_BowCantedShot_50
+  - first:
+      213: -6933169858073266308
+    second: Adventurer_BowCantedShot_51
+  - first:
+      213: -8020019733188382753
+    second: Adventurer_BowCantedShot_52
+  - first:
+      213: -7633767911269542940
+    second: Adventurer_BowCantedShot_53
+  - first:
+      213: -7618445979385740968
+    second: Adventurer_BowCantedShot_54
+  - first:
+      213: -3969286898871085175
+    second: Adventurer_BowCantedShot_55
+  - first:
+      213: -2172110800411979880
+    second: Adventurer_BowCantedShot_56
+  - first:
+      213: 2041580305145725361
+    second: Adventurer_BowCantedShot_57
+  - first:
+      213: 8389127707477071118
+    second: Adventurer_BowCantedShot_58
+  - first:
+      213: 4627116709324558265
+    second: Adventurer_BowCantedShot_59
+  - first:
+      213: -6898176519230992130
+    second: Adventurer_BowCantedShot_60
+  - first:
+      213: 6637066922621274508
+    second: Adventurer_BowCantedShot_61
+  - first:
+      213: 8083555604856041654
+    second: Adventurer_BowCantedShot_62
+  - first:
+      213: -5389880539823099644
+    second: Adventurer_BowCantedShot_63
+  - first:
+      213: 5075027766302135568
+    second: Adventurer_BowCantedShot_64
+  - first:
+      213: -7215732397518236420
+    second: Adventurer_BowCantedShot_65
+  - first:
+      213: -2173865468431681816
+    second: Adventurer_BowCantedShot_66
+  - first:
+      213: -6433605044207777635
+    second: Adventurer_BowCantedShot_67
+  - first:
+      213: -4501764370564203896
+    second: Adventurer_BowCantedShot_68
+  - first:
+      213: 7163747325955514017
+    second: Adventurer_BowCantedShot_69
+  - first:
+      213: 2981052385193122913
+    second: Adventurer_BowCantedShot_70
+  - first:
+      213: -5622812297684782285
+    second: Adventurer_BowCantedShot_71
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6c2cc8799741861439dda7098adf99c3
+      internalID: -171001712
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0e8c5ca147226184eaa2cd75bcac4845
+      internalID: -480739479
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 56b54f3c54182aa4d8da26802d6d78f2
+      internalID: 683530775
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 77902eb382d57df488b9c6dc12b40683
+      internalID: 772804258
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8f1d546526d98084abfffdbe2c2b80a2
+      internalID: 1237379754
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 63b98b217866b164b87ea19a5e7d21eb
+      internalID: -120952845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7c42fe03608f4c4f980c0667f558589
+      internalID: 964202733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 375cc00cc2c59b846b32acfe2aafb95b
+      internalID: 555621719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_E_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 560
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 01955774757ca1c4f9ae095416fa6fe8
+      internalID: -595293291
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f8ac5f2927877e741b14b9433578c273
+      internalID: -541466865
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9a9f17877a1218d4d9be4a10d247bce6
+      internalID: 2125248262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f970c0c3a20fcc9438c712bcd64c0b03
+      internalID: -1512100541
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7b226e662d2a0bd42bc56ef0466f155f
+      internalID: 28620783
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dda311cc8ed9454469298692e7e2b7ba
+      internalID: 2090832753
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 202865776300d994ebc6cbe6594395cc
+      internalID: -1869557233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8603560023fcad44b840b769f8f2fbd6
+      internalID: 725145194
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 293e95fda972d314daf032a44cc43f5b
+      internalID: 2049988797
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NE_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 480
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fe922b67630ed114ebad808141592af5
+      internalID: -3657097
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ee3d1011de002d34a81209d33abb1100
+      internalID: 1905520402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4fc5a8f00463c904abf9fcdeb0fbc847
+      internalID: 2137054621
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3380688e80bdf5044ba669689095103a
+      internalID: 1419463154
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b6e43c25a0748064aba93fbcf4095104
+      internalID: 62853392
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a7b7ead5af03b3542a02a582b2403108
+      internalID: -1544920023
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3b36551b86b4cdf4a8743d4022f26390
+      internalID: -329003001
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 958b4e3528d9d0e4e92cdde3189bb565
+      internalID: -2139240960
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ef5500c7f04015b4d90b203c45ebb449
+      internalID: 730036092
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_N_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 400
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7941d78be3546ec4da6e4ee84286713b
+      internalID: 1877088808
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a53ecd82218464048ac7e4f997ca0be5
+      internalID: -123715983
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6776837a5db172547945ae3528a84169
+      internalID: -1585902502
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2a414cafe344fc347907497fb693c80a
+      internalID: 373576876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 05c653da73c6e9e4c8c37a716ea07d8d
+      internalID: -2019868179
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4584db8637333bf4e86cc61de360dd82
+      internalID: 521821119
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 32c06dedda5db14459f600b0cbf07061
+      internalID: -351808201
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 27c8a241165fce748add941743de9c7d
+      internalID: 750159215
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 529e981356eb0e845b2b8c7d96093213
+      internalID: 246099044
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_NW_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 320
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8dc4abf2d32be204a8a8435d2f5bb66b
+      internalID: 2103127549
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 642a201192344e049ac0e333de20b424
+      internalID: 420962503
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1903b55ee47bb75468c80ca2772a6180
+      internalID: 788642634
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: cbfda74f9efe04f42ad19c4e22887acb
+      internalID: -1675241339
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c844cb2472ec03d409ef762d196a10b0
+      internalID: 1868961842
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f34edf886072ea4798760f0f03f85b7
+      internalID: -700690688
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e2081c5e5005c7c41b51218921ab28c7
+      internalID: 398136668
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e21f2133882e5d141a30b41fb95ef56a
+      internalID: 1726661280
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2daeb472ee15f32408e9128e20df13c4
+      internalID: 1802789478
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_W_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 240
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 71e0ebea9b58f8240b28ca3d928d28ff
+      internalID: 921916603
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 93e8c0b22e0566b4d8049892e79266ac
+      internalID: -461365344
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 07f9dfeecf0553344b99768143d4de72
+      internalID: -807174020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c06961aece4051a4580f2ba8e59cbd24
+      internalID: 1323611759
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a1bd0140facf6c44c8fdfea5b725a63c
+      internalID: -699985878
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d14f6fab9d92a19438efa1c172a7d74d
+      internalID: -1863089056
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4a912e93063ba9149b2f8c9e656a2347
+      internalID: 61526191
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 67ab79aed060f30409c7bfa634b30feb
+      internalID: 668484440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 38ecf34a9381a0342a0b4087deff6bf3
+      internalID: 659333433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SW_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bfb1de8ae6be5354298b974607243728
+      internalID: -1550193357
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8b0339132992f7d4394c3b8226ccb68c
+      internalID: -1840597633
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bed44cbe499ed7848832244578aeffd8
+      internalID: 767938380
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b4e88431f48d5ed419f2750b5c097db5
+      internalID: -1292791528
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6bfb49b85eb4f7a4ba0f4be61fff7183
+      internalID: -1502997931
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bee0ae3528c5563498f8f1fd7d4ad9ba
+      internalID: -1921829161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 14c09e6208089f44ab081288e3932407
+      internalID: 705817353
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e807849afbb66cd49a346909288da632
+      internalID: -925963858
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 01a1771e7323ca74da37ec518a9f070a
+      internalID: 323471414
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_S_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2156404ca4a9cdb41aa76c43f1bb9cab
+      internalID: -1601827054
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 50e428c11e922f343ab612b66662d55b
+      internalID: -164156223
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_1
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 74513dc33980f49478649ee1567da421
+      internalID: -755114938
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_2
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a39fcad973e117349a3048abb74ade5c
+      internalID: -814183309
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_3
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fe37a0daf9c291d41b1e2eef9ca418e1
+      internalID: -1823345968
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_4
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2347a6487e4e3c941829f0d78517f519
+      internalID: -2055640144
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_5
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d18746e921745b8459ef2e5061c4bf17
+      internalID: 706166948
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_6
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9037e113b3788fe4aa728de6e4468715
+      internalID: -2134595998
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_7
+      rect:
+        serializedVersion: 2
+        x: 560
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 78fb809d8d504914cae69acf0184bccd
+      internalID: -1568809569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_BowCantedShot_SE_8
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 0
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5, y: 0.275}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a378741fe59bdaa4193dc82e66202696
+      internalID: -1416386641
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 70a7ca34286819349bf57f1dc0826b83
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Adventurer_BowCantedShot_E_0: -171001712
+      Adventurer_BowCantedShot_E_1: -480739479
+      Adventurer_BowCantedShot_E_2: 683530775
+      Adventurer_BowCantedShot_E_3: 772804258
+      Adventurer_BowCantedShot_E_4: 1237379754
+      Adventurer_BowCantedShot_E_5: -120952845
+      Adventurer_BowCantedShot_E_6: 964202733
+      Adventurer_BowCantedShot_E_7: 555621719
+      Adventurer_BowCantedShot_E_8: -595293291
+      Adventurer_BowCantedShot_NE_0: -541466865
+      Adventurer_BowCantedShot_NE_1: 2125248262
+      Adventurer_BowCantedShot_NE_2: -1512100541
+      Adventurer_BowCantedShot_NE_3: 28620783
+      Adventurer_BowCantedShot_NE_4: 2090832753
+      Adventurer_BowCantedShot_NE_5: -1869557233
+      Adventurer_BowCantedShot_NE_6: 725145194
+      Adventurer_BowCantedShot_NE_7: 2049988797
+      Adventurer_BowCantedShot_NE_8: -3657097
+      Adventurer_BowCantedShot_NW_0: -123715983
+      Adventurer_BowCantedShot_NW_1: -1585902502
+      Adventurer_BowCantedShot_NW_2: 373576876
+      Adventurer_BowCantedShot_NW_3: -2019868179
+      Adventurer_BowCantedShot_NW_4: 521821119
+      Adventurer_BowCantedShot_NW_5: -351808201
+      Adventurer_BowCantedShot_NW_6: 750159215
+      Adventurer_BowCantedShot_NW_7: 246099044
+      Adventurer_BowCantedShot_NW_8: 2103127549
+      Adventurer_BowCantedShot_N_0: 1905520402
+      Adventurer_BowCantedShot_N_1: 2137054621
+      Adventurer_BowCantedShot_N_2: 1419463154
+      Adventurer_BowCantedShot_N_3: 62853392
+      Adventurer_BowCantedShot_N_4: -1544920023
+      Adventurer_BowCantedShot_N_5: -329003001
+      Adventurer_BowCantedShot_N_6: -2139240960
+      Adventurer_BowCantedShot_N_7: 730036092
+      Adventurer_BowCantedShot_N_8: 1877088808
+      Adventurer_BowCantedShot_SE_0: -164156223
+      Adventurer_BowCantedShot_SE_1: -755114938
+      Adventurer_BowCantedShot_SE_2: -814183309
+      Adventurer_BowCantedShot_SE_3: -1823345968
+      Adventurer_BowCantedShot_SE_4: -2055640144
+      Adventurer_BowCantedShot_SE_5: 706166948
+      Adventurer_BowCantedShot_SE_6: -2134595998
+      Adventurer_BowCantedShot_SE_7: -1568809569
+      Adventurer_BowCantedShot_SE_8: -1416386641
+      Adventurer_BowCantedShot_SW_0: -461365344
+      Adventurer_BowCantedShot_SW_1: -807174020
+      Adventurer_BowCantedShot_SW_2: 1323611759
+      Adventurer_BowCantedShot_SW_3: -699985878
+      Adventurer_BowCantedShot_SW_4: -1863089056
+      Adventurer_BowCantedShot_SW_5: 61526191
+      Adventurer_BowCantedShot_SW_6: 668484440
+      Adventurer_BowCantedShot_SW_7: 659333433
+      Adventurer_BowCantedShot_SW_8: -1550193357
+      Adventurer_BowCantedShot_S_0: -1840597633
+      Adventurer_BowCantedShot_S_1: 767938380
+      Adventurer_BowCantedShot_S_2: -1292791528
+      Adventurer_BowCantedShot_S_3: -1502997931
+      Adventurer_BowCantedShot_S_4: -1921829161
+      Adventurer_BowCantedShot_S_5: 705817353
+      Adventurer_BowCantedShot_S_6: -925963858
+      Adventurer_BowCantedShot_S_7: 323471414
+      Adventurer_BowCantedShot_S_8: -1601827054
+      Adventurer_BowCantedShot_W_0: 420962503
+      Adventurer_BowCantedShot_W_1: 788642634
+      Adventurer_BowCantedShot_W_2: -1675241339
+      Adventurer_BowCantedShot_W_3: 1868961842
+      Adventurer_BowCantedShot_W_4: -700690688
+      Adventurer_BowCantedShot_W_5: 398136668
+      Adventurer_BowCantedShot_W_6: 1726661280
+      Adventurer_BowCantedShot_W_7: 1802789478
+      Adventurer_BowCantedShot_W_8: 921916603
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

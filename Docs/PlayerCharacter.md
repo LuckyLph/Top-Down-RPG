@@ -49,6 +49,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Attacks and casts on a new body | A keyed motion names the body its keys were posed on and fits each pose to the body it is baked on (Animation.md's Motions): the legs' and arms' lengths scale the pelvis, feet and hands. |
 | Gaits | The adventurer's own walk, run and sprint, styled on top of the stride (Phase 2): a bob big enough to read at this size with its top and bottom on frames, a bounce in the run and the sprint, the head a beat and the hair's tips two beats behind the bob, a torso that stretches and squashes with it, hands that rise at both ends of their swing like a pendulum, and longer strides, so the steps come slower. The rogue's gaits stay as they were. |
 | Idle | A still frame, the standing pose, as before. A breathing loop was turned down in favour of idle animations that play once after the player has stood still for a while, as champions' do in League of Legends: looking around, a stretch, a scratch of the head, a tapped foot and a yawn (Phase 3). |
+| Attacks | Two attacks a weapon for now, which flow into each other: each ends in the pose the other starts from, so attacking again carries on from where the last attack stopped (Phase 4). After equipping a weapon its first attack plays, then each attack is followed by one of the others at random, never by itself, so two alternate. Three a weapon, picked that way, was the first ask; two came first so they could flow. A weapon can list more. |
 
 ## Phases
 
@@ -149,7 +150,37 @@ Phase 3 notes:
 
 ### Phase 4: attacks and casts
 
-- [ ] The sword, greatsword and bow attacks and the casts, restyled to match the gaits on the new body, their contact and release frames kept on the timeline.
+- [x] The sword, greatsword and bow attacks restyled to match the gaits on the new body, settled with the user on previews: two attacks a weapon that flow into each other, their contact frames kept on the timeline.
+- [x] A weapon's attacks played in turn, never the same twice in a row, the owner naming the attack it made to the other machines; a look without a weapon's other attacks plays its first.
+- [ ] The casts restyled to match.
+
+Phase 4 notes:
+
+- **How the attacks were settled.** On previews baked in memory, each attack at its weapon's timeline in the game, chained back to back from the idle (`Recordings/RogueRework/phase4/`).
+  - Sword, round 1: today's slash beside its keys with the head and hair late and the torso stretching, a slower windup holding at its top (the anticipation), a bigger swing and a bigger one still. No single slash was picked: the user asked for several attacks a weapon instead, three picked at random but never the same twice in a row.
+  - Sword, round 2: a slash (the held windup), a backhand and a chop. Then two that flow came first: the slash and the backhand.
+  - Sword, round 3: the backhand redone, each attack ending in the pose the other starts from. Approved.
+  - Greatsword: an overhead cleave and a low sweep back across. Bow: today's upright shot ending on the nock, and a canted shot from it, crouched with a lean and the bow tilted. The canted shot's string first ran through the body, the draw hand pulled back to the chest; the hand now draws to the cheek, the bow tilted about 35 degrees where it was 60. Approved.
+- **What the keyed motion gained.** `KeyedMotion`'s Style settings, off by default, so the rogue's sheets did not change by a byte. `headFollow` and `headLag`, and `hairFollow` and `hairLag`, have the head and the hair's tips follow the head's own rise and fall late: the head's height a lag earlier in the motion, against now. A key's `stretch` grows or shrinks the torso. Every attack of the adventurer has the head follow at 1 with a lag of 0.06 of the motion, and the hair at 1.5 with a lag of 0.1.
+- **The attacks.** Copies of the rogue's motions with new keys, still posed on `Recipe_Rogue` and fitted to the adventurer:
+
+  | Weapon | First attack | Second attack | Frames, contact |
+  |---|---|---|---|
+  | Sword | `SwordSlash`: from a guard at the right shoulder, a windup that holds at its top (320 of its 430 natural ms), a wide forehand cut ending low on the left | `SwordBackhand`: from low on the left, back across and up, ending at the right shoulder's guard | 8, frame 4 |
+  | Greatsword | `GreatswordCleave`: from the blade over the right shoulder, raised high, cut down and across to the left, ending low with the knees bent | `GreatswordSweep`: from low on the left, swept round at waist height, ending over the right shoulder | 9, frame 5 |
+  | Longbow | `BowShot`: upright, drawn and loosed, ending with an arrow nocked, the bow held before the chest | `BowCantedShot`: from the nock, crouched with a lean and the bow tilted, drawn to the cheek and loosed, ending standing | 9, frame 5 |
+
+  The weapons' timelines did not change: the sword 0.15, 0.05 and 0.15 s, the greatsword 0.40, 0.06 and 0.44, the longbow 0.35, 0.07 and 0.38. Each phase's frames still stretch to it in their natural proportions.
+- **How they flow.** Each attack's last key is the pose the other's first key holds, with two small differences: the backhand ends leaning 2 degrees further forward than the slash starts, and the sweep ends with its left foot 1.3 rig units from where the cleave starts it. In the sheets, in every direction, an attack's last frame puts the head's top and the boots within two pixels of the other's first frame. An attack's first frame from standing still is within a pixel of the idle's at the head and two at the boots, the greatsword's two and three at the head, as they start with the knees bent.
+- **How they play.** The owner picks: after equipping a weapon, its first attack, then one of the others than the last with the injected `IRandom` (`MainLifetimeScope`'s), never the same twice in a row, so with two they alternate. A weapon names its attacks' clips, its first (`attackClip`, as before) and the others (`otherAttackClips`). Every attack of a weapon lands alike: the same area or projectile, damage and timeline.
+- **On every machine.** The attack's index goes in the start and the contact messages, which carried the byte already (always 0 before), so nothing new goes on the wire. A copy plays that attack's clip, and nothing for an index past the weapon's attacks. A look whose set lacks one of a weapon's other attacks plays the first attack's clip instead: the Bandit, drawn in Aseprite with one attack a weapon. Only the first attack is a clip every look must hold (`CharacterClipNeeds`).
+- **Checked by eye.** The baked attack sheets are the approved previews to the pixel.
+- **Tests.**
+  - `AdventurerRecipeTests` adds: the adventurer's attacks are its own, two a weapon, each ending with the pelvis, the shoulders' twist, the hands and the weapon where the other starts, the head following late and the torso stretching or squashing on some frame, while the rogue's stay plain. The motions fitted from the rogue's body are 16 now.
+  - `CharacterPrefabTests`: every attack of the three weapons lines up with the idle at the feet, and each attack's last frame lines up with the other's first.
+  - `WeaponCatalogTests`: every weapon has its two attacks in the set, each showing its contact frame at contact under attack speed.
+  - `CharacterAnimatorTests` adds: a weapon's three attacks start with the first, never repeat, are picked at random among the others and start over on equipping; two alternate without a random source; a copy plays the attack the owner made, or the first where its set lacks it, and nothing for an attack past the weapon's.
+  - `NetworkWeaponsPlayModeTests`: a client's second attack plays the second attack's clip on the host's copy.
 
 ### Phase 5: colours
 
@@ -165,8 +196,8 @@ Phase 3 notes:
 
 ## Testing
 
-- EditMode: the recipe's pixels are repeatable and the standing height is right. The face, the locks and the outfit's options draw as set (Phase 0). Every look holds every clip the player plays (Phase 1). The gaits' style shows where it should and the speed bands keep the feet (Phase 2). The idle animations start after the wait, never twice in a row, and stop on anything else (Phase 3). Customization: a player's choice resolves to the right colours and parts (Phases 5 to 7).
-- PlayMode: the idle animations play on the other machines' copies of a standing player (Phase 3). A player's look, colours and parts reach the other machines through the in-process host and client, a late joiner's included (Phases 5 to 7).
+- EditMode: the recipe's pixels are repeatable and the standing height is right. The face, the locks and the outfit's options draw as set (Phase 0). Every look holds every clip the player plays (Phase 1). The gaits' style shows where it should and the speed bands keep the feet (Phase 2). The idle animations start after the wait, never twice in a row, and stop on anything else (Phase 3). A weapon's attacks flow into each other and never play twice in a row (Phase 4). Customization: a player's choice resolves to the right colours and parts (Phases 5 to 7).
+- PlayMode: the idle animations play on the other machines' copies of a standing player (Phase 3). The attack the owner made plays on the other machines' copies (Phase 4). A player's look, colours and parts reach the other machines through the in-process host and client, a late joiner's included (Phases 5 to 7).
 
 ## Open questions
 

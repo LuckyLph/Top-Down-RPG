@@ -8,7 +8,7 @@ using VContainer;
 
 /// <summary>
 /// PlayMode tests for weapons online (Docs/Animation.md, Phase 4) between a host and an in-process client: a client's
-/// weapon switch reaching the host's copy (its weapon, its weapon abilities and the clip its attacks play), an attack
+/// weapon switch reaching the host's copy (its weapon, its weapon abilities and the clips its two attacks play), an attack
 /// made on the frame of a switch playing out on the host's copy whichever arrives first, a client's arrow resolving
 /// exactly once on the host from where the owner stood, a client joining after the host switched weapons seeing
 /// the host's current weapon, and, under a delayed connection (Docs/KnownGaps.md, Phase 4), a copy's windup ending
@@ -36,10 +36,11 @@ public class NetworkWeaponsPlayModeTests
 
     /// <summary>
     /// A client equipping the greatsword reaches the host's copy of its player, which equips it with its two
-    /// abilities in the weapon slots; the client's next attack plays the greatsword's clip on that copy.
+    /// abilities in the weapon slots; the client's next attack plays the greatsword's first attack's clip on that copy,
+    /// and the one after it the second attack's, the owner naming the attack it made (Docs/PlayerCharacter.md, Phase 4).
     /// </summary>
     [UnityTest]
-    public IEnumerator AClientsWeaponSwitch_ReachesTheHostsCopy_WithItsAbilitiesAndClip()
+    public IEnumerator AClientsWeaponSwitch_ReachesTheHostsCopy_WithItsAbilitiesAndAttacks()
     {
         yield return HostAndJoin();
         IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
@@ -61,6 +62,9 @@ public class NetworkWeaponsPlayModeTests
         Assert.That(ownerWeapon.TryAttack(Vector2.right), Is.True);
         yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing, "the client's attack to play on the host's copy");
         Assert.That(copyAnimation.Clip.Name, Is.EqualTo(greatsword.AttackClip), "The copy plays the greatsword's attack.");
+
+        yield return SceneBootTestHelper.WaitUntil(() => ownerWeapon.TryAttack(Vector2.right), "the client's next attack to start");
+        yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.IsActing && copyAnimation.Clip.Name == greatsword.AttackClipOf(1), "the client's second attack to play on the host's copy");
     }
 
     /// <summary>

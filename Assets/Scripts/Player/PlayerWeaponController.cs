@@ -8,18 +8,20 @@ using VContainer;
 /// moves the attack on, and at contact a melee weapon's hit resolves once through <see cref="AttackService"/> around
 /// where the player stands, while a ranged weapon launches its projectile through <see cref="ProjectileService"/>
 /// toward the attack's target (or along the attack without one). The character's visuals play the weapon's attack clip
-/// stretched to the timeline. The player controller passes it the orders the player gives (the weapon's cancel rules),
-/// and cancels the attack on stuns, casts, teleports and death; equipping another weapon cancels it too. The owner
-/// raises <see cref="AttackStarted"/>, <see cref="AttackContacted"/> and <see cref="AttackCancelled"/> so its attacks can
-/// be replicated; other machines replay them on their copy with the weapon the owner attacked with (named by its
+/// stretched to the timeline. A weapon with several attacks starts with its first after being equipped, then follows
+/// each attack with one of the others at random, never the same twice in a row (Docs/PlayerCharacter.md, Phase 4). The
+/// player controller passes it the orders the player gives (the weapon's cancel rules), and cancels the attack on stuns,
+/// casts, teleports and death; equipping another weapon cancels it too. The owner raises <see cref="AttackStarted"/>,
+/// <see cref="AttackContacted"/> and <see cref="AttackCancelled"/> so its attacks can be replicated; other machines
+/// replay them on their copy with the weapon and the attack the owner made (the weapon named by its
 /// <see cref="WeaponCatalog"/> index), visual only, and land their contact through <see cref="ResolveRemoteContact"/>,
-/// where only the host resolves hits. The weapon only shows in its attack clip; standing and moving the character is
+/// where only the host resolves hits. The weapon only shows in its attack clips; standing and moving the character is
 /// drawn unarmed. Equips the starting weapon on <c>Awake</c>.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerWeaponController : MonoBehaviour
 {
-    private const int OnlyAttack = 0;
+    private const int FirstAttack = 0;
 
     [SerializeField] private PlayerController playerController;
     [SerializeField] private PlayerWeapon startingWeapon;
@@ -31,10 +33,12 @@ public class PlayerWeaponController : MonoBehaviour
     private AttackService attackService;
     private ProjectileService projectileService;
     private IClock clock;
+    private IRandom random;
     private AttackState attack;
     private PlayerWeapon currentWeapon;
-    private CharacterAnimationClip attackClip;
-    private CharacterAnimationClip[] catalogClips;
+    private int lastAttack = -1;
+    private CharacterAnimationClip[] attackClips;
+    private CharacterAnimationClip[][] catalogClips;
     private CharacterAnimationSet clipsFrom;
     private Health health;
     private float attackSpeed = 1f;
@@ -43,8 +47,8 @@ public class PlayerWeaponController : MonoBehaviour
     public event Action<PlayerWeapon> EquippedWeaponChanged;
 
     /// <summary>
-    /// Raised on the machine running the attack when one starts: which attack of the weapon (0, the weapons having one
-    /// each so far), its direction and the attack speed it plays at.
+    /// Raised on the machine running the attack when one starts: which attack of the weapon (0 its first), its direction
+    /// and the attack speed it plays at.
     /// </summary>
     public event Action<int, Vector2, float> AttackStarted;
 
@@ -146,14 +150,16 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Takes the services that resolve hits and fly projectiles and the game clock that times attacks.
+    /// Takes the services that resolve hits and fly projectiles, the game clock that times attacks and the random source
+    /// that picks a weapon's next attack among its others (without one they follow in order).
     /// </summary>
     [Inject]
-    public void Construct(AttackService attacks, ProjectileService projectiles, IClock gameClock)
+    public void Construct(AttackService attacks, ProjectileService projectiles, IClock gameClock, IRandom attackRandom)
     {
         attackService = attacks;
         projectileService = projectiles;
         clock = gameClock;
+        random = attackRandom;
         attack = null;
     }
 
@@ -221,7 +227,8 @@ public class PlayerWeaponController : MonoBehaviour
     /// <summary>
     /// A swing request toward <paramref name="direction"/> (the facing direction when it is zero) at
     /// <paramref name="target"/> (none for an attack without one): starts an attack when the cooldown and the running
-    /// attack allow, ending a recovery it chains into. Returns whether it started.
+    /// attack allow, ending a recovery it chains into: the weapon's next attack (see <see cref="NextAttack"/>). Returns
+    /// whether it started.
     /// </summary>
     public bool TryAttack(Vector2 direction, in UnitTarget target)
     {
@@ -238,16 +245,35 @@ public class PlayerWeaponController : MonoBehaviour
             attackDirection = Vector2.down;
         }
 
+        int attackIndex = NextAttack();
         AttackTimeline timeline = currentWeapon.Timeline.At(attackSpeed);
-        state.TryStart(OnlyAttack, attackDirection, timeline, currentWeapon.AttackCooldown / attackSpeed, currentWeapon.WindupCancelledByMove, currentWeapon.RecoveryCancellable);
+        state.TryStart(attackIndex, attackDirection, timeline, currentWeapon.AttackCooldown / attackSpeed, currentWeapon.WindupCancelledByMove, currentWeapon.RecoveryCancellable);
         attackTarget = target;
+        lastAttack = attackIndex;
         if (visuals != null)
         {
-            visuals.PlayAction(ClipFor(currentWeapon), attackDirection, timeline, false);
+            visuals.PlayAction(ClipFor(currentWeapon, attackIndex), attackDirection, timeline, false);
         }
 
-        AttackStarted?.Invoke(OnlyAttack, attackDirection, attackSpeed);
+        AttackStarted?.Invoke(attackIndex, attackDirection, attackSpeed);
         return true;
+    }
+
+    /// <summary>
+    /// The equipped weapon's attack to start next: its first after it was equipped, then one of the attacks other than
+    /// the last at random (the next in order without a random source), so none plays twice in a row.
+    /// </summary>
+    private int NextAttack()
+    {
+        int count = currentWeapon.AttackCount;
+        if (count <= 1 || lastAttack < 0 || lastAttack >= count)
+        {
+            return FirstAttack;
+        }
+
+        int others = count - 1;
+        int skip = random != null && others > 1 ? Mathf.Min((int)random.Range(0f, others), others - 1) : 0;
+        return (lastAttack + 1 + skip) % count;
     }
 
     /// <summary>
@@ -308,8 +334,9 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Plays an attack the owner started on another machine on this copy: the clip of the catalog's weapon at
-    /// <paramref name="weaponIndex"/> (this copy's weapon outside the catalog) toward <paramref name="direction"/>
+    /// Plays an attack the owner started on another machine on this copy: the clip of attack
+    /// <paramref name="attackIndex"/> of the catalog's weapon at <paramref name="weaponIndex"/> (this copy's weapon
+    /// outside the catalog; nothing for an attack the weapon lacks) toward <paramref name="direction"/>
     /// (down when zero) at <paramref name="speed"/>, its windup holding until the owner's contact arrives, at most the
     /// character's contact wait past the windup, after which the copy goes back to its locomotion (a later contact
     /// still lands its hit). Visual only: no cooldown, hit or event.
@@ -317,13 +344,13 @@ public class PlayerWeaponController : MonoBehaviour
     public void PlayRemoteAttack(int weaponIndex, int attackIndex, Vector2 direction, float speed)
     {
         PlayerWeapon weapon = WeaponFor(weaponIndex);
-        if (weapon == null || visuals == null || attackIndex != OnlyAttack)
+        if (weapon == null || visuals == null || attackIndex < 0 || attackIndex >= weapon.AttackCount)
         {
             return;
         }
 
         Vector2 attackDirection = direction.sqrMagnitude > 0.0001f ? direction.normalized : Vector2.down;
-        visuals.PlayAction(ClipFor(weapon), attackDirection, weapon.Timeline.At(speed), true);
+        visuals.PlayAction(ClipFor(weapon, attackIndex), attackDirection, weapon.Timeline.At(speed), true);
     }
 
     /// <summary>
@@ -353,12 +380,13 @@ public class PlayerWeaponController : MonoBehaviour
     /// <paramref name="weaponIndex"/> toward <paramref name="direction"/> while standing at
     /// <paramref name="attackerPosition"/>, rather than around this lagging copy: a melee hit resolves there on the
     /// host only, and a projectile leaves there toward <paramref name="target"/> on every machine, hitting only on the
-    /// host. Ignored while this machine sees the player dead.
+    /// host. Every attack of a weapon lands alike. Ignored for an attack the weapon lacks, and while this machine sees the
+    /// player dead.
     /// </summary>
     public void ResolveRemoteContact(int weaponIndex, int attackIndex, Vector2 direction, Vector2 attackerPosition, in UnitTarget target)
     {
         PlayerWeapon weapon = WeaponFor(weaponIndex);
-        if (weapon == null || attackIndex != OnlyAttack || (health != null && health.IsDead))
+        if (weapon == null || attackIndex < 0 || attackIndex >= weapon.AttackCount || (health != null && health.IsDead))
         {
             return;
         }
@@ -410,14 +438,15 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// Makes <paramref name="weapon"/> the current weapon with its attack clip and raises
-    /// <see cref="EquippedWeaponChanged"/>.
+    /// Makes <paramref name="weapon"/> the current weapon, looks its attack clips up, starts its attacks over from its
+    /// first and raises <see cref="EquippedWeaponChanged"/>.
     /// </summary>
     private void Switch(PlayerWeapon weapon)
     {
-        CharacterAnimationClip clip = ClipFor(weapon);
         currentWeapon = weapon;
-        attackClip = clip;
+        attackClips = null;
+        lastAttack = -1;
+        ClipFor(weapon, FirstAttack);
         EquippedWeaponChanged?.Invoke(currentWeapon);
     }
 
@@ -435,11 +464,12 @@ public class PlayerWeaponController : MonoBehaviour
     }
 
     /// <summary>
-    /// The attack clip of <paramref name="weapon"/> in the character's set: the equipped weapon's, a catalog weapon's
-    /// looked up once and kept, or another's looked up by name. The clips kept are forgotten once the visuals draw
-    /// another set (the player's look changed).
+    /// The clip of attack <paramref name="attack"/> of <paramref name="weapon"/> in the character's set (the first
+    /// attack's for an index outside its attacks): the equipped weapon's clips and a catalog weapon's are looked up once
+    /// and kept, another's looked up by name. The clips kept are forgotten once the visuals draw another set (the
+    /// player's look changed).
     /// </summary>
-    private CharacterAnimationClip ClipFor(PlayerWeapon weapon)
+    private CharacterAnimationClip ClipFor(PlayerWeapon weapon, int attack)
     {
         if (weapon == null)
         {
@@ -450,32 +480,51 @@ public class PlayerWeaponController : MonoBehaviour
         if (!ReferenceEquals(set, clipsFrom))
         {
             clipsFrom = set;
-            attackClip = null;
+            attackClips = null;
             catalogClips = null;
         }
 
-        if (weapon == currentWeapon && attackClip != null)
-        {
-            return attackClip;
-        }
-
+        CharacterAnimationClip[] clips;
         int index = catalog != null ? catalog.IndexOf(weapon) : -1;
-        if (index < 0)
+        if (weapon == currentWeapon)
         {
-            return FindClip(weapon.AttackClip);
+            clips = attackClips ??= ClipsOf(weapon);
+        }
+        else if (index < 0)
+        {
+            clips = ClipsOf(weapon);
+        }
+        else
+        {
+            if (catalogClips == null || catalogClips.Length != catalog.Count)
+            {
+                catalogClips = new CharacterAnimationClip[catalog.Count][];
+            }
+
+            clips = catalogClips[index] ??= ClipsOf(weapon);
         }
 
-        if (catalogClips == null || catalogClips.Length != catalog.Count)
+        return attack > FirstAttack && attack < clips.Length ? clips[attack] : clips[FirstAttack];
+    }
+
+    /// <summary>
+    /// The clip of each of <paramref name="weapon"/>'s attacks in the character's set. The set must hold the first
+    /// attack's clip (an error is logged when it does not); one it lacks past the first plays the first's instead, as
+    /// the Bandit's set holds only each weapon's first attack.
+    /// </summary>
+    private CharacterAnimationClip[] ClipsOf(PlayerWeapon weapon)
+    {
+        CharacterAnimationClip[] clips = new CharacterAnimationClip[weapon.AttackCount];
+        clips[FirstAttack] = FindClip(weapon.AttackClip);
+        CharacterAnimationSet set = visuals != null ? visuals.AnimationSet : null;
+        for (int i = FirstAttack + 1; i < clips.Length; i++)
         {
-            catalogClips = new CharacterAnimationClip[catalog.Count];
+            string clipName = weapon.AttackClipOf(i);
+            CharacterAnimationClip clip = set != null && !string.IsNullOrEmpty(clipName) ? set.Find(clipName) : null;
+            clips[i] = clip ?? clips[FirstAttack];
         }
 
-        if (catalogClips[index] == null)
-        {
-            catalogClips[index] = FindClip(weapon.AttackClip);
-        }
-
-        return catalogClips[index];
+        return clips;
     }
 
     /// <summary>

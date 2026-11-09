@@ -1,0 +1,2031 @@
+fileFormatVersion: 2
+guid: 05f61c68cb7cd754485351311fb93ae5
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -7705088154973144559
+    second: Adventurer_GreatswordSweep_0
+  - first:
+      213: -6649657623931437802
+    second: Adventurer_GreatswordSweep_1
+  - first:
+      213: -2472157049571300143
+    second: Adventurer_GreatswordSweep_2
+  - first:
+      213: 192558139874120026
+    second: Adventurer_GreatswordSweep_3
+  - first:
+      213: 8986094229456853972
+    second: Adventurer_GreatswordSweep_4
+  - first:
+      213: 6397409141345517297
+    second: Adventurer_GreatswordSweep_5
+  - first:
+      213: 5239319020251373703
+    second: Adventurer_GreatswordSweep_6
+  - first:
+      213: -1188269026223945001
+    second: Adventurer_GreatswordSweep_7
+  - first:
+      213: -2705676548699552743
+    second: Adventurer_GreatswordSweep_8
+  - first:
+      213: -438874845506749545
+    second: Adventurer_GreatswordSweep_9
+  - first:
+      213: 8121612537361285533
+    second: Adventurer_GreatswordSweep_10
+  - first:
+      213: 2854702294990408833
+    second: Adventurer_GreatswordSweep_11
+  - first:
+      213: -1253324262561183117
+    second: Adventurer_GreatswordSweep_12
+  - first:
+      213: 9051082886682091448
+    second: Adventurer_GreatswordSweep_13
+  - first:
+      213: 3711563564222671920
+    second: Adventurer_GreatswordSweep_14
+  - first:
+      213: 6586454173409844082
+    second: Adventurer_GreatswordSweep_15
+  - first:
+      213: -4949617605318132711
+    second: Adventurer_GreatswordSweep_16
+  - first:
+      213: 888529034168896027
+    second: Adventurer_GreatswordSweep_17
+  - first:
+      213: -2644621971661143945
+    second: Adventurer_GreatswordSweep_18
+  - first:
+      213: 6421023022480617604
+    second: Adventurer_GreatswordSweep_19
+  - first:
+      213: -8479513486119153375
+    second: Adventurer_GreatswordSweep_20
+  - first:
+      213: 1635586470688921300
+    second: Adventurer_GreatswordSweep_21
+  - first:
+      213: 1482022250663963684
+    second: Adventurer_GreatswordSweep_22
+  - first:
+      213: -6576716440409494044
+    second: Adventurer_GreatswordSweep_23
+  - first:
+      213: -742352660359022316
+    second: Adventurer_GreatswordSweep_24
+  - first:
+      213: 8113975147357836530
+    second: Adventurer_GreatswordSweep_25
+  - first:
+      213: -8921387122424155870
+    second: Adventurer_GreatswordSweep_26
+  - first:
+      213: 1045906942500575399
+    second: Adventurer_GreatswordSweep_27
+  - first:
+      213: -5007565098783416430
+    second: Adventurer_GreatswordSweep_28
+  - first:
+      213: -4981024735026780351
+    second: Adventurer_GreatswordSweep_29
+  - first:
+      213: 4912320480705067276
+    second: Adventurer_GreatswordSweep_30
+  - first:
+      213: 3390883962368117880
+    second: Adventurer_GreatswordSweep_31
+  - first:
+      213: 227092137004931657
+    second: Adventurer_GreatswordSweep_32
+  - first:
+      213: -4075098435460629400
+    second: Adventurer_GreatswordSweep_33
+  - first:
+      213: -7429933744044143272
+    second: Adventurer_GreatswordSweep_34
+  - first:
+      213: 4065222874166292443
+    second: Adventurer_GreatswordSweep_35
+  - first:
+      213: -1742139455873682609
+    second: Adventurer_GreatswordSweep_36
+  - first:
+      213: 6010631839265975026
+    second: Adventurer_GreatswordSweep_37
+  - first:
+      213: 8201591535019135197
+    second: Adventurer_GreatswordSweep_38
+  - first:
+      213: -1258673034453832029
+    second: Adventurer_GreatswordSweep_39
+  - first:
+      213: -1006133279640893550
+    second: Adventurer_GreatswordSweep_40
+  - first:
+      213: -951437965537705573
+    second: Adventurer_GreatswordSweep_41
+  - first:
+      213: 5608829631212812033
+    second: Adventurer_GreatswordSweep_42
+  - first:
+      213: 5634041823024760861
+    second: Adventurer_GreatswordSweep_43
+  - first:
+      213: -641562151321124014
+    second: Adventurer_GreatswordSweep_44
+  - first:
+      213: 6859222726116308274
+    second: Adventurer_GreatswordSweep_45
+  - first:
+      213: 905738405841675127
+    second: Adventurer_GreatswordSweep_46
+  - first:
+      213: -3853406678580776619
+    second: Adventurer_GreatswordSweep_47
+  - first:
+      213: -3060060502964422940
+    second: Adventurer_GreatswordSweep_48
+  - first:
+      213: 8322570454067901830
+    second: Adventurer_GreatswordSweep_49
+  - first:
+      213: -2186864773346519594
+    second: Adventurer_GreatswordSweep_50
+  - first:
+      213: -960828667348411067
+    second: Adventurer_GreatswordSweep_51
+  - first:
+      213: -1102914454555204726
+    second: Adventurer_GreatswordSweep_52
+  - first:
+      213: 7135367772466433086
+    second: Adventurer_GreatswordSweep_53
+  - first:
+      213: -8323745377528582217
+    second: Adventurer_GreatswordSweep_54
+  - first:
+      213: 7296728968202918116
+    second: Adventurer_GreatswordSweep_55
+  - first:
+      213: 6476978825754588149
+    second: Adventurer_GreatswordSweep_56
+  - first:
+      213: 4808425217278894742
+    second: Adventurer_GreatswordSweep_57
+  - first:
+      213: -1396968410294124577
+    second: Adventurer_GreatswordSweep_58
+  - first:
+      213: 4807959856650114076
+    second: Adventurer_GreatswordSweep_59
+  - first:
+      213: 880296788305483070
+    second: Adventurer_GreatswordSweep_60
+  - first:
+      213: -3452798998291931413
+    second: Adventurer_GreatswordSweep_61
+  - first:
+      213: -1928766588105062352
+    second: Adventurer_GreatswordSweep_62
+  - first:
+      213: -430350224437032812
+    second: Adventurer_GreatswordSweep_63
+  - first:
+      213: 8294005065982023511
+    second: Adventurer_GreatswordSweep_64
+  - first:
+      213: 2534376515373264492
+    second: Adventurer_GreatswordSweep_65
+  - first:
+      213: 4745230503829258744
+    second: Adventurer_GreatswordSweep_66
+  - first:
+      213: 4339155105670654171
+    second: Adventurer_GreatswordSweep_67
+  - first:
+      213: -2233252094702753245
+    second: Adventurer_GreatswordSweep_68
+  - first:
+      213: -6027234421309701249
+    second: Adventurer_GreatswordSweep_69
+  - first:
+      213: -4621992682581384447
+    second: Adventurer_GreatswordSweep_70
+  - first:
+      213: 1591317406562497439
+    second: Adventurer_GreatswordSweep_71
+  - first:
+      213: -1309113985993511063
+    second: Adventurer_GreatswordSweep_72
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4241951b38f5de64491efb3e388137d9
+      internalID: -1139696784
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 229866a91722ffc45a17ef245313417a
+      internalID: -2060137129
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 81c0c1fcb5d27c749ae8dd12f5cc0668
+      internalID: 637594121
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 470951ad1ef882645bf2eb85f81cbeac
+      internalID: -1860661653
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1e16a7d6e5be7254c879a61fa982cdde
+      internalID: -446068411
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9afb78af2f97e6e46811813e8d80e98a
+      internalID: 545061057
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 713c6aa8c96f3ac4eb5dca30e2985fa9
+      internalID: -713173281
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dbbbfa40b1ee83d49b91847f8803dfb5
+      internalID: 38246479
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_E_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 672
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 88b983c83f6711144a9f841fe65b7119
+      internalID: -1049861423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5fa3ee92ff3b63b40860210b24358472
+      internalID: -105521156
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 26cda65f3e2c27e43befc6fde3a1ce03
+      internalID: -547224128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2d41db51ca378c3438900d6fd97a8c57
+      internalID: 1682841716
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3f55c2b1562d5324a97dfa8e76e4058b
+      internalID: 1021410615
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2b24e1f12515e4b4eac77f47c4699f66
+      internalID: 21819538
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7ecf1570d68d3cf4aa223423f01072ca
+      internalID: -1596360085
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c8ff06f8ba795ce46b78e68ea6d6fad0
+      internalID: -1869269069
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4cf1b7416359bd5498f5c62d3b0dc9ce
+      internalID: 1385134084
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NE_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 576
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 31020192ecbd40c4db9f213f2c8b805a
+      internalID: 1273725370
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b4e7c4cd8c457344983f020806c88280
+      internalID: -1957419574
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 38ecb07c4d8186846b23ce270534e34a
+      internalID: 56842813
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7e149897502eb2647963c90666526597
+      internalID: 1768637467
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 373abb9e875267a4981548ae58cbf347
+      internalID: 356202983
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7e144b04cbc52cd4cbc075e4b8235eef
+      internalID: -590492496
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4eb0603987af3c443a85184858f0582d
+      internalID: -202518058
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b6e7295d3c2e26344a47afa05d3bb60e
+      internalID: 1908983661
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8921e8fdfc6f2cb4783feb04fc7bdf50
+      internalID: 1746344275
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_N_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 480
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 01db117da0b69b8469c8303513e5329d
+      internalID: -1020704123
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9ba8eca0bfb6b18439b65fb15097dad4
+      internalID: 1697662868
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5e1e190b4ece6df4e8bf9f109826afb6
+      internalID: 558548938
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a68b390d9ea1e7f45824213e617fa23f
+      internalID: -592487020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7e4194c72e0b40b4f981c331af36d22f
+      internalID: 305412520
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 219afe28ccc69b74badb999430569797
+      internalID: -430838014
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: bdaf7d63a6e2db143ab13da9e1177150
+      internalID: -257618636
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 402d44ee36dd34d45b54f648750ef025
+      internalID: -187550831
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ba5024847ca21c14d9e9a09c4a99eae6
+      internalID: -2035216011
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_NW_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 384
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ff9c80cf84c02a84a938ce1c746a1422
+      internalID: -1617682074
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8800f029374a1ad4c9e917905011f596
+      internalID: 78761826
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b6d6c832f5a5e7c47abc1a7b385d7be4
+      internalID: 309357672
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ace80d23e966e4644ad295665242f3dd
+      internalID: 64793037
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3285f2c5219e97f449df53a6d7757e53
+      internalID: 138782076
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c0bcecc9eea1af54fbd657246383afd0
+      internalID: 1353611079
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d4e88c36b50e40e4084c4556897b0387
+      internalID: 2143776282
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 71b3de5b77f3dbc48986c20f9902efe6
+      internalID: -1481792067
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3ce3ad201b48eb74ab9e3d928154a813
+      internalID: 390815756
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_W_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 288
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d40f11eb2031d6140b4efb6015ee0a58
+      internalID: -535645694
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dd0d34fb23daf2a4e908f3306e852624
+      internalID: 1838469307
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 14ba4413030e32544be53a024cb868a3
+      internalID: -195168435
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f5c621d3f547f7948910ab904f739aa4
+      internalID: -265117248
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a80e600806de2004cb0108228f989d1c
+      internalID: -297872522
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5da51b03f6178674bae72169f92b2d8f
+      internalID: 1492121398
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f035c3f5fd1fe5944bce5e773560d236
+      internalID: -1226295765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c7efdb624269b14ca5c436f27b3ba4d
+      internalID: -389691880
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fbe4ff94ccc3c6c4d87992eb39da4a08
+      internalID: -1223844235
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SW_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 192
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a47d7e6509d0728488fb09123e2bbcb5
+      internalID: 1459902937
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 91085e4dd3ca51544b694aabfbbefed1
+      internalID: 1186407299
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f68124781ede454ea779d293e53dc1b
+      internalID: -1464419876
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 335ad5ffcabcc5e45b9c10f9a7f5a0a8
+      internalID: 620681400
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f1a6ba72a71d45a4b9a3a26630dc5a96
+      internalID: -20004107
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 92505c0c8d0353941af4963e551c65d4
+      internalID: -1402044547
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 598aaad522a932b49872a2470afd6b65
+      internalID: -1438355546
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6e4576c405b67ff43a93c928ee5ce33e
+      internalID: 1198450159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3afdf5e9e5db02f4eaa02f53e36fb913
+      internalID: -80383151
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_S_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 96
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7636bcdf2203c3f4f8479424788da09e
+      internalID: -321522491
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9472fda54a5713e4199b582c3184ad68
+      internalID: 1611999695
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_1
+      rect:
+        serializedVersion: 2
+        x: 96
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 930183b057422564297f469b0fa60e64
+      internalID: -1855903830
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_2
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d145df17bb382004bad5617785e4f955
+      internalID: -591324187
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_3
+      rect:
+        serializedVersion: 2
+        x: 288
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 02da5414f096a7348bc023b2c6207d71
+      internalID: 702633971
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_4
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 62b0318c7539d094a9d46db27ff06b49
+      internalID: 866816516
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_5
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 016847db40cb1c34abd5ce5377f034ee
+      internalID: 621220113
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_6
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d49d2777ed6548545a4608afec70e89e
+      internalID: -1475794856
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_7
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1323610d04c0af844b5601970af7b7fa
+      internalID: 1158901993
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_GreatswordSweep_SE_8
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 0
+        width: 96
+        height: 96
+      alignment: 9
+      pivot: {x: 0.5, y: 0.29166666}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8a31ff14a392f5c4b9f1bba47cd3ed56
+      internalID: 155398170
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 09aed2d0488edf64691727c6e5a345b7
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Adventurer_GreatswordSweep_E_0: -1139696784
+      Adventurer_GreatswordSweep_E_1: -2060137129
+      Adventurer_GreatswordSweep_E_2: 637594121
+      Adventurer_GreatswordSweep_E_3: -1860661653
+      Adventurer_GreatswordSweep_E_4: -446068411
+      Adventurer_GreatswordSweep_E_5: 545061057
+      Adventurer_GreatswordSweep_E_6: -713173281
+      Adventurer_GreatswordSweep_E_7: 38246479
+      Adventurer_GreatswordSweep_E_8: -1049861423
+      Adventurer_GreatswordSweep_NE_0: -105521156
+      Adventurer_GreatswordSweep_NE_1: -547224128
+      Adventurer_GreatswordSweep_NE_2: 1682841716
+      Adventurer_GreatswordSweep_NE_3: 1021410615
+      Adventurer_GreatswordSweep_NE_4: 21819538
+      Adventurer_GreatswordSweep_NE_5: -1596360085
+      Adventurer_GreatswordSweep_NE_6: -1869269069
+      Adventurer_GreatswordSweep_NE_7: 1385134084
+      Adventurer_GreatswordSweep_NE_8: 1273725370
+      Adventurer_GreatswordSweep_NW_0: 1697662868
+      Adventurer_GreatswordSweep_NW_1: 558548938
+      Adventurer_GreatswordSweep_NW_2: -592487020
+      Adventurer_GreatswordSweep_NW_3: 305412520
+      Adventurer_GreatswordSweep_NW_4: -430838014
+      Adventurer_GreatswordSweep_NW_5: -257618636
+      Adventurer_GreatswordSweep_NW_6: -187550831
+      Adventurer_GreatswordSweep_NW_7: -2035216011
+      Adventurer_GreatswordSweep_NW_8: -1617682074
+      Adventurer_GreatswordSweep_N_0: -1957419574
+      Adventurer_GreatswordSweep_N_1: 56842813
+      Adventurer_GreatswordSweep_N_2: 1768637467
+      Adventurer_GreatswordSweep_N_3: 356202983
+      Adventurer_GreatswordSweep_N_4: -590492496
+      Adventurer_GreatswordSweep_N_5: -202518058
+      Adventurer_GreatswordSweep_N_6: 1908983661
+      Adventurer_GreatswordSweep_N_7: 1746344275
+      Adventurer_GreatswordSweep_N_8: -1020704123
+      Adventurer_GreatswordSweep_SE_0: 1611999695
+      Adventurer_GreatswordSweep_SE_1: -1855903830
+      Adventurer_GreatswordSweep_SE_2: -591324187
+      Adventurer_GreatswordSweep_SE_3: 702633971
+      Adventurer_GreatswordSweep_SE_4: 866816516
+      Adventurer_GreatswordSweep_SE_5: 621220113
+      Adventurer_GreatswordSweep_SE_6: -1475794856
+      Adventurer_GreatswordSweep_SE_7: 1158901993
+      Adventurer_GreatswordSweep_SE_8: 155398170
+      Adventurer_GreatswordSweep_SW_0: 1838469307
+      Adventurer_GreatswordSweep_SW_1: -195168435
+      Adventurer_GreatswordSweep_SW_2: -265117248
+      Adventurer_GreatswordSweep_SW_3: -297872522
+      Adventurer_GreatswordSweep_SW_4: 1492121398
+      Adventurer_GreatswordSweep_SW_5: -1226295765
+      Adventurer_GreatswordSweep_SW_6: -389691880
+      Adventurer_GreatswordSweep_SW_7: -1223844235
+      Adventurer_GreatswordSweep_SW_8: 1459902937
+      Adventurer_GreatswordSweep_S_0: 1186407299
+      Adventurer_GreatswordSweep_S_1: -1464419876
+      Adventurer_GreatswordSweep_S_2: 620681400
+      Adventurer_GreatswordSweep_S_3: -20004107
+      Adventurer_GreatswordSweep_S_4: -1402044547
+      Adventurer_GreatswordSweep_S_5: -1438355546
+      Adventurer_GreatswordSweep_S_6: 1198450159
+      Adventurer_GreatswordSweep_S_7: -80383151
+      Adventurer_GreatswordSweep_S_8: -321522491
+      Adventurer_GreatswordSweep_W_0: 78761826
+      Adventurer_GreatswordSweep_W_1: 309357672
+      Adventurer_GreatswordSweep_W_2: 64793037
+      Adventurer_GreatswordSweep_W_3: 138782076
+      Adventurer_GreatswordSweep_W_4: 1353611079
+      Adventurer_GreatswordSweep_W_5: 2143776282
+      Adventurer_GreatswordSweep_W_6: -1481792067
+      Adventurer_GreatswordSweep_W_7: 390815756
+      Adventurer_GreatswordSweep_W_8: -535645694
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

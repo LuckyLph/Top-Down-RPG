@@ -39,6 +39,8 @@ MonoBehaviour:
   projectileHoming: 1
   projectileVisual: {fileID: 3463214288168290358, guid: 6e9ec06b6836b1441a4cd7df518dc7cb, type: 3}
   attackClip: BowShot
+  otherAttackClips:
+  - BowCantedShot
   hudIcon: {fileID: 1919766224, guid: b15754d9f5f59b147880ecf947e00c3f, type: 3}
   abilities:
   - {fileID: 11400000, guid: 2788f7efda8b4e84284c30659746b8ed, type: 2}

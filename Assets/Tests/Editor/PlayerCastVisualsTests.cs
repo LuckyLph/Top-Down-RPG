@@ -417,7 +417,7 @@ public class PlayerCastVisualsTests
         serialized.ApplyModifiedPropertiesWithoutUndo();
         visuals.Construct(clock);
         weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
+        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock, null);
         weapon.Equip(Track(PlayerWeapon.Create("Sword", 1, 0.35f, 0.5f, new Vector2[4], windup: 0.15f, contact: 0.05f, recovery: 0.15f, attackClipName: "Slash")));
         AbilityService service = TestCombat.CreateAbilityService(FixedGameAuthority.Authoritative);
         service.CastResolved += (_, _) => resolved++;

@@ -27,7 +27,6 @@ public class CharacterPrefabTests
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
     private const string ArrowPath = "Assets/Prefabs/Combat/Arrow.prefab";
-    private const string SwordArtPath = "Assets/Settings/Characters/Weapons/WeaponArt_Sword.asset";
     private const string WeaponsFolder = "Assets/Data/Weapons/";
     private const string WeaponArtFolder = "Assets/Settings/Characters/Weapons/";
     private const float OnePixel = 1f / 32f;
@@ -220,78 +219,95 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The sword's attack is in the adventurer's set with the contact frame its motion keys (frame 4, after a windup of
-    /// frames 0 to 3), and the set holds no carried clips: the weapons only show in their attacks and their own casts,
-    /// never standing or moving. The attack's 80 px frames pivot on the feet like the 64 px locomotion frames: in every
-    /// direction the first attack frame and the first idle frame put the top of the head and the boots within a pixel of
-    /// each other above the feet (the sword's own pixels left out, since its first frame holds it low).
+    /// The set holds no carried clips: the weapons only show in their attacks and their own casts, never standing or
+    /// moving.
     /// </summary>
     [Test]
-    public void TheSwordsClips_AreInTheSet_AndLineUpWithTheLocomotionAtTheFeet()
+    public void TheSet_DrawsTheWeaponsOnlyInAttacksAndCasts()
     {
-        PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(SwordPath);
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
-        CharacterAnimationClip attack = set.Find(sword.AttackClip);
-        CharacterAnimationClip idle = set.Locomotion(CharacterGait.Idle);
-        Assert.That(attack, Is.Not.Null);
-        Assert.That(attack.HasContact, Is.True);
-        Assert.That(attack.ContactFrame, Is.EqualTo(4));
         foreach (CharacterAnimationClip clip in set.Clips)
         {
             Assert.That(!clip.Armed || clip.HasContact, Is.True, $"{clip.Name}: only attacks and weapon casts draw a weapon.");
             Assert.That(clip.Gait == CharacterGait.None || !clip.Armed, Is.True, $"{clip.Name}: the character stands and moves unarmed.");
         }
-
-        Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
-        Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
-        HashSet<Color32> swordColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(SwordArtPath));
-        for (int direction = 0; direction < CharacterDirections.Count; direction++)
-        {
-            Sprite attackFrame = attack.SpriteAt(direction, 0);
-            Sprite idleFrame = idle.SpriteAt(direction, 0);
-            Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(80f, 80f)));
-            Assert.That(idleFrame.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
-            OpaqueRows(attackSheet, attackFrame, swordColours, out int attackBottom, out int attackTop);
-            OpaqueRows(idleSheet, idleFrame, swordColours, out int idleBottom, out int idleTop);
-            string name = CharacterDirections.Name(direction);
-            Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(1), $"{name}: the head's top.");
-            Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(1), $"{name}: the boots.");
-        }
     }
 
     /// <summary>
-    /// The greatsword's and the longbow's attacks (contact frame 5 each) start where the character stands: in every
-    /// direction their first frame (96 and 80 px, pivoted on the feet) puts the top of the head within a pixel of the
-    /// idle's (the greatsword's within two, its first pose bending its knees) and the boots within two, the weapon's own
-    /// pixels left out.
+    /// Each attack of the sword, the greatsword and the longbow is in the adventurer's set with the contact frame its
+    /// motion keys (the sword's frame 4 after a windup of frames 0 to 3, the others' frame 5) and starts where the
+    /// character stands: its frames (80, 96 and 80 px) pivot on the feet like the 64 px locomotion frames, and in every
+    /// direction its first frame puts the top of the head within a pixel of the idle's and the boots within two, the
+    /// weapon's own pixels left out. The greatsword's attacks start lower, their first poses bending the knees: the
+    /// cleave's head within two pixels, the sweep's within three.
     /// </summary>
     [Test]
-    public void TheGreatswordAndBowAttacks_LineUpWithTheLocomotionAtTheFeet()
+    public void ThePlayersAttacks_AreInTheSet_AndLineUpWithTheLocomotionAtTheFeet()
     {
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
         CharacterAnimationClip idle = set.Locomotion(CharacterGait.Idle);
         Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
-        string[] weapons = { "Greatsword", "Longbow" };
-        string[] arts = { "WeaponArt_Greatsword", "WeaponArt_Bow" };
-        float[] sizes = { 96f, 80f };
-        int[] headDrops = { 2, 1 };
+        string[] weapons = { "Sword", "Greatsword", "Longbow" };
+        string[] arts = { "WeaponArt_Sword", "WeaponArt_Greatsword", "WeaponArt_Bow" };
+        float[] sizes = { 80f, 96f, 80f };
+        int[] contacts = { 4, 5, 5 };
+        int[][] headDrops = { new[] { 1, 1 }, new[] { 2, 3 }, new[] { 1, 1 } };
         for (int w = 0; w < weapons.Length; w++)
         {
             PlayerWeapon weapon = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(WeaponsFolder + weapons[w] + ".asset");
-            CharacterAnimationClip attack = set.Find(weapon.AttackClip);
-            Assert.That(attack, Is.Not.Null, weapons[w]);
-            Assert.That(attack.ContactFrame, Is.EqualTo(5), weapons[w]);
-            Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
             HashSet<Color32> weaponColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[w] + ".asset"));
-            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            Assert.That(weapon.AttackCount, Is.EqualTo(2), weapons[w]);
+            for (int a = 0; a < weapon.AttackCount; a++)
             {
-                Sprite attackFrame = attack.SpriteAt(direction, 0);
-                Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(sizes[w], sizes[w])));
-                OpaqueRows(attackSheet, attackFrame, weaponColours, out int attackBottom, out int attackTop);
-                OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), weaponColours, out int idleBottom, out int idleTop);
-                string name = $"{weapons[w]} {CharacterDirections.Name(direction)}";
-                Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(headDrops[w]), $"{name}: the head's top.");
-                Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+                CharacterAnimationClip attack = set.Find(weapon.AttackClipOf(a));
+                Assert.That(attack, Is.Not.Null, weapon.AttackClipOf(a));
+                Assert.That(attack.HasContact, Is.True, attack.Name);
+                Assert.That(attack.ContactFrame, Is.EqualTo(contacts[w]), attack.Name);
+                Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    Sprite attackFrame = attack.SpriteAt(direction, 0);
+                    Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(sizes[w], sizes[w])), attack.Name);
+                    OpaqueRows(attackSheet, attackFrame, weaponColours, out int attackBottom, out int attackTop);
+                    OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), weaponColours, out int idleBottom, out int idleTop);
+                    string name = $"{attack.Name} {CharacterDirections.Name(direction)}";
+                    Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(headDrops[w][a]), $"{name}: the head's top.");
+                    Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Each of the player's weapons has two attacks that flow into each other: in every direction the last frame of one
+    /// puts the top of the head and the boots within two pixels of the other's first frame, the weapon's own pixels left
+    /// out, so attacking again in the recovery carries on from the pose it ended in (Docs/PlayerCharacter.md, Phase 4).
+    /// </summary>
+    [Test]
+    public void ThePlayersAttacks_EndWhereTheOtherAttackStarts()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
+        string[] weapons = { "Sword", "Greatsword", "Longbow" };
+        string[] arts = { "WeaponArt_Sword", "WeaponArt_Greatsword", "WeaponArt_Bow" };
+        for (int w = 0; w < weapons.Length; w++)
+        {
+            PlayerWeapon weapon = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(WeaponsFolder + weapons[w] + ".asset");
+            HashSet<Color32> weaponColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[w] + ".asset"));
+            for (int a = 0; a < weapon.AttackCount; a++)
+            {
+                CharacterAnimationClip attack = set.Find(weapon.AttackClipOf(a));
+                CharacterAnimationClip next = set.Find(weapon.AttackClipOf((a + 1) % weapon.AttackCount));
+                Assert.That(next, Is.Not.SameAs(attack), weapons[w]);
+                Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
+                Texture2D nextSheet = Track(LoadSheet(next.SpriteAt(0, 0)));
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    OpaqueRows(attackSheet, attack.SpriteAt(direction, attack.FrameCount - 1), weaponColours, out int endBottom, out int endTop);
+                    OpaqueRows(nextSheet, next.SpriteAt(direction, 0), weaponColours, out int startBottom, out int startTop);
+                    string name = $"{attack.Name} into {next.Name} {CharacterDirections.Name(direction)}";
+                    Assert.That(Mathf.Abs(endTop - startTop), Is.LessThanOrEqualTo(2), $"{name}: the head's top.");
+                    Assert.That(Mathf.Abs(endBottom - startBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+                }
             }
         }
     }

@@ -24,7 +24,9 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// seeded alike picking alike and none playing without a random source (Docs/PlayerCharacter.md, Phase 3); the
 /// visuals put the sprite on their renderer, two seeded alike playing the same idle animations, the weapon plays its
 /// attack on them while the character stands and runs unarmed, and a copy's attack plays on through a switch to its
-/// weapon that arrives after it.
+/// weapon that arrives after it; a weapon's attacks start with its first, then never repeat, the next picked at random
+/// among the others (in order without a random source), starting over when it is equipped; and a copy plays the attack
+/// the owner made, the first attack's clip where its set lacks that attack's (Docs/PlayerCharacter.md, Phase 4).
 /// </summary>
 public class CharacterAnimatorTests
 {
@@ -44,8 +46,8 @@ public class CharacterAnimatorTests
     /// Builds settings (walk from 0.1, run from 2.4, sprint from 5.6 units per second, 10% hysteresis, rates 0.5 to
     /// 1.5, an 8 degree direction margin, the first idle animation after 2 s and the next 3 to 5 s after one ends) and
     /// a set of idle (4 frames of 0.25 s), walk (8 of 0.125 s), run (8 of 0.1 s) and sprint (8 of 0.075 s) clips,
-    /// attacks and casts, and two idle animations (Fidget, 3 frames of 0.1 s, and Yawn, 4 of 0.1 s), each sprite its
-    /// own.
+    /// three attacks (Slash, Backhand and Thrust), casts, and two idle animations (Fidget, 3 frames of 0.1 s, and Yawn,
+    /// 4 of 0.1 s), each sprite its own.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -59,6 +61,8 @@ public class CharacterAnimatorTests
             Clip("Run", CharacterGait.Run, 8, 0.1f, RunNatural),
             Clip("Sprint", CharacterGait.Sprint, 8, 0.075f, SprintNatural),
             AttackClip("Slash"),
+            AttackClip("Backhand"),
+            AttackClip("Thrust"),
             CastClip("Cast", 0),
             CastClip("CastRun", 8),
             CastClip("Second", 0),
@@ -1258,10 +1262,81 @@ public class CharacterAnimatorTests
     }
 
     /// <summary>
-    /// A tracked player with a weapon controller on the test clock, resolving hits with authority, and its visuals on a
-    /// child playing the test set: <paramref name="visuals"/> and their <paramref name="renderer"/>.
+    /// A weapon with three attacks starts with its first, then follows each with one of the other two picked at random,
+    /// never the same twice in a row, raising and showing the attack it starts; equipping it again starts over from the
+    /// first. Without a random source a weapon's two attacks alternate.
     /// </summary>
-    private PlayerWeaponController CreateArmedPlayer(out CharacterVisuals visuals, out SpriteRenderer renderer)
+    [Test]
+    public void AWeaponsAttacks_StartWithTheFirst_ThenNeverRepeat()
+    {
+        PlayerWeaponController weapon = CreateArmedPlayer(out CharacterVisuals visuals, out _, new ScriptedRandom(0.75f, 0.6f, 0.1f, 0f));
+        PlayerWeapon sword = Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash", otherAttackClipNames: new[] { "Backhand", "Thrust" }));
+        weapon.Equip(sword);
+        int started = -1;
+        weapon.AttackStarted += (attack, _, _) => started = attack;
+
+        int[] attacks = { 0, 2, 1, 2, 0 };
+        for (int i = 0; i < attacks.Length; i++)
+        {
+            Assert.That(weapon.TryAttack(Vector2.down), Is.True, $"attack {i}");
+            visuals.Tick();
+            Assert.That(started, Is.EqualTo(attacks[i]), $"attack {i}");
+            Assert.That(visuals.Animator.Clip.Name, Is.EqualTo(sword.AttackClipOf(attacks[i])), $"attack {i}");
+            clock.Advance(1.1f);
+            weapon.Tick();
+        }
+
+        weapon.Equip(sword);
+        Assert.That(weapon.TryAttack(Vector2.down), Is.True);
+        Assert.That(started, Is.EqualTo(0), "Equipping the weapon starts its attacks over.");
+
+        PlayerWeaponController plain = CreateArmedPlayer(out CharacterVisuals plainVisuals, out _);
+        plain.Equip(Track(PlayerWeapon.Create("Pair", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash", otherAttackClipNames: new[] { "Backhand" })));
+        for (int i = 0; i < 4; i++)
+        {
+            Assert.That(plain.TryAttack(Vector2.down), Is.True, $"attack {i}");
+            plainVisuals.Tick();
+            Assert.That(plainVisuals.Animator.Clip.Name, Is.EqualTo(i % 2 == 0 ? "Slash" : "Backhand"), $"attack {i}");
+            clock.Advance(1.1f);
+            plain.Tick();
+        }
+    }
+
+    /// <summary>
+    /// A copy plays the attack the owner made, named by its index: the weapon's second attack plays its own clip, an
+    /// attack whose clip the set lacks plays the first attack's (as the Bandit's set holds each weapon's first attack
+    /// only), and an index past the weapon's attacks plays nothing.
+    /// </summary>
+    [Test]
+    public void ACopy_PlaysTheAttackTheOwnerMade_OrTheFirstWhereItsSetLacksIt()
+    {
+        PlayerWeaponController weapon = CreateArmedPlayer(out CharacterVisuals visuals, out _);
+        PlayerWeapon sword = Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash", otherAttackClipNames: new[] { "Backhand", "Lunge" }));
+        weapon.SetCatalog(Track(WeaponCatalog.Create(sword)));
+        weapon.Equip(sword);
+
+        weapon.PlayRemoteAttack(0, 1, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.Clip.Name, Is.EqualTo("Backhand"));
+
+        weapon.StopRemoteAttack();
+        weapon.PlayRemoteAttack(0, 2, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.True);
+        Assert.That(visuals.Animator.Clip.Name, Is.EqualTo("Slash"), "The set has no Lunge.");
+
+        weapon.StopRemoteAttack();
+        weapon.PlayRemoteAttack(0, 3, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.False, "The weapon has no fourth attack.");
+    }
+
+    /// <summary>
+    /// A tracked player with a weapon controller on the test clock, resolving hits with authority and picking its next
+    /// attack with <paramref name="random"/> (none by default), and its visuals on a child playing the test set:
+    /// <paramref name="visuals"/> and their <paramref name="renderer"/>.
+    /// </summary>
+    private PlayerWeaponController CreateArmedPlayer(out CharacterVisuals visuals, out SpriteRenderer renderer, IRandom random = null)
     {
         GameObject player = Track(new GameObject("Player"));
         GameObject child = new("Visuals");
@@ -1274,7 +1349,7 @@ public class CharacterAnimatorTests
         serialized.ApplyModifiedPropertiesWithoutUndo();
         visuals.Construct(clock);
         PlayerWeaponController weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
+        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock, random);
         return weapon;
     }
 

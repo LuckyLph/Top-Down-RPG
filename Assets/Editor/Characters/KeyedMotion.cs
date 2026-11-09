@@ -10,7 +10,9 @@ using UnityEngine;
 /// or the cast completes. Frame durations pace the inspector's preview and keep each phase's proportions: the runtime
 /// stretches each phase to its timeline (a channelling cast plays its gather at their pace). The keys are posed on one
 /// body (<see cref="PosedOn"/>); baked on another, each pose is fitted to it (<see cref="FitToBody"/>). An idle
-/// animation (<see cref="IsIdleAnimation"/>) plays at its frames' durations, with no contact frame.
+/// animation (<see cref="IsIdleAnimation"/>) plays at its frames' durations, with no contact frame. Its Style settings,
+/// off by default, have the head and the hair's tips follow the head's own rise and fall late, and a key can stretch or
+/// squash the torso.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Keyed Motion", fileName = "Motion_Keyed")]
 public sealed class KeyedMotion : CharacterMotion
@@ -40,6 +42,16 @@ public sealed class KeyedMotion : CharacterMotion
     [Tooltip("An idle animation: plays once on its own after the character has stood still a while, at its frames' durations, without a contact frame. Its first and last poses should be the idle's.")]
     [SerializeField] private bool idleAnimation;
 
+    [Header("Style")]
+    [Tooltip("How much of the head's own rise and fall it follows late, 0 none to 1 all of it.")]
+    [SerializeField, Range(0f, 1f)] private float headFollow;
+    [Tooltip("How late the head follows, as a share of the motion's time.")]
+    [SerializeField, Range(0f, 0.25f)] private float headLag = 0.05f;
+    [Tooltip("How much of the head's rise and fall the hair's tips follow late, per head radius of lock.")]
+    [SerializeField, Range(0f, 2f)] private float hairFollow;
+    [Tooltip("How late the hair follows, as a share of the motion's time.")]
+    [SerializeField, Range(0f, 0.25f)] private float hairLag = 0.08f;
+
     private readonly List<MotionEffect> frameEffects = new();
 
     public override int FrameCount => frameTimes.Length;
@@ -66,9 +78,37 @@ public sealed class KeyedMotion : CharacterMotion
     }
 
     /// <summary>
-    /// The pose at <paramref name="time"/>: between the two keys around it, eased by the earlier one's easing.
+    /// The pose at <paramref name="time"/>: between the two keys around it, eased by the earlier one's easing, fitted to
+    /// the body; with a style, the head and the hair's tips follow the head's rise and fall late.
     /// </summary>
     public override CharacterPose PoseAtTime(float time, CharacterRecipe recipe, CharacterWeaponArt weapon)
+    {
+        CharacterPose pose = KeyedPose(time, recipe, weapon);
+        if (headFollow <= 0f && hairFollow <= 0f)
+        {
+            return pose;
+        }
+
+        float head = CharacterRig.Solve(recipe, pose, weapon).Head.z;
+        pose.HeadLift = headFollow * (HeadHeight(time - headLag, recipe, weapon) - head);
+        pose.HairLift = hairFollow * (HeadHeight(time - hairLag, recipe, weapon) - head);
+        return pose;
+    }
+
+    /// <summary>
+    /// The height of the head's middle at <paramref name="time"/> (the first key's before the motion starts), without
+    /// the style.
+    /// </summary>
+    private float HeadHeight(float time, CharacterRecipe recipe, CharacterWeaponArt weapon)
+    {
+        return CharacterRig.Solve(recipe, KeyedPose(Mathf.Max(0f, time), recipe, weapon), weapon).Head.z;
+    }
+
+    /// <summary>
+    /// The keyed pose at <paramref name="time"/>, fitted to the body: between the two keys around it, eased by the
+    /// earlier one's easing.
+    /// </summary>
+    private CharacterPose KeyedPose(float time, CharacterRecipe recipe, CharacterWeaponArt weapon)
     {
         if (keys.Count == 0)
         {
@@ -233,6 +273,8 @@ public sealed class MotionKey
     [SerializeField] private float arrow;
     [Tooltip("How far the string snaps past rest after a release, 0 to 1.")]
     [SerializeField] private float kick;
+    [Tooltip("The share the torso stretches by; negative squashes it.")]
+    [SerializeField] private float stretch;
     [Tooltip("How far the face tips back, chin up, in degrees.")]
     [SerializeField] private float headTilt;
     [Tooltip("The eyes are shut above 0.5.")]
@@ -268,6 +310,7 @@ public sealed class MotionKey
             Draw = Mathf.LerpUnclamped(a.draw, b.draw, share),
             Arrow = Mathf.LerpUnclamped(a.arrow, b.arrow, share),
             Kick = Mathf.LerpUnclamped(a.kick, b.kick, share),
+            Stretch = Mathf.LerpUnclamped(a.stretch, b.stretch, share),
             HeadTilt = Mathf.LerpUnclamped(a.headTilt, b.headTilt, share),
             EyesClosed = Mathf.LerpUnclamped(a.eyesClosed, b.eyesClosed, share),
             MouthOpen = Mathf.LerpUnclamped(a.mouthOpen, b.mouthOpen, share),

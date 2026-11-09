@@ -5,17 +5,18 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 3), on the
+/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 4), on the
 /// project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
 /// standing adventurer is its target height; its face shows both eyes, their glints, the brows and the mouth from the
 /// front, one eye in profile and nothing from behind; its ears show beside the head; its locks grow the hair past the
 /// head's ball from the front and in profile; the outfit's options (short sleeves, gloves, the satchel's strap, the
-/// skirt) draw as the recipe sets them; every clip has a row per direction and fits its frames; the rogue's attacks and
-/// casts fit its body; its gaits are its own, styled, while the rogue's stay plain: the bob's top and bottom on frames,
-/// the head following it late, the torso stretching at its top and squashing at its bottom, the hair's tips moving,
-/// and the hands rising at both ends of their swing; its idle animations start and end on the idle's pose, the first
-/// frame the idle's to the pixel, without a contact frame; the yawn shuts the eyes and opens the mouth; and the
-/// project's sheets and animation set are what the recipe bakes.
+/// skirt) draw as the recipe sets them; every clip has a row per direction and fits its frames; the attacks and casts
+/// keyed on the rogue's body fit its body; its gaits are its own, styled, while the rogue's stay plain: the bob's top and
+/// bottom on frames, the head following it late, the torso stretching at its top and squashing at its bottom, the
+/// hair's tips moving, and the hands rising at both ends of their swing; its idle animations start and end on the
+/// idle's pose, the first frame the idle's to the pixel, without a contact frame; the yawn shuts the eyes and opens the
+/// mouth; its attacks are its own, two a weapon, each ending with the weapon where the other starts, styled while the
+/// rogue's stay plain; and the project's sheets and animation set are what the recipe bakes.
 /// </summary>
 public class AdventurerRecipeTests
 {
@@ -25,6 +26,12 @@ public class AdventurerRecipeTests
     private const int North = 2;
     private const int South = 6;
     private static readonly string[] IdleAnimations = { "IdleLookAround", "IdleStretch", "IdleScratch", "IdleTapFoot", "IdleYawn" };
+    private static readonly string[][] AttackPairs =
+    {
+        new[] { "SwordSlash", "SwordBackhand" },
+        new[] { "GreatswordCleave", "GreatswordSweep" },
+        new[] { "BowShot", "BowCantedShot" },
+    };
 
     private readonly List<Object> created = new();
     private AdventurerRecipe recipe;
@@ -194,13 +201,13 @@ public class AdventurerRecipeTests
     }
 
     /// <summary>
-    /// The rogue's attacks and casts, keyed on the rogue's body, fit the adventurer's (<see cref="KeyedMotion.FitToBody"/>):
-    /// in every frame the pelvis's height over the ankles and each foot's height over them are the same share of the
-    /// legs' length, so a planted foot stays on the ground, and each hand is as far from its shoulder in arm lengths as on
-    /// the rogue. On a copy of the rogue's body nothing changes.
+    /// The attacks and casts keyed on the rogue's body, the rogue's casts and the adventurer's own attacks, fit the
+    /// adventurer's (<see cref="KeyedMotion.FitToBody"/>): in every frame the pelvis's height over the ankles and each
+    /// foot's height over them are the same share of the legs' length, so a planted foot stays on the ground, and each
+    /// hand is as far from its shoulder in arm lengths as on the rogue. On a copy of the rogue's body nothing changes.
     /// </summary>
     [Test]
-    public void TheRoguesKeyedMotions_FitTheAdventurersBody()
+    public void TheMotionsKeyedOnTheRogue_FitTheAdventurersBody()
     {
         CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RoguePath);
         CharacterRecipe rogueCopy = Object.Instantiate(rogue);
@@ -238,7 +245,7 @@ public class AdventurerRecipeTests
             }
         }
 
-        Assert.That(motions, Is.EqualTo(13), "The weapons' attacks and the standing casts.");
+        Assert.That(motions, Is.EqualTo(16), "The weapons' two attacks each and the standing casts.");
     }
 
     /// <summary>
@@ -404,6 +411,66 @@ public class AdventurerRecipeTests
             for (int direction = 0; direction < CharacterDirections.Count; direction++)
             {
                 Assert.That(FramePixels(sheet, direction, 0), Is.EqualTo(FramePixels(idleSheet, direction, 0)), $"{name} {CharacterDirections.Name(direction)}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// The adventurer's attacks are its own: the first of each weapon's pair is not the rogue's motion and the second is
+    /// one the rogue lacks, both keyed motions with the weapon's art. Each ends with the pelvis, the shoulders' twist, the
+    /// hands and the weapon (the blade, or the bow and its draw) where the other starts, so attacking again carries on from
+    /// where the last attack stopped. Their head follows its own rise and fall late and the torso stretches or squashes on
+    /// some frame, as in the gaits, while the rogue's attacks stay plain.
+    /// </summary>
+    [Test]
+    public void TheAttacks_ComeInPairsThatFlowIntoEachOther_StyledLikeTheGaits()
+    {
+        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RoguePath);
+        foreach (string[] pair in AttackPairs)
+        {
+            CharacterClip first = recipe.Clips.First(clip => clip.Name == pair[0]);
+            CharacterClip second = recipe.Clips.First(clip => clip.Name == pair[1]);
+            Assert.That(first.Motion, Is.Not.EqualTo(MotionOf(rogue, pair[0])), pair[0]);
+            Assert.That(rogue.Clips.Any(clip => clip.Name == pair[1]), Is.False, pair[1]);
+            Assert.That(second.Weapon, Is.EqualTo(first.Weapon), pair[1]);
+            Assert.That(first.Motion, Is.InstanceOf<KeyedMotion>(), pair[0]);
+            Assert.That(second.Motion, Is.InstanceOf<KeyedMotion>(), pair[1]);
+            foreach ((CharacterClip ending, CharacterClip next) in new[] { (first, second), (second, first) })
+            {
+                string name = $"{ending.Name} into {next.Name}";
+                CharacterPose end = ending.Motion.PoseAtTime(1f, recipe, ending.Weapon);
+                CharacterPose start = next.Motion.PoseAtTime(0f, recipe, next.Weapon);
+                Assert.That(end.PelvisHeight, Is.EqualTo(start.PelvisHeight).Within(0.05f), name);
+                Assert.That(end.Twist, Is.EqualTo(start.Twist).Within(0.05f), name);
+                Assert.That(Vector3.Distance(end.LeftHand, start.LeftHand), Is.LessThan(0.05f), name);
+                Assert.That(Vector3.Distance(end.RightHand, start.RightHand), Is.LessThan(0.05f), name);
+                Assert.That(Vector3.Distance(end.Blade, start.Blade), Is.LessThan(0.01f), name);
+                Assert.That(Vector3.Distance(end.BowUp, start.BowUp), Is.LessThan(0.01f), name);
+                Assert.That(end.Draw, Is.EqualTo(start.Draw).Within(0.01f), name);
+            }
+
+            foreach (CharacterClip clip in new[] { first, second })
+            {
+                float lift = 0f;
+                float stretch = 0f;
+                for (int frame = 0; frame < clip.Motion.FrameCount; frame++)
+                {
+                    CharacterPose pose = clip.Motion.PoseAt(frame, recipe, clip.Weapon);
+                    lift = Mathf.Max(lift, Mathf.Abs(pose.HeadLift));
+                    stretch = Mathf.Max(stretch, Mathf.Abs(pose.Stretch));
+                }
+
+                Assert.That(lift, Is.GreaterThan(0.2f), $"{clip.Name}: the head follows late.");
+                Assert.That(stretch, Is.GreaterThan(0.05f), $"{clip.Name}: the torso stretches or squashes.");
+            }
+
+            CharacterMotion rogues = MotionOf(rogue, pair[0]);
+            for (int frame = 0; frame < rogues.FrameCount; frame++)
+            {
+                CharacterPose pose = rogues.PoseAt(frame, rogue, first.Weapon);
+                Assert.That(pose.HeadLift, Is.Zero, $"the rogue's {pair[0]} {frame}");
+                Assert.That(pose.HairLift, Is.Zero, $"the rogue's {pair[0]} {frame}");
+                Assert.That(pose.Stretch, Is.Zero, $"the rogue's {pair[0]} {frame}");
             }
         }
     }

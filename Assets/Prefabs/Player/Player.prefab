@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4281714967186475612}
   - component: {fileID: 3567725046483388587}
   - component: {fileID: 4451734619522619835}
+  - component: {fileID: 2840482547276852834}
   m_Layer: 9
   m_Name: Visuals
   m_TagString: Untagged
@@ -111,6 +112,18 @@ MonoBehaviour:
   castLightIntensity: 1.2
   lanternRenderer: {fileID: 0}
   lanternLight: {fileID: 0}
+--- !u!114 &2840482547276852834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1264398985062822945}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15435143e1e9b6547b6c005a0eaa902c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterPalette
 --- !u!1 &1489771720348594681
 GameObject:
   m_ObjectHideFlags: 0
@@ -620,6 +633,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerLook
   catalog: {fileID: 11400000, guid: 7ee68ec85e15d1d41aba52af430bb49e, type: 2}
   visuals: {fileID: 4451734619522619835}
+  colours: {fileID: 11400000, guid: fdc585b5f9c89a14c8b9639a63694965, type: 2}
+  palette: {fileID: 2840482547276852834}
 --- !u!210 &3466547070987228911
 SortingGroup:
   m_ObjectHideFlags: 0

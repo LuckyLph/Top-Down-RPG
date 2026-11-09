@@ -80,6 +80,35 @@ public abstract class CharacterRecipe : ScriptableObject
     public abstract ColourRamp Ramp(CharacterMaterial material);
 
     /// <summary>
+    /// The dye a player's colours give one of the character's own materials (Docs/PlayerCharacter.md, Phase 5), or
+    /// <see cref="CharacterDye.None"/> where the sheets keep their colour: everywhere, for a body plan whose colours are
+    /// its own.
+    /// </summary>
+    public virtual CharacterDye DyeOf(CharacterMaterial material)
+    {
+        return CharacterDye.None;
+    }
+
+    /// <summary>
+    /// Whether any of the character's materials takes a player's colours, so its sheets carry palette maps.
+    /// </summary>
+    public bool HasDyes
+    {
+        get
+        {
+            for (int i = 0; i < CharacterMaterials.Count; i++)
+            {
+                if (DyeOf((CharacterMaterial)i) != CharacterDye.None)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
     /// A painter of the recipe's body plan holding <paramref name="weapon"/> (or none), drawing onto
     /// <paramref name="canvas"/>.
     /// </summary>

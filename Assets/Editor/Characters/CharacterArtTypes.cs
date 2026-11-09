@@ -41,6 +41,9 @@ public enum CharacterMaterial
     Mouth,
     Blush,
     EyeGlint,
+    MouthInside,
+    Strap,
+    Pouch,
     Steel,
     Guard,
     Grip,
@@ -149,34 +152,6 @@ public enum CastHands
 }
 
 /// <summary>
-/// The four colours a material is drawn in, darkest first: its outline, then its shadow, middle and light tones.
-/// </summary>
-[Serializable]
-public struct ColourRamp
-{
-    [SerializeField] private Color32 outline;
-    [SerializeField] private Color32 shadow;
-    [SerializeField] private Color32 middle;
-    [SerializeField] private Color32 light;
-
-    /// <summary>
-    /// Creates a ramp of the four colours, darkest first.
-    /// </summary>
-    public ColourRamp(Color32 outline, Color32 shadow, Color32 middle, Color32 light)
-    {
-        this.outline = outline;
-        this.shadow = shadow;
-        this.middle = middle;
-        this.light = light;
-    }
-
-    public Color32 Outline => outline;
-    public Color32 Shadow => shadow;
-    public Color32 Middle => middle;
-    public Color32 Light => light;
-}
-
-/// <summary>
 /// Which character materials are flat (always their middle tone) and which draw no outline.
 /// </summary>
 public static class CharacterMaterials
@@ -218,7 +193,8 @@ public static class CharacterMaterials
 
     /// <summary>
     /// Whether <paramref name="material"/> is drawn in its middle tone whatever its surface faces: the face, the inside
-    /// of the hood, the eyes, the inside of the ears, the smears, a cast's light and the lantern's glass and wick.
+    /// of the hood, the eyes, the inside of the ears and of an open mouth, the smears, a cast's light and the lantern's
+    /// glass and wick.
     /// </summary>
     public static bool IsFlat(CharacterMaterial material)
     {
@@ -233,6 +209,7 @@ public static class CharacterMaterials
             case CharacterMaterial.Mouth:
             case CharacterMaterial.Blush:
             case CharacterMaterial.EyeGlint:
+            case CharacterMaterial.MouthInside:
             case CharacterMaterial.SmearNew:
             case CharacterMaterial.SmearMiddle:
             case CharacterMaterial.SmearOld:
@@ -263,6 +240,7 @@ public static class CharacterMaterials
             case CharacterMaterial.Mouth:
             case CharacterMaterial.Blush:
             case CharacterMaterial.EyeGlint:
+            case CharacterMaterial.MouthInside:
             case CharacterMaterial.Bangs:
             case CharacterMaterial.Mask:
             case CharacterMaterial.BowString:

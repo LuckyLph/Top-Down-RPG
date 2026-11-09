@@ -14,7 +14,9 @@ using UnityEngine.Rendering;
 /// runs at an unclamped rate so its feet keep up, and on either side of every boundary between its gaits the gait it
 /// keeps plays unclamped too; its set holds its five idle animations, which its settings wait for; it plays every ability's cast clip, over the run for its Continue
 /// casts; its look comes from the project's catalog, whose first look is the adventurer it is drawn as, the rogue retired
-/// from it, and whose every look holds every clip it plays, standing, walking and running clips included; the player and
+/// from it, and whose every look holds every clip it plays, standing, walking and running clips included; its colours
+/// come from the project's colours, which the options menu offers too, drawn on a palette beside its body, the
+/// adventurer's sheets carrying palette maps and the Bandit's none; the player and
 /// the Weasel sort as a group at their feet, the Weasel's bar apart from it over every unit; the Weasels draw the
 /// Weasel's baked set from their feet with no Mecanim animator, their config's attack clip in it.
 /// </summary>
@@ -24,6 +26,9 @@ public class CharacterPrefabTests
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
     private const string SetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
     private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
+    private const string ColoursPath = "Assets/Data/Characters/CharacterColours.asset";
+    private const string OptionsMenuPath = "Assets/Prefabs/UI/OptionsMenu.prefab";
+    private const string LitMaterialPath = "Assets/Materials/SpritePixelLit.mat";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
     private const string ArrowPath = "Assets/Prefabs/Combat/Arrow.prefab";
@@ -48,6 +53,31 @@ public class CharacterPrefabTests
         }
 
         created.Clear();
+    }
+
+    /// <summary>
+    /// The player's colours (Docs/PlayerCharacter.md, Phase 5) are the project's colours, drawn by a palette beside its
+    /// body's renderer, which draws with the lit sprite material, and the options menu offers the same colours; the
+    /// adventurer's set names the dyes its sheets carry, while the Bandit's, drawn in Aseprite, names none.
+    /// </summary>
+    [Test]
+    public void ThePlayersColours_DrawOnAPaletteBesideItsBody()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterColours colours = AssetDatabase.LoadAssetAtPath<CharacterColours>(ColoursPath);
+        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
+        PlayerLook look = player.GetComponent<PlayerLook>();
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        CharacterPalette palette = visuals.GetComponent<CharacterPalette>();
+        Assert.That(colours, Is.Not.Null);
+        Assert.That(palette, Is.Not.Null, "The palette sits beside the body's renderer.");
+        SerializedObject serialized = new(look);
+        Assert.That(serialized.FindProperty("colours").objectReferenceValue, Is.EqualTo(colours));
+        Assert.That(serialized.FindProperty("palette").objectReferenceValue, Is.EqualTo(palette));
+        Assert.That(visuals.GetComponent<SpriteRenderer>().sharedMaterial, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Material>(LitMaterialPath)));
+        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(OptionsMenuPath).GetComponentInChildren<OptionsMenuView>(true).Colours, Is.EqualTo(colours));
+        Assert.That(looks.Get(0).AnimationSet.Dyes, Is.Not.Zero, "The adventurer carries palette maps.");
+        Assert.That(looks.Get(looks.IndexOf("Bandit")).AnimationSet.Dyes, Is.Zero, "The Bandit keeps its own colours.");
     }
 
     /// <summary>

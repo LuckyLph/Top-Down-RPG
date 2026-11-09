@@ -6,15 +6,17 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Checks shared by the tests of the baked characters' recipes (the rogue's and the adventurer's): the project's sheets
-/// and animation set of a recipe are what it bakes.
+/// Checks shared by the tests of the baked characters' recipes (the rogue's and the adventurer's): the project's sheets,
+/// their palette maps and the animation set of a recipe are what it bakes.
 /// </summary>
 public static class CharacterSheetAssert
 {
     /// <summary>
     /// Each of the project's sheets of <paramref name="recipe"/> is what it bakes (<paramref name="sheets"/>, by clip
     /// name), imported as sprites at 32 pixels per unit, sliced into one sprite per direction and frame named after the
-    /// character, clip, direction and frame, at its frame's rect with its pivot on the clip's feet pixel.
+    /// character, clip, direction and frame, at its frame's rect with its pivot on the clip's feet pixel. A sheet a player
+    /// colours (Docs/PlayerCharacter.md, Phase 5) has its baked palette map beside it, imported as a single channel (R8),
+    /// linear and point filtered, as its only secondary texture <c>_PaletteMap</c>; any other has neither.
     /// </summary>
     public static void SheetsAreWhatTheRecipeBakes(CharacterRecipe recipe, IReadOnlyDictionary<string, CharacterSheet> sheets)
     {
@@ -28,6 +30,7 @@ public static class CharacterSheetAssert
             Assert.That(importer.spritePixelsPerUnit, Is.EqualTo(CharacterSheetWriter.PixelsPerUnit), path);
             Assert.That(importer.spriteImportMode, Is.EqualTo(SpriteImportMode.Multiple), path);
             Assert.That(importer.filterMode, Is.EqualTo(FilterMode.Point), path);
+            PaletteMapIsWhatTheRecipeBakes(recipe, clip, sheet, importer);
 
             Dictionary<string, Sprite> sprites = AssetDatabase.LoadAllAssetsAtPath(path).OfType<Sprite>().ToDictionary(s => s.name);
             Assert.That(sprites.Count, Is.EqualTo(CharacterDirections.Count * sheet.FrameCount), path);
@@ -47,16 +50,49 @@ public static class CharacterSheetAssert
     }
 
     /// <summary>
+    /// The palette map of <paramref name="clip"/>'s sheet: its baked bytes as grey levels beside the sheet, imported as a
+    /// single channel and the sheet's only secondary texture, or, for a sheet without one, no file and no such texture.
+    /// </summary>
+    private static void PaletteMapIsWhatTheRecipeBakes(CharacterRecipe recipe, CharacterClip clip, CharacterSheet sheet, TextureImporter importer)
+    {
+        string mapPath = CharacterSheetWriter.PaletteMapPath(recipe.SheetName, clip.Name);
+        SecondarySpriteTexture[] secondaries = importer.secondarySpriteTextures ?? new SecondarySpriteTexture[0];
+        if (sheet.PaletteMap == null)
+        {
+            Assert.That(File.Exists(mapPath), Is.False, mapPath);
+            Assert.That(secondaries.Any(secondary => secondary.name == CharacterPaletteMap.MapTextureName), Is.False, clip.Name);
+            return;
+        }
+
+        Color32[] grey = sheet.PaletteMap.Select(code => new Color32(code, code, code, 255)).ToArray();
+        Assert.That(File.ReadAllBytes(mapPath), Is.EqualTo(TerrainMaterialWriter.EncodePng(sheet.Width, sheet.Height, grey)), mapPath);
+        Texture2D map = AssetDatabase.LoadAssetAtPath<Texture2D>(mapPath);
+        Assert.That(map.format, Is.EqualTo(TextureFormat.R8), mapPath);
+        Assert.That(map.filterMode, Is.EqualTo(FilterMode.Point), mapPath);
+        Assert.That(map.isDataSRGB, Is.False, mapPath);
+        Assert.That(map.mipmapCount, Is.EqualTo(1), mapPath);
+        Assert.That(secondaries.Length, Is.EqualTo(1), clip.Name);
+        Assert.That(secondaries[0].name, Is.EqualTo(CharacterPaletteMap.MapTextureName), clip.Name);
+        Assert.That(secondaries[0].texture, Is.EqualTo(map), clip.Name);
+    }
+
+    /// <summary>
     /// The project's animation set of <paramref name="recipe"/> holds every clip of it in order: its name, its motion's
     /// gait, whether it is drawn with a weapon, its motion's frame durations, its natural speed as
     /// <paramref name="baker"/> measures it, its motion's contact (release) frame (none for a gait), the gait frames it is
     /// drawn over (none but for a cast over the run), and for every direction, gait frame and frame the sheet's slice of
-    /// that column. Its locomotion is the unarmed Idle, Walk, Run and Sprint.
+    /// that column. Its locomotion is the unarmed Idle, Walk, Run and Sprint. A recipe whose colours are its own names no
+    /// dyes.
     /// </summary>
     public static void SetHoldsWhatTheRecipeBakes(CharacterRecipe recipe, CharacterBaker baker)
     {
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(recipe));
         Assert.That(set, Is.Not.Null);
+        if (!recipe.HasDyes)
+        {
+            Assert.That(set.Dyes, Is.Zero);
+        }
+
         Assert.That(set.Clips.Count, Is.EqualTo(recipe.Clips.Count));
         for (int i = 0; i < recipe.Clips.Count; i++)
         {

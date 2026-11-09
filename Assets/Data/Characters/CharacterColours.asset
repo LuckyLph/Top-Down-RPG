@@ -1,0 +1,794 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8a11e340e7d0c449b340ee317fc896f, type: 3}
+  m_Name: CharacterColours
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterColours
+  lists:
+  - name: Skin
+    swatches:
+    - name: Fair
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280824924
+        shadow:
+          serializedVersion: 2
+          rgba: 4285171912
+        middle:
+          serializedVersion: 2
+          rgba: 4287805164
+        light:
+          serializedVersion: 2
+          rgba: 4290303738
+      - outline:
+          serializedVersion: 2
+          rgba: 4283457706
+        shadow:
+          serializedVersion: 2
+          rgba: 4283457706
+        middle:
+          serializedVersion: 2
+          rgba: 4283457706
+        light:
+          serializedVersion: 2
+          rgba: 4283457706
+      - outline:
+          serializedVersion: 2
+          rgba: 4286748398
+        shadow:
+          serializedVersion: 2
+          rgba: 4286748398
+        middle:
+          serializedVersion: 2
+          rgba: 4286748398
+        light:
+          serializedVersion: 2
+          rgba: 4286748398
+    - name: Rosy
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4281086560
+        shadow:
+          serializedVersion: 2
+          rgba: 4286617302
+        middle:
+          serializedVersion: 2
+          rgba: 4289513204
+        light:
+          serializedVersion: 2
+          rgba: 4291748604
+      - outline:
+          serializedVersion: 2
+          rgba: 4284376758
+        shadow:
+          serializedVersion: 2
+          rgba: 4284376758
+        middle:
+          serializedVersion: 2
+          rgba: 4284376758
+        light:
+          serializedVersion: 2
+          rgba: 4284376758
+      - outline:
+          serializedVersion: 2
+          rgba: 4287798514
+        shadow:
+          serializedVersion: 2
+          rgba: 4287798514
+        middle:
+          serializedVersion: 2
+          rgba: 4287798514
+        light:
+          serializedVersion: 2
+          rgba: 4287798514
+    - name: Olive
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279773254
+        shadow:
+          serializedVersion: 2
+          rgba: 4282938028
+        middle:
+          serializedVersion: 2
+          rgba: 4285045456
+        light:
+          serializedVersion: 2
+          rgba: 4287545066
+      - outline:
+          serializedVersion: 2
+          rgba: 4282274964
+        shadow:
+          serializedVersion: 2
+          rgba: 4282274964
+        middle:
+          serializedVersion: 2
+          rgba: 4282274964
+        light:
+          serializedVersion: 2
+          rgba: 4282274964
+      - outline:
+          serializedVersion: 2
+          rgba: 4284776662
+        shadow:
+          serializedVersion: 2
+          rgba: 4284776662
+        middle:
+          serializedVersion: 2
+          rgba: 4284776662
+        light:
+          serializedVersion: 2
+          rgba: 4284776662
+    - name: Brown
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279245360
+        shadow:
+          serializedVersion: 2
+          rgba: 4281223802
+        middle:
+          serializedVersion: 2
+          rgba: 4282542240
+        light:
+          serializedVersion: 2
+          rgba: 4284517572
+      - outline:
+          serializedVersion: 2
+          rgba: 4280956520
+        shadow:
+          serializedVersion: 2
+          rgba: 4280956520
+        middle:
+          serializedVersion: 2
+          rgba: 4280956520
+        light:
+          serializedVersion: 2
+          rgba: 4280956520
+      - outline:
+          serializedVersion: 2
+          rgba: 4283195568
+        shadow:
+          serializedVersion: 2
+          rgba: 4283195568
+        middle:
+          serializedVersion: 2
+          rgba: 4283195568
+        light:
+          serializedVersion: 2
+          rgba: 4283195568
+    - name: Deep
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278849052
+        shadow:
+          serializedVersion: 2
+          rgba: 4280167502
+        middle:
+          serializedVersion: 2
+          rgba: 4281090668
+        light:
+          serializedVersion: 2
+          rgba: 4282540176
+      - outline:
+          serializedVersion: 2
+          rgba: 4280033346
+        shadow:
+          serializedVersion: 2
+          rgba: 4280033346
+        middle:
+          serializedVersion: 2
+          rgba: 4280033346
+        light:
+          serializedVersion: 2
+          rgba: 4280033346
+      - outline:
+          serializedVersion: 2
+          rgba: 4281745536
+        shadow:
+          serializedVersion: 2
+          rgba: 4281745536
+        middle:
+          serializedVersion: 2
+          rgba: 4281745536
+        light:
+          serializedVersion: 2
+          rgba: 4281745536
+  - name: Hair
+    swatches:
+    - name: Brown
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279113770
+        shadow:
+          serializedVersion: 2
+          rgba: 4280170592
+        middle:
+          serializedVersion: 2
+          rgba: 4281095308
+        light:
+          serializedVersion: 2
+          rgba: 4282809528
+      - outline:
+          serializedVersion: 2
+          rgba: 4279377978
+        shadow:
+          serializedVersion: 2
+          rgba: 4279377978
+        middle:
+          serializedVersion: 2
+          rgba: 4279377978
+        light:
+          serializedVersion: 2
+          rgba: 4279377978
+    - name: Blonde
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279513674
+        shadow:
+          serializedVersion: 2
+          rgba: 4282156208
+        middle:
+          serializedVersion: 2
+          rgba: 4284527838
+        light:
+          serializedVersion: 2
+          rgba: 4288077046
+      - outline:
+          serializedVersion: 2
+          rgba: 4280967308
+        shadow:
+          serializedVersion: 2
+          rgba: 4280967308
+        middle:
+          serializedVersion: 2
+          rgba: 4280967308
+        light:
+          serializedVersion: 2
+          rgba: 4280967308
+    - name: Black
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279110156
+        shadow:
+          serializedVersion: 2
+          rgba: 4280819748
+        middle:
+          serializedVersion: 2
+          rgba: 4282397754
+        light:
+          serializedVersion: 2
+          rgba: 4284896860
+      - outline:
+          serializedVersion: 2
+          rgba: 4279899160
+        shadow:
+          serializedVersion: 2
+          rgba: 4279899160
+        middle:
+          serializedVersion: 2
+          rgba: 4279899160
+        light:
+          serializedVersion: 2
+          rgba: 4279899160
+    - name: Ginger
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278850618
+        shadow:
+          serializedVersion: 2
+          rgba: 4280172182
+        middle:
+          serializedVersion: 2
+          rgba: 4281098438
+        light:
+          serializedVersion: 2
+          rgba: 4283338986
+      - outline:
+          serializedVersion: 2
+          rgba: 4279774832
+        shadow:
+          serializedVersion: 2
+          rgba: 4279774832
+        middle:
+          serializedVersion: 2
+          rgba: 4279774832
+        light:
+          serializedVersion: 2
+          rgba: 4279774832
+    - name: Silver
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4282660920
+        shadow:
+          serializedVersion: 2
+          rgba: 4289108118
+        middle:
+          serializedVersion: 2
+          rgba: 4292003524
+        light:
+          serializedVersion: 2
+          rgba: 4294242028
+      - outline:
+          serializedVersion: 2
+          rgba: 4286345328
+        shadow:
+          serializedVersion: 2
+          rgba: 4286345328
+        middle:
+          serializedVersion: 2
+          rgba: 4286345328
+        light:
+          serializedVersion: 2
+          rgba: 4286345328
+  - name: Eyes
+    swatches:
+    - name: Dark
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280423966
+        shadow:
+          serializedVersion: 2
+          rgba: 4280423966
+        middle:
+          serializedVersion: 2
+          rgba: 4280423966
+        light:
+          serializedVersion: 2
+          rgba: 4280423966
+      - outline:
+          serializedVersion: 2
+          rgba: 4292267204
+        shadow:
+          serializedVersion: 2
+          rgba: 4292267204
+        middle:
+          serializedVersion: 2
+          rgba: 4292267204
+        light:
+          serializedVersion: 2
+          rgba: 4292267204
+    - name: Blue
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4286595624
+        shadow:
+          serializedVersion: 2
+          rgba: 4286595624
+        middle:
+          serializedVersion: 2
+          rgba: 4286595624
+        light:
+          serializedVersion: 2
+          rgba: 4286595624
+      - outline:
+          serializedVersion: 2
+          rgba: 4292267204
+        shadow:
+          serializedVersion: 2
+          rgba: 4292267204
+        middle:
+          serializedVersion: 2
+          rgba: 4292267204
+        light:
+          serializedVersion: 2
+          rgba: 4292267204
+    - name: Green
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4281487906
+        shadow:
+          serializedVersion: 2
+          rgba: 4281487906
+        middle:
+          serializedVersion: 2
+          rgba: 4281487906
+        light:
+          serializedVersion: 2
+          rgba: 4281487906
+      - outline:
+          serializedVersion: 2
+          rgba: 4292267204
+        shadow:
+          serializedVersion: 2
+          rgba: 4292267204
+        middle:
+          serializedVersion: 2
+          rgba: 4292267204
+        light:
+          serializedVersion: 2
+          rgba: 4292267204
+    - name: Brown
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279774804
+        shadow:
+          serializedVersion: 2
+          rgba: 4279774804
+        middle:
+          serializedVersion: 2
+          rgba: 4279774804
+        light:
+          serializedVersion: 2
+          rgba: 4279774804
+      - outline:
+          serializedVersion: 2
+          rgba: 4292267204
+        shadow:
+          serializedVersion: 2
+          rgba: 4292267204
+        middle:
+          serializedVersion: 2
+          rgba: 4292267204
+        light:
+          serializedVersion: 2
+          rgba: 4292267204
+  - name: Cloth
+    swatches:
+    - name: Blue
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4281212440
+        shadow:
+          serializedVersion: 2
+          rgba: 4287389766
+        middle:
+          serializedVersion: 2
+          rgba: 4289757280
+        light:
+          serializedVersion: 2
+          rgba: 4292258956
+    - name: Red
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279373870
+        shadow:
+          serializedVersion: 2
+          rgba: 4280821376
+        middle:
+          serializedVersion: 2
+          rgba: 4281612458
+        light:
+          serializedVersion: 2
+          rgba: 4283457750
+    - name: Green
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279641106
+        shadow:
+          serializedVersion: 2
+          rgba: 4282016308
+        middle:
+          serializedVersion: 2
+          rgba: 4283204682
+        light:
+          serializedVersion: 2
+          rgba: 4285049460
+    - name: Purple
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4281078818
+        shadow:
+          serializedVersion: 2
+          rgba: 4286069340
+        middle:
+          serializedVersion: 2
+          rgba: 4288435324
+        light:
+          serializedVersion: 2
+          rgba: 4291068070
+    - name: Mustard
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278855220
+        shadow:
+          serializedVersion: 2
+          rgba: 4280580770
+        middle:
+          serializedVersion: 2
+          rgba: 4282032332
+        light:
+          serializedVersion: 2
+          rgba: 4285581546
+    - name: Teal
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280821260
+        shadow:
+          serializedVersion: 2
+          rgba: 4285295142
+        middle:
+          serializedVersion: 2
+          rgba: 4287401530
+        light:
+          serializedVersion: 2
+          rgba: 4289772140
+    - name: Navy
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280422926
+        shadow:
+          serializedVersion: 2
+          rgba: 4283707430
+        middle:
+          serializedVersion: 2
+          rgba: 4285678646
+        light:
+          serializedVersion: 2
+          rgba: 4288046676
+    - name: Charcoal
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279504912
+        shadow:
+          serializedVersion: 2
+          rgba: 4281740846
+        middle:
+          serializedVersion: 2
+          rgba: 4283187778
+        light:
+          serializedVersion: 2
+          rgba: 4285424226
+    - name: Beige
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280164388
+        shadow:
+          serializedVersion: 2
+          rgba: 4286221462
+        middle:
+          serializedVersion: 2
+          rgba: 4288985796
+        light:
+          serializedVersion: 2
+          rgba: 4291617000
+    - name: Linen
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280821288
+        shadow:
+          serializedVersion: 2
+          rgba: 4289375920
+        middle:
+          serializedVersion: 2
+          rgba: 4292008668
+        light:
+          serializedVersion: 2
+          rgba: 4293719286
+    - name: Grey
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280294942
+        shadow:
+          serializedVersion: 2
+          rgba: 4284768352
+        middle:
+          serializedVersion: 2
+          rgba: 4286873728
+        light:
+          serializedVersion: 2
+          rgba: 4289373862
+    - name: Umber
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279506972
+        shadow:
+          serializedVersion: 2
+          rgba: 4282009168
+        middle:
+          serializedVersion: 2
+          rgba: 4283589230
+        light:
+          serializedVersion: 2
+          rgba: 4285564050
+  - name: Leather
+    swatches:
+    - name: Brown
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278849046
+        shadow:
+          serializedVersion: 2
+          rgba: 4280299078
+        middle:
+          serializedVersion: 2
+          rgba: 4281090144
+        light:
+          serializedVersion: 2
+          rgba: 4282276482
+    - name: Saddle
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278849562
+        shadow:
+          serializedVersion: 2
+          rgba: 4280169554
+        middle:
+          serializedVersion: 2
+          rgba: 4281092720
+        light:
+          serializedVersion: 2
+          rgba: 4282411158
+    - name: Black
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278848012
+        shadow:
+          serializedVersion: 2
+          rgba: 4280295462
+        middle:
+          serializedVersion: 2
+          rgba: 4281479738
+        light:
+          serializedVersion: 2
+          rgba: 4283190872
+    - name: Tan
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279114280
+        shadow:
+          serializedVersion: 2
+          rgba: 4281621124
+        middle:
+          serializedVersion: 2
+          rgba: 4282939562
+        light:
+          serializedVersion: 2
+          rgba: 4285046990
+    - name: Oxblood
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4278848028
+        shadow:
+          serializedVersion: 2
+          rgba: 4280163924
+        middle:
+          serializedVersion: 2
+          rgba: 4280822898
+        light:
+          serializedVersion: 2
+          rgba: 4282271896
+  - name: Metal
+    swatches:
+    - name: Brass
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279118908
+        shadow:
+          serializedVersion: 2
+          rgba: 4280841366
+        middle:
+          serializedVersion: 2
+          rgba: 4282820814
+        light:
+          serializedVersion: 2
+          rgba: 4287421684
+    - name: Silver
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4281477672
+        shadow:
+          serializedVersion: 2
+          rgba: 4287792770
+        middle:
+          serializedVersion: 2
+          rgba: 4291082420
+        light:
+          serializedVersion: 2
+          rgba: 4293978856
+    - name: Iron
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4280031256
+        shadow:
+          serializedVersion: 2
+          rgba: 4283451462
+        middle:
+          serializedVersion: 2
+          rgba: 4285687910
+        light:
+          serializedVersion: 2
+          rgba: 4288319630
+    - name: Copper
+      ramps:
+      - outline:
+          serializedVersion: 2
+          rgba: 4279114296
+        shadow:
+          serializedVersion: 2
+          rgba: 4281093270
+        middle:
+          serializedVersion: 2
+          rgba: 4282412228
+        light:
+          serializedVersion: 2
+          rgba: 4285571304
+  choices:
+  - name: Skin
+    list: Skin
+    own: Fair
+    dyes: 010000000200000003000000
+  - name: Hair
+    list: Hair
+    own: Brown
+    dyes: 0400000005000000
+  - name: Eyes
+    list: Eyes
+    own: Dark
+    dyes: 0600000007000000
+  - name: Tunic
+    list: Cloth
+    own: Blue
+    dyes: 08000000
+  - name: Shirt
+    list: Cloth
+    own: Beige
+    dyes: 09000000
+  - name: Trousers
+    list: Cloth
+    own: Umber
+    dyes: 0a000000
+  - name: Boots
+    list: Leather
+    own: Brown
+    dyes: 0b000000
+  - name: Belt
+    list: Leather
+    own: Saddle
+    dyes: 0c000000
+  - name: Buckle
+    list: Metal
+    own: Brass
+    dyes: 0d000000
+  - name: Gloves
+    list: Leather
+    own: Brown
+    dyes: 0e000000
+  - name: Strap
+    list: Leather
+    own: Saddle
+    dyes: 0f000000
+  - name: Pouch
+    list: Leather
+    own: Saddle
+    dyes: 10000000

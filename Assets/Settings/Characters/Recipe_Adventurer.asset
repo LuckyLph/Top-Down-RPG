@@ -275,6 +275,19 @@ MonoBehaviour:
     light:
       serializedVersion: 2
       rgba: 4283457706
+  mouthInside:
+    outline:
+      serializedVersion: 2
+      rgba: 4279377978
+    shadow:
+      serializedVersion: 2
+      rgba: 4279377978
+    middle:
+      serializedVersion: 2
+      rgba: 4279377978
+    light:
+      serializedVersion: 2
+      rgba: 4279377978
   blushColour:
     outline:
       serializedVersion: 2
@@ -392,3 +405,29 @@ MonoBehaviour:
     light:
       serializedVersion: 2
       rgba: 4282276482
+  strapColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849562
+    shadow:
+      serializedVersion: 2
+      rgba: 4280169554
+    middle:
+      serializedVersion: 2
+      rgba: 4281092720
+    light:
+      serializedVersion: 2
+      rgba: 4282411158
+  pouch:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849562
+    shadow:
+      serializedVersion: 2
+      rgba: 4280169554
+    middle:
+      serializedVersion: 2
+      rgba: 4281092720
+    light:
+      serializedVersion: 2
+      rgba: 4282411158

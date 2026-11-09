@@ -18,7 +18,10 @@ using UnityEngine;
 /// mouth; its attacks are its own, two a weapon, each ending with the weapon where the other starts, styled while the
 /// rogue's stay plain; its casts are its own and styled, the whirl and the sweep spinning a whole turn and the roll
 /// unarmed, while the rogue's stay plain; a spin turns the whole character; a cast over the run takes the cast's spin and
-/// adds its style to the run's; and the project's sheets and animation set are what the recipe bakes.
+/// adds its style to the run's; its palette maps name the dye and tone of every pixel a player colours, in the colours
+/// the recipe gives the dye's material, and none for the weapons, the casts' light and the inside of the mouth; its set
+/// names the dyes its sheets carry, and the outfit's options carry their own; and the project's sheets, their palette
+/// maps and the animation set are what the recipe bakes.
 /// </summary>
 public class AdventurerRecipeTests
 {
@@ -160,8 +163,8 @@ public class AdventurerRecipeTests
 
     /// <summary>
     /// The outfit's options draw as set: the project's adventurer wears long shirt sleeves, bare hands and no strap;
-    /// short sleeves bare the forearms, gloves cover the hands, the strap crosses the chest, and without a skirt less
-    /// of the tunic shows.
+    /// short sleeves bare the forearms, gloves cover the hands, the strap crosses the chest in a material of its own, and
+    /// without a skirt less of the tunic shows.
     /// </summary>
     [Test]
     public void TheOutfitsOptions_DrawAsTheRecipeSetsThem()
@@ -170,7 +173,7 @@ public class AdventurerRecipeTests
         Assert.That(recipe.Sleeves, Is.EqualTo(AdventurerSleeves.Long));
         Assert.That(MaterialOn(plain, CharacterMaterial.Skin, CharacterPart.LeftForearm, CharacterPart.RightForearm), Is.Zero);
         Assert.That(MaterialOn(plain, CharacterMaterial.Skin, CharacterPart.LeftHand, CharacterPart.RightHand), Is.Positive);
-        Assert.That(MaterialOn(plain, CharacterMaterial.Belt, CharacterPart.Strap), Is.Zero);
+        Assert.That(plain.Count(CharacterMaterial.Strap) + plain.Count(CharacterMaterial.Pouch), Is.Zero);
 
         CharacterCanvas shortSleeves = new CharacterBaker(Copy("{\"sleeves\":1}")).Render(idle, South, 0);
         Assert.That(MaterialOn(shortSleeves, CharacterMaterial.Skin, CharacterPart.LeftForearm, CharacterPart.RightForearm), Is.Positive);
@@ -181,7 +184,8 @@ public class AdventurerRecipeTests
         Assert.That(MaterialOn(gloved, CharacterMaterial.Gloves, CharacterPart.LeftHand, CharacterPart.RightHand), Is.Positive);
 
         CharacterCanvas strapped = new CharacterBaker(Copy("{\"strap\":true}")).Render(idle, South, 0);
-        Assert.That(MaterialOn(strapped, CharacterMaterial.Belt, CharacterPart.Strap), Is.Positive);
+        Assert.That(MaterialOn(strapped, CharacterMaterial.Strap, CharacterPart.Strap), Is.Positive);
+        Assert.That(MaterialOn(strapped, CharacterMaterial.Belt, CharacterPart.Strap), Is.Zero);
 
         CharacterCanvas skirtless = new CharacterBaker(Copy("{\"skirtLength\":0}")).Render(idle, South, 0);
         Assert.That(skirtless.Count(CharacterMaterial.Jerkin), Is.LessThan(plain.Count(CharacterMaterial.Jerkin)));
@@ -590,13 +594,13 @@ public class AdventurerRecipeTests
 
     /// <summary>
     /// Facing south, on every frame of the yawn whose pose shuts the eyes each eye is a line without its glint, and on
-    /// every frame whose pose opens the mouth the rows below its line are dark, so a yawn reads at this size.
+    /// every frame whose pose opens the mouth the rows below its line are the inside of the mouth, dark, so a yawn reads
+    /// at this size: a material of its own, not the brows', which a player's colours give the hair's.
     /// </summary>
     [Test]
     public void TheYawn_ShutsTheEyes_AndOpensTheMouth()
     {
         CharacterClip yawn = recipe.Clips.First(clip => clip.Name == "IdleYawn");
-        CharacterCanvas standing = baker.Render(idle, South, 0);
         int mouthWidth = Mathf.RoundToInt(recipe.Mouth.y);
         int shut = 0;
         int open = 0;
@@ -616,12 +620,95 @@ public class AdventurerRecipeTests
             {
                 open++;
                 Assert.That(canvas.Count(CharacterMaterial.Mouth), Is.EqualTo(mouthWidth), $"frame {frame}");
-                Assert.That(canvas.Count(CharacterMaterial.Brow), Is.GreaterThanOrEqualTo(standing.Count(CharacterMaterial.Brow) + mouthWidth), $"frame {frame}");
+                Assert.That(canvas.Count(CharacterMaterial.MouthInside), Is.GreaterThanOrEqualTo(mouthWidth), $"frame {frame}");
             }
         }
 
         Assert.That(shut, Is.GreaterThan(0));
         Assert.That(open, Is.GreaterThan(0));
+    }
+
+    /// <summary>
+    /// Every pixel of every sheet whose palette map names a dye and tone (Docs/PlayerCharacter.md, Phase 5) is that tone
+    /// of the ramp the recipe gives the dye's material, one material a dye, so a palette of the recipe's own ramps draws
+    /// every sheet exactly; and on the slash's contact frame, the bolt's release and the yawn, every drawn pixel names the
+    /// dye of its material, and none for the sword, the cast's light and the inside of the open mouth, whose colours
+    /// stay.
+    /// </summary>
+    [Test]
+    public void ThePaletteMaps_NameTheDyeAndToneOfEveryPixelAPlayerColours()
+    {
+        Dictionary<CharacterDye, CharacterMaterial> materialOf = new();
+        for (int m = 0; m < CharacterMaterials.Count; m++)
+        {
+            CharacterDye dye = recipe.DyeOf((CharacterMaterial)m);
+            if (dye != CharacterDye.None)
+            {
+                materialOf.Add(dye, (CharacterMaterial)m);
+            }
+        }
+
+        int dyed = 0;
+        int wrong = 0;
+        foreach (CharacterSheet sheet in Sheets.Values)
+        {
+            Assert.That(sheet.PaletteMap, Is.Not.Null, sheet.Clip.Name);
+            for (int i = 0; i < sheet.PaletteMap.Length; i++)
+            {
+                byte code = sheet.PaletteMap[i];
+                if (code == 0)
+                {
+                    continue;
+                }
+
+                dyed++;
+                bool known = materialOf.TryGetValue(CharacterPaletteMap.DyeOf(code), out CharacterMaterial material);
+                wrong += known && recipe.Ramp(material).Tone(CharacterPaletteMap.ToneOf(code)).Equals(sheet.Pixels[i]) ? 0 : 1;
+            }
+        }
+
+        Assert.That(dyed, Is.GreaterThan(0));
+        Assert.That(wrong, Is.Zero, $"of {dyed} dyed pixels");
+
+        CharacterClip slash = recipe.Clips.First(clip => clip.Name == "SwordSlash");
+        CharacterClip bolt = recipe.Clips.First(clip => clip.Name == "CastBolt");
+        CharacterClip yawn = recipe.Clips.First(clip => clip.Name == "IdleYawn");
+        Assert.That(KeptPixels(slash, East, slash.Motion.ContactFrame, CharacterMaterials.IsWeapons), Is.Positive, "the sword");
+        Assert.That(KeptPixels(bolt, South, bolt.Motion.ContactFrame, CharacterMaterials.IsLight), Is.Positive, "the cast's light");
+        int mouth = 0;
+        for (int frame = 0; frame < yawn.Motion.FrameCount; frame++)
+        {
+            mouth += KeptPixels(yawn, South, frame, material => material == CharacterMaterial.MouthInside);
+        }
+
+        Assert.That(mouth, Is.Positive, "the inside of the mouth");
+    }
+
+    /// <summary>
+    /// The project's animation set names the dyes its sheets' palette maps carry: from the skin to the buckle, not the
+    /// blush, the gloves, the strap or the pouch the outfit does not draw; an adventurer drawn with them carries theirs
+    /// too.
+    /// </summary>
+    [Test]
+    public void TheAnimationSet_NamesTheDyesItsSheetsCarry()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(recipe));
+        Assert.That(set.Dyes, Is.EqualTo(Sheets.Values.Aggregate(0, (dyes, sheet) => dyes | sheet.Dyes)));
+        CharacterDye[] carried =
+        {
+            CharacterDye.Skin, CharacterDye.Mouth, CharacterDye.Hair, CharacterDye.Brows, CharacterDye.Eyes, CharacterDye.EyeGlint,
+            CharacterDye.Tunic, CharacterDye.Shirt, CharacterDye.Trousers, CharacterDye.Boots, CharacterDye.Belt, CharacterDye.Buckle
+        };
+        foreach (CharacterDye dye in System.Enum.GetValues(typeof(CharacterDye)))
+        {
+            Assert.That(set.Carries(dye), Is.EqualTo(carried.Contains(dye)), dye.ToString());
+        }
+
+        CharacterSheet dressed = new CharacterBaker(Copy("{\"gloves\":true,\"strap\":true,\"blush\":{\"x\":24,\"y\":-20}}")).Bake(idle);
+        foreach (CharacterDye dye in new[] { CharacterDye.Gloves, CharacterDye.Strap, CharacterDye.Blush })
+        {
+            Assert.That(dressed.Dyes & (1 << (int)dye), Is.Not.Zero, dye.ToString());
+        }
     }
 
     /// <summary>
@@ -642,6 +729,38 @@ public class AdventurerRecipeTests
     public void TheProjectsAnimationSet_HoldsWhatTheRecipeBakes()
     {
         CharacterSheetAssert.SetHoldsWhatTheRecipeBakes(recipe, baker);
+    }
+
+    /// <summary>
+    /// How many drawn pixels of <paramref name="clip"/>'s frame <paramref name="frame"/> facing
+    /// <paramref name="direction"/> are of a material <paramref name="kept"/> accepts and name no dye in its palette map;
+    /// asserts that every drawn pixel names the dye of its material.
+    /// </summary>
+    private int KeptPixels(CharacterClip clip, int direction, int frame, System.Func<CharacterMaterial, bool> kept)
+    {
+        CharacterCanvas canvas = baker.Render(clip, direction, frame);
+        byte[] codes = baker.PaletteMap(canvas);
+        int count = 0;
+        int wrong = 0;
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                if (!canvas.IsFilled(x, y))
+                {
+                    continue;
+                }
+
+                CharacterMaterial material = canvas.MaterialAt(x, y);
+                byte code = codes[y * canvas.Width + x];
+                CharacterDye named = code == 0 ? CharacterDye.None : CharacterPaletteMap.DyeOf(code);
+                wrong += named == recipe.DyeOf(material) ? 0 : 1;
+                count += kept(material) && code == 0 ? 1 : 0;
+            }
+        }
+
+        Assert.That(wrong, Is.Zero, $"{clip.Name} {direction} {frame}");
+        return count;
     }
 
     /// <summary>

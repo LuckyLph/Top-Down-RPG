@@ -14,7 +14,8 @@ public enum AdventurerSleeves
 /// <summary>
 /// The adventurer's <see cref="CharacterRecipe"/>, the player's base body: boots, a tunic over a shirt, a bare head with
 /// its ears, its hair and its locks, the face laid out on it by angle, and its palette, drawn by an
-/// <see cref="AdventurerPainter"/>.
+/// <see cref="AdventurerPainter"/>. Every material but the inside of the mouth takes a player's colours
+/// (<see cref="DyeOf"/>, Docs/PlayerCharacter.md, Phase 5), its ramps here being the ones the sheets are baked in.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Adventurer Recipe", fileName = "Recipe_Adventurer")]
 public sealed class AdventurerRecipe : CharacterRecipe
@@ -75,6 +76,8 @@ public sealed class AdventurerRecipe : CharacterRecipe
     [SerializeField] private ColourRamp eyeGlintColour = Colours(250, 248, 240, 250, 248, 240, 250, 248, 240, 250, 248, 240);
     [SerializeField] private ColourRamp brow = Colours(70, 40, 22, 70, 40, 22, 70, 40, 22, 70, 40, 22);
     [SerializeField] private ColourRamp mouthColour = Colours(170, 96, 80, 170, 96, 80, 170, 96, 80, 170, 96, 80);
+    [Tooltip("The inside of an open mouth.")]
+    [SerializeField] private ColourRamp mouthInside = Colours(58, 32, 18, 58, 32, 18, 58, 32, 18, 58, 32, 18);
     [SerializeField] private ColourRamp blushColour = Colours(238, 150, 130, 238, 150, 130, 238, 150, 130, 238, 150, 130);
     [SerializeField] private ColourRamp hair = Colours(42, 24, 14, 96, 56, 30, 140, 84, 44, 184, 124, 70);
     [SerializeField] private ColourRamp tunic = Colours(24, 30, 46, 70, 96, 140, 96, 128, 176, 140, 172, 214);
@@ -84,6 +87,10 @@ public sealed class AdventurerRecipe : CharacterRecipe
     [SerializeField] private ColourRamp belt = Colours(26, 16, 10, 82, 52, 30, 112, 74, 44, 150, 104, 64);
     [SerializeField] private ColourRamp fittings = Colours(60, 44, 14, 150, 116, 40, 206, 168, 70, 244, 220, 140);
     [SerializeField] private ColourRamp glovesColour = Colours(22, 14, 10, 70, 46, 32, 96, 64, 44, 130, 90, 62);
+    [Tooltip("The satchel's strap.")]
+    [SerializeField] private ColourRamp strapColour = Colours(26, 16, 10, 82, 52, 30, 112, 74, 44, 150, 104, 64);
+    [Tooltip("The satchel's pouch.")]
+    [SerializeField] private ColourRamp pouch = Colours(26, 16, 10, 82, 52, 30, 112, 74, 44, 150, 104, 64);
 
     public float BootSize => bootSize;
     public float BootTop => bootTop;
@@ -123,6 +130,8 @@ public sealed class AdventurerRecipe : CharacterRecipe
                 return brow;
             case CharacterMaterial.Mouth:
                 return mouthColour;
+            case CharacterMaterial.MouthInside:
+                return mouthInside;
             case CharacterMaterial.Blush:
                 return blushColour;
             case CharacterMaterial.Hair:
@@ -139,9 +148,38 @@ public sealed class AdventurerRecipe : CharacterRecipe
                 return belt;
             case CharacterMaterial.Gloves:
                 return glovesColour;
+            case CharacterMaterial.Strap:
+                return strapColour;
+            case CharacterMaterial.Pouch:
+                return pouch;
             default:
                 return fittings;
         }
+    }
+
+    /// <inheritdoc />
+    public override CharacterDye DyeOf(CharacterMaterial material)
+    {
+        return material switch
+        {
+            CharacterMaterial.Skin => CharacterDye.Skin,
+            CharacterMaterial.Mouth => CharacterDye.Mouth,
+            CharacterMaterial.Blush => CharacterDye.Blush,
+            CharacterMaterial.Hair => CharacterDye.Hair,
+            CharacterMaterial.Brow => CharacterDye.Brows,
+            CharacterMaterial.Eye => CharacterDye.Eyes,
+            CharacterMaterial.EyeGlint => CharacterDye.EyeGlint,
+            CharacterMaterial.Jerkin => CharacterDye.Tunic,
+            CharacterMaterial.Shirt => CharacterDye.Shirt,
+            CharacterMaterial.Trousers => CharacterDye.Trousers,
+            CharacterMaterial.Boots => CharacterDye.Boots,
+            CharacterMaterial.Belt => CharacterDye.Belt,
+            CharacterMaterial.Fittings => CharacterDye.Buckle,
+            CharacterMaterial.Gloves => CharacterDye.Gloves,
+            CharacterMaterial.Strap => CharacterDye.Strap,
+            CharacterMaterial.Pouch => CharacterDye.Pouch,
+            _ => CharacterDye.None
+        };
     }
 
     /// <inheritdoc />

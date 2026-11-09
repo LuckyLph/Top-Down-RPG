@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
 
 /// <summary>
 /// The local machine's preferences, read once when created and written on every change: the key binding overrides, the
-/// name of the look the local player is drawn with (Docs/AsepriteCharacters.md, Phase 2), and this install's player id
+/// name of the look the local player is drawn with (Docs/AsepriteCharacters.md, Phase 2), the swatch picked for each of
+/// its colour choices (Docs/PlayerCharacter.md, Phase 5), and this install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -18,6 +20,7 @@ public sealed class UserSettings
     private string inputBindingOverrides = string.Empty;
     private string playerId = string.Empty;
     private string characterLook = string.Empty;
+    private readonly List<UserColourPick> characterColours = new();
     private bool isReadOnly;
 
     /// <summary>
@@ -34,11 +37,33 @@ public sealed class UserSettings
     /// </summary>
     public event Action CharacterLookChanged;
 
+    /// <summary>
+    /// Raised when <see cref="SetCharacterColour"/> changes a colour choice.
+    /// </summary>
+    public event Action CharacterColoursChanged;
+
     /// <summary>The key binding overrides as written by the Input System, or an empty string for the defaults.</summary>
     public string InputBindingOverrides => inputBindingOverrides;
 
     /// <summary>The name of the look the local player is drawn with, or an empty string for the player's own.</summary>
     public string CharacterLook => characterLook;
+
+    /// <summary>
+    /// The name of the swatch picked for the colour choice named <paramref name="choice"/>, or an empty string for the
+    /// choice's own.
+    /// </summary>
+    public string CharacterColour(string choice)
+    {
+        foreach (UserColourPick pick in characterColours)
+        {
+            if (pick.Choice == choice)
+            {
+                return pick.Swatch;
+            }
+        }
+
+        return string.Empty;
+    }
 
     /// <summary>
     /// This install's player id, which a joining client sends the host. The first read makes a new GUID and writes the
@@ -89,11 +114,35 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// Keeps <paramref name="swatchName"/> as the swatch picked for the colour choice named <paramref name="choice"/>
+    /// (an empty name goes back to the choice's own, forgetting the pick), writes the file unless it came from a newer
+    /// build, and raises <see cref="CharacterColoursChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetCharacterColour(string choice, string swatchName)
+    {
+        string swatch = swatchName ?? string.Empty;
+        if (string.IsNullOrEmpty(choice) || swatch == CharacterColour(choice))
+        {
+            return false;
+        }
+
+        characterColours.RemoveAll(pick => pick.Choice == choice);
+        if (swatch.Length > 0)
+        {
+            characterColours.Add(new UserColourPick(choice, swatch));
+        }
+
+        bool written = Write();
+        CharacterColoursChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
     /// Writes every setting to the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours).ToJson());
     }
 
     /// <summary>
@@ -129,5 +178,12 @@ public sealed class UserSettings
         inputBindingOverrides = data.InputBindingOverrides;
         playerId = data.PlayerId;
         characterLook = data.CharacterLook;
+        foreach (UserColourPick pick in data.CharacterColours)
+        {
+            if (pick.Choice.Length > 0 && pick.Swatch.Length > 0 && CharacterColour(pick.Choice).Length == 0)
+            {
+                characterColours.Add(pick);
+            }
+        }
     }
 }

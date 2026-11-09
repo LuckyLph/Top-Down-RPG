@@ -4,23 +4,42 @@ using UnityEngine;
 /// <summary>
 /// Every clip a character's recipe bakes (Docs/Animation.md, Runtime), written beside its sheets by the character
 /// baker's Generate: per clip the sprites by direction and frame, each frame's duration at natural speed, and for a
-/// gait its natural speed, and for an attack its contact frame. <see cref="CharacterAnimator"/> plays it; runtime code
-/// only reads it.
+/// gait its natural speed, and for an attack its contact frame, and which dyes its sheets' palette maps name
+/// (<see cref="Dyes"/>, Docs/PlayerCharacter.md, Phase 5). <see cref="CharacterAnimator"/> plays it; runtime code only
+/// reads it.
 /// </summary>
 public sealed class CharacterAnimationSet : ScriptableObject
 {
     [SerializeField] private List<CharacterAnimationClip> clips = new();
+    [SerializeField, Tooltip("The dyes its sheets' palette maps name, a bit per CharacterDye: what a player's colours change on it. None for sheets without palette maps.")]
+    private int dyes;
 
     public IReadOnlyList<CharacterAnimationClip> Clips => clips;
 
     /// <summary>
-    /// Creates an unsaved set holding <paramref name="setClips"/>, for the baker and tests.
+    /// The dyes the sheets' palette maps name, a bit per <see cref="CharacterDye"/> (1 &lt;&lt; dye): what a player's
+    /// colours change on this character. 0 for sheets without palette maps, drawn in their own colours only.
     /// </summary>
-    public static CharacterAnimationSet Create(IEnumerable<CharacterAnimationClip> setClips)
+    public int Dyes => dyes;
+
+    /// <summary>
+    /// Creates an unsaved set holding <paramref name="setClips"/> whose sheets' palette maps name
+    /// <paramref name="setDyes"/>, for the baker and tests.
+    /// </summary>
+    public static CharacterAnimationSet Create(IEnumerable<CharacterAnimationClip> setClips, int setDyes = 0)
     {
         CharacterAnimationSet set = CreateInstance<CharacterAnimationSet>();
         set.clips = new List<CharacterAnimationClip>(setClips);
+        set.dyes = setDyes;
         return set;
+    }
+
+    /// <summary>
+    /// Whether the sheets' palette maps name <paramref name="dye"/>.
+    /// </summary>
+    public bool Carries(CharacterDye dye)
+    {
+        return dye != CharacterDye.None && (dyes & (1 << (int)dye)) != 0;
     }
 
     /// <summary>

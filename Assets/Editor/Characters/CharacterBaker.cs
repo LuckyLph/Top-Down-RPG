@@ -9,7 +9,9 @@ using UnityEngine;
 /// (<see cref="CharacterCanvas.LightCentre"/>, <see cref="CharacterCanvas.LightStrength"/>), direction by direction and
 /// within each frame by frame. For a character carrying a lantern, also its layer: laid out as the sheet, the pixels the
 /// lantern changes on each frame (every other pixel clear), so drawn over the sheet they give the frame drawn with it,
-/// which of those pixels glow, and where the lantern shines from on each frame.
+/// which of those pixels glow, and where the lantern shines from on each frame. For a character a player can colour
+/// (Docs/PlayerCharacter.md, Phase 5), also its palette map: laid out as the sheet, a byte per pixel naming its dye and
+/// tone (<see cref="CharacterPaletteMap"/>), and the dyes it names.
 /// </summary>
 public sealed class CharacterSheet
 {
@@ -17,7 +19,7 @@ public sealed class CharacterSheet
     /// Creates the sheet of <paramref name="clip"/> from its pixels.
     /// </summary>
     public CharacterSheet(CharacterClip clip, int frameCount, Color32[] pixels, IReadOnlyList<string> framesAtEdge, Vector2[] lightCentres, float[] lightStrengths,
-        Color32[] lanternPixels = null, Color32[] lanternGlow = null, Vector2[] lanternCentres = null)
+        Color32[] lanternPixels = null, Color32[] lanternGlow = null, Vector2[] lanternCentres = null, byte[] paletteMap = null)
     {
         Clip = clip;
         FrameCount = frameCount;
@@ -30,6 +32,16 @@ public sealed class CharacterSheet
         LanternPixels = lanternPixels;
         LanternGlow = lanternGlow;
         LanternCentres = lanternCentres;
+        PaletteMap = paletteMap;
+        if (paletteMap == null)
+        {
+            return;
+        }
+
+        foreach (byte code in paletteMap)
+        {
+            Dyes |= code > 0 ? 1 << (int)CharacterPaletteMap.DyeOf(code) : 0;
+        }
     }
 
     public CharacterClip Clip { get; }
@@ -67,6 +79,17 @@ public sealed class CharacterSheet
     public Vector2[] LanternCentres { get; }
 
     /// <summary>
+    /// The palette map, laid out as <see cref="Pixels"/>: per pixel its dye and tone (<see cref="CharacterPaletteMap.Code"/>),
+    /// 0 where the sheet's colour stays; null for a character whose colours are its own.
+    /// </summary>
+    public byte[] PaletteMap { get; }
+
+    /// <summary>
+    /// The dyes the palette map names, a bit per <see cref="CharacterDye"/>; 0 without one.
+    /// </summary>
+    public int Dyes { get; }
+
+    /// <summary>
     /// Whether the clip's frames carry a lantern.
     /// </summary>
     public bool HasLantern => LanternPixels != null;
@@ -89,8 +112,9 @@ public sealed class CharacterSheet
 /// the recipe's <see cref="CharacterPainter"/> onto a <see cref="CharacterCanvas"/> of the clip's frame size with the feet on its
 /// pivot, and shaded with the recipe's, the weapon's and the motion's light colours. A recipe carrying a lantern has it
 /// painted over each frame once the frame is shaded (<see cref="DrawLantern"/>), and the pixels that changed are the
-/// frame's lantern layer, so the sheets themselves stay as they are without it. The same recipe always gives the same
-/// pixels.
+/// frame's lantern layer, so the sheets themselves stay as they are without it. A recipe whose materials take a
+/// player's colours (<see cref="CharacterRecipe.HasDyes"/>) also gets each frame's palette map (<see cref="PaletteMap"/>).
+/// The same recipe always gives the same pixels.
 /// </summary>
 public sealed class CharacterBaker
 {
@@ -100,6 +124,7 @@ public sealed class CharacterBaker
     private const int ScaleSteps = 40;
 
     private static readonly List<MotionEffect> NoEffects = new();
+    private static readonly ColourRamp[] MaterialTones = MaterialToneRamps();
 
     private readonly CharacterRecipe recipe;
 
@@ -145,6 +170,7 @@ public sealed class CharacterBaker
         Vector2[] lightCentres = new Vector2[CharacterDirections.Count * frames];
         float[] lightStrengths = new float[lightCentres.Length];
         bool carries = recipe.Lantern != null;
+        byte[] paletteMap = recipe.HasDyes ? new byte[pixels.Length] : null;
         Color32[] lanternPixels = carries ? new Color32[pixels.Length] : null;
         Color32[] lanternGlow = carries ? new Color32[pixels.Length] : null;
         Vector2[] lanternCentres = carries ? new Vector2[lightCentres.Length] : null;
@@ -165,6 +191,15 @@ public sealed class CharacterBaker
                 for (int y = 0; y < size.y; y++)
                 {
                     Array.Copy(colours, y * size.x, pixels, (rect.y + y) * width + rect.x, size.x);
+                }
+
+                if (paletteMap != null)
+                {
+                    byte[] codes = PaletteMap(canvas);
+                    for (int y = 0; y < size.y; y++)
+                    {
+                        Array.Copy(codes, y * size.x, paletteMap, (rect.y + y) * width + rect.x, size.x);
+                    }
                 }
 
                 if (!carries)
@@ -201,7 +236,7 @@ public sealed class CharacterBaker
             }
         }
 
-        return new CharacterSheet(clip, frames, pixels, atEdge, lightCentres, lightStrengths, lanternPixels, lanternGlow, lanternCentres);
+        return new CharacterSheet(clip, frames, pixels, atEdge, lightCentres, lightStrengths, lanternPixels, lanternGlow, lanternCentres, paletteMap);
     }
 
     /// <summary>
@@ -288,6 +323,31 @@ public sealed class CharacterBaker
     }
 
     /// <summary>
+    /// The palette map of a drawn frame (Docs/PlayerCharacter.md, Phase 5), rows from the bottom: per pixel the dye the
+    /// recipe gives the material <see cref="Shade(CharacterCanvas, CharacterWeaponArt, ColourRamp)"/> colours it with and
+    /// the tone it takes (<see cref="CharacterPaletteMap.Code"/>), its outline and inner lines included, found by shading
+    /// the frame the same way with each material's tones as its colours; 0 where the material keeps its colour or nothing
+    /// is drawn.
+    /// </summary>
+    public byte[] PaletteMap(CharacterCanvas canvas)
+    {
+        Color32[] tones = canvas.Shade(MaterialTones, recipe.LightThreshold, recipe.ShadowThreshold, recipe.InnerLineGap);
+        byte[] codes = new byte[tones.Length];
+        for (int i = 0; i < tones.Length; i++)
+        {
+            if (tones[i].a == 0)
+            {
+                continue;
+            }
+
+            CharacterDye dye = recipe.DyeOf((CharacterMaterial)tones[i].r);
+            codes[i] = dye == CharacterDye.None ? (byte)0 : CharacterPaletteMap.Code(dye, tones[i].g);
+        }
+
+        return codes;
+    }
+
+    /// <summary>
     /// How many pixels tall the standing character is, outline included, at the baker's scale.
     /// </summary>
     public int StandingHeight()
@@ -315,6 +375,22 @@ public sealed class CharacterBaker
         CharacterJoints joints = CharacterRig.Solve(recipe, pose, weapon);
         recipe.CreatePainter(weapon, canvas).Paint(facing, pose, joints, smear, effects);
         return canvas;
+    }
+
+    /// <summary>
+    /// A ramp per material whose colours name it and their tone: the material in red, the tone (0 the outline to 3 the
+    /// light) in green.
+    /// </summary>
+    private static ColourRamp[] MaterialToneRamps()
+    {
+        ColourRamp[] ramps = new ColourRamp[CharacterMaterials.Count];
+        for (int i = 0; i < ramps.Length; i++)
+        {
+            byte m = (byte)i;
+            ramps[i] = new ColourRamp(new Color32(m, 0, 0, 255), new Color32(m, 1, 0, 255), new Color32(m, 2, 0, 255), new Color32(m, 3, 0, 255));
+        }
+
+        return ramps;
     }
 
     /// <summary>

@@ -6,7 +6,8 @@ using UnityEngine.InputSystem.Controls;
 
 /// <summary>
 /// Tests for <see cref="OptionsMenuController"/> on the real options menu prefab and project input actions: the
-/// Character section's Look row over the project's looks, the binding rows, Back and close handling, interactive
+/// Character section's Look row over the project's looks and its colour rows over the project's colours, the binding
+/// rows, Back and close handling, interactive
 /// rebinding, per-row reset and reset all with confirmation.
 /// </summary>
 public class OptionsMenuControllerTests : InputTestFixture
@@ -61,7 +62,8 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     /// <summary>
-    /// Starting builds the Character section's Look row, then nine binding rows under three section headers, labelled
+    /// Starting builds the Character section's Look row and a colour row for each of the nine colour choices the
+    /// adventurer's sheets carry, then nine binding rows under three section headers, labelled
     /// with each action and its current binding, and leaves the screen hidden.
     /// </summary>
     [Test]
@@ -69,16 +71,66 @@ public class OptionsMenuControllerTests : InputTestFixture
     {
         Assert.That(view.IsShown, Is.False);
         Assert.That(controller.RowCount, Is.EqualTo(9));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(14), "The Character header and its Look row, three section headers and nine rows.");
+        Assert.That(controller.ColourRowCount, Is.EqualTo(9));
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(23), "The Character header, its Look row and nine colour rows, three section headers and nine rows.");
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
         Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
-        Assert.That(view.RowsContainer.GetChild(2).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.GetChild(2).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetColourRow(0)));
+        Assert.That(view.RowsContainer.GetChild(11).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
         Assert.That(controller.GetRow(AttackMoveRow).Label.text, Is.EqualTo("Attack move"));
         Assert.That(controller.GetRow(AttackMoveRow).BindingText.text, Is.EqualTo("A"));
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
         Assert.That(controller.GetRow(8).Label.text, Is.EqualTo("Weapon ability 2"));
+    }
+
+    /// <summary>
+    /// The colour rows, the choices the adventurer's sheets carry in the colours' order, show the swatch the local
+    /// settings pick, each choice's own by default; a button keeps the next swatch of its choice's list in the settings,
+    /// after the last the first, the choice's own kept as no pick; a reset goes back to the choice's own; and a row
+    /// follows a change made elsewhere, an unknown swatch showing the choice's own.
+    /// </summary>
+    [Test]
+    public void TheColourRows_ShowAndCycleTheSettingsSwatches()
+    {
+        string[] labels = new string[controller.ColourRowCount];
+        for (int i = 0; i < labels.Length; i++)
+        {
+            labels[i] = controller.GetColourRow(i).Label.text;
+        }
+
+        Assert.That(labels, Is.EqualTo(new[] { "Skin", "Hair", "Eyes", "Tunic", "Shirt", "Trousers", "Boots", "Belt", "Buckle" }));
+        KeyBindingRowView tunic = controller.GetColourRow(3);
+        KeyBindingRowView shirt = controller.GetColourRow(4);
+        Assert.That(tunic.BindingText.text, Is.EqualTo("Blue"));
+        Assert.That(shirt.BindingText.text, Is.EqualTo("Beige"));
+
+        controller.Open(null);
+        tunic.BindingButton.onClick.Invoke();
+        Assert.That(settings.CharacterColour("Tunic"), Is.EqualTo("Red"));
+        Assert.That(tunic.BindingText.text, Is.EqualTo("Red"));
+        shirt.BindingButton.onClick.Invoke();
+        Assert.That(settings.CharacterColour("Shirt"), Is.EqualTo("Linen"), "The cloth after the shirt's own beige.");
+
+        CharacterColours colours = view.Colours;
+        int cloths = colours.Swatches(colours.IndexOf("Tunic")).Count;
+        for (int i = 1; i < cloths; i++)
+        {
+            tunic.BindingButton.onClick.Invoke();
+        }
+
+        Assert.That(settings.CharacterColour("Tunic"), Is.Empty, "After the last cloth, the first, the tunic's own.");
+        Assert.That(tunic.BindingText.text, Is.EqualTo("Blue"));
+
+        shirt.ResetButton.onClick.Invoke();
+        Assert.That(settings.CharacterColour("Shirt"), Is.Empty);
+        Assert.That(shirt.BindingText.text, Is.EqualTo("Beige"));
+
+        settings.SetCharacterColour("Tunic", "Teal");
+        Assert.That(tunic.BindingText.text, Is.EqualTo("Teal"));
+        settings.SetCharacterColour("Tunic", "Plaid");
+        Assert.That(tunic.BindingText.text, Is.EqualTo("Blue"));
     }
 
     /// <summary>

@@ -121,10 +121,10 @@ public sealed class AdventurerPainter : CharacterPainter
         {
             float angle = 2f * Mathf.PI * i / 48f;
             Vector3 p = middle + along * (Mathf.Cos(angle) * reach) + j.TorsoForward * (Mathf.Sin(angle) * depth);
-            canvas.Sphere(World(p), 0.55f, CharacterMaterial.Belt, CharacterPart.Strap);
+            canvas.Sphere(World(p), 0.55f, CharacterMaterial.Strap, CharacterPart.Strap);
         }
 
-        canvas.Sphere(World(j.Pelvis + j.HipAxis * 2.9f + j.Spine * 0.2f + j.HipForward * 0.4f), 1.25f, CharacterMaterial.Belt, CharacterPart.Belt);
+        canvas.Sphere(World(j.Pelvis + j.HipAxis * 2.9f + j.Spine * 0.2f + j.HipForward * 0.4f), 1.25f, CharacterMaterial.Pouch, CharacterPart.Belt);
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ public sealed class AdventurerPainter : CharacterPainter
             {
                 for (int row = 0; row <= open; row++)
                 {
-                    PaintSkin(start + column, mouth.y - row, row == 0 ? CharacterMaterial.Mouth : CharacterMaterial.Brow);
+                    PaintSkin(start + column, mouth.y - row, row == 0 ? CharacterMaterial.Mouth : CharacterMaterial.MouthInside);
                 }
             }
 

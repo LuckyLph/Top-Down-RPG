@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -7,6 +8,10 @@ using UnityEngine;
 /// player's look shows a catalog look on its visuals and ignores an index the catalog lacks; on the owner it follows
 /// the local settings' choice, the first look for an empty or unknown name or no settings, raising each look it shows,
 /// until it stops following; and the local settings keep the look's name across a restart, telling only of a change.
+/// Its colours (Docs/PlayerCharacter.md, Phase 5) follow the local settings' picks the same way, the look's own for an
+/// unknown swatch or the choice's own, shown on its palette, and a copy shows the picks it is given; the local settings
+/// keep a swatch per colour choice across a restart, an empty one forgetting the pick, and read a file from before
+/// colours with none.
 /// </summary>
 public class CharacterLookTests
 {
@@ -151,6 +156,99 @@ public class CharacterLookTests
         Assert.That(settings.SetCharacterLook("Bandit"), Is.False);
         Assert.That(changes, Is.EqualTo(1));
         Assert.That(new UserSettings(store).CharacterLook, Is.EqualTo("Bandit"));
+    }
+
+    /// <summary>
+    /// The owner shows the colours its settings pick on its palette and raises them, then follows each change to them; an
+    /// unknown swatch, or the choice's own, shows the look's own colours. Once it stops following, a change shows
+    /// nothing, and the picks a copy is given show.
+    /// </summary>
+    [Test]
+    public void FollowLocalChoice_ShowsTheSettingsColours_AndEveryChangeToThem()
+    {
+        UserSettings settings = new(new MemorySaveStore());
+        settings.SetCharacterColour("Tunic", "Red");
+        PlayerLook look = CreateColouredPlayer(out CharacterPalette palette, out CharacterColours colours);
+        look.Construct(settings);
+        List<CharacterColourPicks> chosen = new();
+        look.ColoursChosen += chosen.Add;
+        int tunic = colours.IndexOf("Tunic");
+
+        look.FollowLocalChoice();
+        Track(palette.Copy);
+        Track(palette.Palette);
+        Assert.That(chosen.Count, Is.EqualTo(1));
+        Assert.That(chosen[0].Get(tunic), Is.EqualTo(1));
+        Assert.That(look.ShownColours, Is.EqualTo(chosen[0]));
+        Assert.That(palette.IsShown, Is.True);
+
+        settings.SetCharacterColour("Tunic", "Plaid");
+        Assert.That(chosen.Count, Is.EqualTo(2));
+        Assert.That(chosen[1].IsDefault, Is.True, "An unknown swatch shows the look's own colours.");
+        Assert.That(palette.IsShown, Is.False);
+
+        settings.SetCharacterColour("Tunic", "Blue");
+        Assert.That(chosen.Count, Is.EqualTo(3));
+        Assert.That(chosen[2].IsDefault, Is.True, "The choice's own swatch is no pick.");
+
+        look.StopFollowing();
+        settings.SetCharacterColour("Tunic", "Red");
+        Assert.That(chosen.Count, Is.EqualTo(3), "Stopped, it no longer follows.");
+        Assert.That(palette.IsShown, Is.False);
+
+        look.ShowColours(colours.Pick(default, tunic, "Red"));
+        Assert.That(palette.IsShown, Is.True);
+        Assert.That(look.ShownColours.Get(tunic), Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// The settings keep a swatch per colour choice in their file, which settings read again later find; the same
+    /// swatch again neither writes nor tells of a change, an empty one forgets the pick, and a file written before
+    /// colours reads with none.
+    /// </summary>
+    [Test]
+    public void TheSettings_KeepTheColourPicks()
+    {
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        int changes = 0;
+        settings.CharacterColoursChanged += () => changes++;
+        Assert.That(settings.CharacterColour("Tunic"), Is.Empty);
+
+        Assert.That(settings.SetCharacterColour("Tunic", "Red"), Is.True);
+        Assert.That(settings.SetCharacterColour("Hair", "Blonde"), Is.True);
+        Assert.That(settings.SetCharacterColour("Tunic", "Red"), Is.False);
+        Assert.That(changes, Is.EqualTo(2));
+        UserSettings again = new(store);
+        Assert.That(again.CharacterColour("Tunic"), Is.EqualTo("Red"));
+        Assert.That(again.CharacterColour("Hair"), Is.EqualTo("Blonde"));
+
+        Assert.That(settings.SetCharacterColour("Tunic", ""), Is.True);
+        Assert.That(changes, Is.EqualTo(3));
+        Assert.That(new UserSettings(store).CharacterColour("Tunic"), Is.Empty);
+        Assert.That(new UserSettings(store).CharacterColour("Hair"), Is.EqualTo("Blonde"));
+
+        Assert.That(UserSettingsData.TryParse("{\"version\":1,\"characterLook\":\"Bandit\"}", out UserSettingsData old), Is.True);
+        Assert.That(old.CharacterColours, Is.Empty);
+    }
+
+    /// <summary>
+    /// A player as <see cref="CreatePlayer"/> makes it, its renderer drawn with the lit sprite material and a palette
+    /// beside it, over colours of a skin and a tunic of blue (its own) or red.
+    /// </summary>
+    private PlayerLook CreateColouredPlayer(out CharacterPalette palette, out CharacterColours colours)
+    {
+        PlayerLook look = CreatePlayer(out CharacterVisuals visuals);
+        visuals.GetComponent<SpriteRenderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/Materials/SpritePixelLit.mat");
+        palette = visuals.gameObject.AddComponent<CharacterPalette>();
+        ColourRamp blue = new(new Color32(20, 30, 50, 255), new Color32(60, 90, 140, 255), new Color32(90, 120, 170, 255), new Color32(140, 170, 210, 255));
+        ColourRamp red = new(new Color32(50, 15, 15, 255), new Color32(130, 40, 40, 255), new Color32(170, 55, 50, 255), new Color32(215, 95, 80, 255));
+        ColourRamp fair = new(new Color32(90, 50, 40, 255), new Color32(200, 135, 105, 255), new Color32(235, 180, 145, 255), new Color32(250, 215, 185, 255));
+        colours = Track(CharacterColours.Create(
+            new[] { new CharacterSwatchList("Skin", new[] { new CharacterSwatch("Fair", fair) }), new CharacterSwatchList("Cloth", new[] { new CharacterSwatch("Blue", blue), new CharacterSwatch("Red", red) }) },
+            new[] { new CharacterColourChoice("Skin", "Skin", "Fair", CharacterDye.Skin), new CharacterColourChoice("Tunic", "Cloth", "Blue", CharacterDye.Tunic) }));
+        look.Configure(catalog, visuals, colours, palette);
+        return look;
     }
 
     /// <summary>

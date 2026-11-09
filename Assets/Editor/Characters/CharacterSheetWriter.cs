@@ -22,6 +22,10 @@ using UnityEngine;
 /// tightly (<see cref="PackLantern"/>), with its glow beside it in <see cref="GlowRoot"/> as its secondary texture
 /// <c>_GlowTex</c>; a recipe without a lantern has neither. <see cref="AsepriteCharacterWriter"/> writes a hand-drawn
 /// clip's lantern layer the same way.
+/// A sheet a player can colour (Docs/PlayerCharacter.md, Phase 5) has its palette map beside it in <see cref="GlowRoot"/>,
+/// <c>&lt;sheet name&gt;_&lt;clip&gt;_Palette.png</c>, as its secondary texture <c>_PaletteMap</c>
+/// (<see cref="WritePaletteMap(string, CharacterSheet)"/>), and the set names the dyes they carry; a recipe whose
+/// colours are its own has neither.
 /// A sheet larger than its import's maximum size (a cast drawn over the run's eight frames) gets the size it needs.
 /// Writing a sheet (<see cref="WriteSheet"/>) and a set (<see cref="WriteSet"/>) goes through
 /// <see cref="SpriteSheetFiles"/> and is shared with <see cref="AsepriteCharacterWriter"/>, which writes hand-drawn
@@ -35,8 +39,9 @@ public static class CharacterSheetWriter
     public const int PixelsPerUnit = 32;
 
     /// <summary>
-    /// Bakes and writes every clip of <paramref name="recipe"/>, then its animation set, returning the sheets' paths
-    /// followed by the set's. Logs an error and writes nothing when the recipe cannot bake
+    /// Bakes and writes every clip of <paramref name="recipe"/>, then its animation set, returning the sheets' paths, each
+    /// followed by its palette map's and its lantern layer's when it has them, then the set's. Logs an error and writes
+    /// nothing when the recipe cannot bake
     /// (<see cref="CharacterRecipe.CanGenerate"/>).
     /// </summary>
     public static IReadOnlyList<string> Generate(CharacterRecipe recipe)
@@ -55,6 +60,12 @@ public static class CharacterSheetWriter
             CharacterClip clip = sheet.Clip;
             WriteSheet(recipe.SheetName, clip.Name, clip.FrameSize, clip.Pivot, sheet.FrameCount, sheet.Pixels);
             paths.Add(SheetPath(recipe, clip));
+            WritePaletteMap(recipe.SheetName, sheet);
+            if (sheet.PaletteMap != null)
+            {
+                paths.Add(PaletteMapPath(recipe.SheetName, clip.Name));
+            }
+
             WriteLantern(recipe.SheetName, sheet);
             if (sheet.HasLantern)
             {
@@ -91,6 +102,43 @@ public static class CharacterSheetWriter
         }
 
         return SpriteSheetFiles.WriteSheet(SheetPath(sheetName, clipName), columns * frameSize.x, CharacterDirections.Count * frameSize.y, pixels, slices);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="sheet"/>'s palette map (see <see cref="WritePaletteMap(string, string, int, int, byte[])"/>).
+    /// </summary>
+    public static bool WritePaletteMap(string sheetName, CharacterSheet sheet)
+    {
+        return WritePaletteMap(sheetName, sheet.Clip.Name, sheet.Width, sheet.Height, sheet.PaletteMap);
+    }
+
+    /// <summary>
+    /// Writes clip <paramref name="clipName"/>'s palette map, <paramref name="paletteMap"/> laid out as its sheet of
+    /// <paramref name="width"/> x <paramref name="height"/> pixels, at <see cref="PaletteMapPath"/> through
+    /// <see cref="SpriteSheetFiles.WritePaletteMap"/>, and gives the sheet it as its only secondary texture
+    /// <c>_PaletteMap</c>; without a map (null), deletes any written before and takes it off the sheet. Returns whether
+    /// the map, its import settings or the sheet's secondary textures changed; a sheet that never had one is left as it
+    /// is.
+    /// </summary>
+    public static bool WritePaletteMap(string sheetName, string clipName, int width, int height, byte[] paletteMap)
+    {
+        string path = SheetPath(sheetName, clipName);
+        string mapPath = PaletteMapPath(sheetName, clipName);
+        if (paletteMap == null)
+        {
+            if (AssetDatabase.LoadMainAssetAtPath(mapPath) == null)
+            {
+                return false;
+            }
+
+            AssetDatabase.DeleteAsset(mapPath);
+            SpriteSheetFiles.SetSecondaryTextures(path, new SecondarySpriteTexture[0]);
+            return true;
+        }
+
+        bool written = SpriteSheetFiles.WritePaletteMap(mapPath, width, height, paletteMap);
+        written |= SpriteSheetFiles.SetSecondaryTextures(path, new[] { new SecondarySpriteTexture { name = CharacterPaletteMap.MapTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(mapPath) } });
+        return written;
     }
 
     /// <summary>
@@ -255,13 +303,15 @@ public static class CharacterSheetWriter
 
     /// <summary>
     /// An unsaved set of <paramref name="recipe"/>'s clips, baked as <paramref name="sheets"/> (in the recipe's order),
-    /// over the sprites of its written sheets, without touching an asset.
+    /// over the sprites of its written sheets, naming the dyes their palette maps carry, without touching an asset.
     /// </summary>
     public static CharacterAnimationSet BuildSet(CharacterRecipe recipe, CharacterBaker baker, IReadOnlyList<CharacterSheet> sheets)
     {
         List<CharacterAnimationClip> clips = new();
+        int dyes = 0;
         foreach (CharacterSheet sheet in sheets)
         {
+            dyes |= sheet.Dyes;
             CharacterClip clip = sheet.Clip;
             int columns = clip.Motion.FrameCount;
             int gaitFrames = clip.Motion.GaitFrames;
@@ -274,7 +324,7 @@ public static class CharacterSheetWriter
                 lantern, LanternLights(sheet.LanternCentres), clip.Motion.IsIdleAnimation));
         }
 
-        return CharacterAnimationSet.Create(clips);
+        return CharacterAnimationSet.Create(clips, dyes);
     }
 
     /// <summary>
@@ -364,6 +414,15 @@ public static class CharacterSheetWriter
     public static string GlowPath(string sheetName, string clipName)
     {
         return $"{GlowRoot}/{sheetName}/{sheetName}_{clipName}_Glow.png";
+    }
+
+    /// <summary>
+    /// The path of the palette map beside sheet <paramref name="clipName"/> among the sheets named
+    /// <paramref name="sheetName"/>.
+    /// </summary>
+    public static string PaletteMapPath(string sheetName, string clipName)
+    {
+        return $"{GlowRoot}/{sheetName}/{sheetName}_{clipName}_Palette.png";
     }
 
     /// <summary>

@@ -5,9 +5,11 @@ using UnityEngine.InputSystem;
 using VContainer.Unity;
 
 /// <summary>
-/// Drives the <see cref="OptionsMenuView"/>: when the view names a catalog of more than one look, a Character section
-/// first with a Look row whose button shows the look of the local settings and moves to the next one, its reset going
-/// back to the first (Docs/AsepriteCharacters.md, Phase 2); then a row per rebindable action of
+/// Drives the <see cref="OptionsMenuView"/>: a Character section first, when the view names a catalog of more than one
+/// look or colours a look carries: a Look row whose button shows the look of the local settings and moves to the next
+/// one, its reset going back to the first (Docs/AsepriteCharacters.md, Phase 2), then a row per colour choice whose dyes
+/// a look's sheets carry (Docs/PlayerCharacter.md, Phase 5), its button showing the swatch the local settings pick and
+/// moving to the next one of its list, its reset going back to the choice's own; then a row per rebindable action of
 /// <see cref="InputBindings"/> under its section, rebinding a row when its binding is selected (listening starts on the
 /// next tick, so the click itself is never captured), naming the action that moved on a swap, resetting one row or all
 /// of them after a confirmation; and it closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back
@@ -28,6 +30,8 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private readonly UISelection selection;
     private readonly UserSettings settings;
     private readonly List<KeyBindingRowView> rows = new();
+    private readonly List<KeyBindingRowView> colourRows = new();
+    private readonly List<int> colourChoices = new();
     private KeyBindingRowView lookRow;
     private Action onClosed;
     private int pendingRebind = -1;
@@ -50,6 +54,15 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     public bool IsListening => listeningRow >= 0;
     internal int RowCount => rows.Count;
     internal KeyBindingRowView LookRow => lookRow;
+    internal int ColourRowCount => colourRows.Count;
+
+    /// <summary>
+    /// The colour row at <paramref name="index"/>, in the order its choices have in the colours.
+    /// </summary>
+    internal KeyBindingRowView GetColourRow(int index)
+    {
+        return colourRows[index];
+    }
 
     /// <summary>
     /// The row built for the rebindable action at <paramref name="index"/>, in <see cref="InputBindings"/> order.
@@ -60,16 +73,17 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Hides the screen, builds the Look row, then a section header for each new section and a labelled row per
+    /// Hides the screen, builds the Character section, then a section header for each new section and a labelled row per
     /// rebindable action, wires the buttons, and keeps the rows' labels in sync with
-    /// <see cref="InputBindings.BindingsChanged"/> and <see cref="UserSettings.CharacterLookChanged"/>.
+    /// <see cref="InputBindings.BindingsChanged"/>, <see cref="UserSettings.CharacterLookChanged"/> and
+    /// <see cref="UserSettings.CharacterColoursChanged"/>.
     /// </summary>
     public void Start()
     {
         view.SetShown(false);
         view.HideListening();
         view.SetConfirmShown(false);
-        BuildLookRow();
+        BuildCharacterSection();
 
         string section = null;
         for (int i = 0; i < bindings.Count; i++)
@@ -107,6 +121,11 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         if (lookRow != null)
         {
             settings.CharacterLookChanged -= RefreshLook;
+        }
+
+        if (colourRows.Count > 0)
+        {
+            settings.CharacterColoursChanged -= RefreshColours;
         }
 
         menus.Remove(this);
@@ -303,17 +322,65 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Builds the Character section's Look row when the view names a catalog of more than one look.
+    /// Builds the Character section: its Look row when the view names a catalog of more than one look, and a row per
+    /// colour choice whose dyes a look of the catalog carries; nothing without either.
     /// </summary>
-    private void BuildLookRow()
+    private void BuildCharacterSection()
     {
         CharacterLookCatalog looks = view.Looks;
-        if (looks == null || looks.Count < 2 || settings == null)
+        CharacterColours colours = view.Colours;
+        if (looks == null || settings == null)
+        {
+            return;
+        }
+
+        int carried = 0;
+        for (int i = 0; i < looks.Count; i++)
+        {
+            CharacterLook look = looks.Get(i);
+            carried |= look != null && look.AnimationSet != null ? look.AnimationSet.Dyes : 0;
+        }
+
+        for (int i = 0; colours != null && i < colours.Count && i < CharacterColourPicks.MaxChoices; i++)
+        {
+            if (colours.Colours(i, carried) && colours.Swatches(i).Count > 0)
+            {
+                colourChoices.Add(i);
+            }
+        }
+
+        if (looks.Count < 2 && colourChoices.Count == 0)
         {
             return;
         }
 
         view.AddSectionHeader(CharacterSection);
+        if (looks.Count >= 2)
+        {
+            BuildLookRow();
+        }
+
+        foreach (int choice in colourChoices)
+        {
+            KeyBindingRowView row = view.AddRow();
+            row.SetLabel(colours.Get(choice).Name);
+            row.BindingButton.onClick.AddListener(() => NextColour(choice));
+            row.ResetButton.onClick.AddListener(() => ResetColour(choice));
+            colourRows.Add(row);
+        }
+
+        if (colourRows.Count > 0)
+        {
+            settings.CharacterColoursChanged += RefreshColours;
+            RefreshColours();
+        }
+    }
+
+    /// <summary>
+    /// Builds the Character section's Look row.
+    /// </summary>
+    private void BuildLookRow()
+    {
         lookRow = view.AddRow();
         lookRow.SetLabel(LookLabel);
         lookRow.BindingButton.onClick.AddListener(NextLook);
@@ -355,6 +422,57 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private void RefreshLook()
     {
         lookRow.SetBinding(view.Looks.Get(LookIndex).Name);
+    }
+
+    /// <summary>
+    /// The index in its list of the swatch the local settings pick for colour choice <paramref name="choice"/>, its own
+    /// for an empty or unknown name.
+    /// </summary>
+    private int ColourIndex(int choice)
+    {
+        CharacterColours colours = view.Colours;
+        int picked = colours.IndexOfSwatch(choice, settings.CharacterColour(colours.Get(choice).Name));
+        return picked >= 0 ? picked : Mathf.Max(0, colours.OwnIndex(choice));
+    }
+
+    /// <summary>
+    /// A colour row's button: keeps the next swatch of its choice's list, after the last the first (the choice's own
+    /// kept as no pick). Ignored while listening or confirming.
+    /// </summary>
+    private void NextColour(int choice)
+    {
+        if (IsListening || view.IsConfirmShown)
+        {
+            return;
+        }
+
+        CharacterColours colours = view.Colours;
+        int next = (ColourIndex(choice) + 1) % colours.Swatches(choice).Count;
+        settings.SetCharacterColour(colours.Get(choice).Name, next == colours.OwnIndex(choice) ? string.Empty : colours.Swatches(choice)[next].Name);
+    }
+
+    /// <summary>
+    /// A colour row's reset button: back to the choice's own swatch. Ignored while listening or confirming.
+    /// </summary>
+    private void ResetColour(int choice)
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetCharacterColour(view.Colours.Get(choice).Name, string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Shows the swatch the local settings pick for each colour row's choice on its button.
+    /// </summary>
+    private void RefreshColours()
+    {
+        CharacterColours colours = view.Colours;
+        for (int i = 0; i < colourRows.Count; i++)
+        {
+            int choice = colourChoices[i];
+            colourRows[i].SetBinding(colours.Swatches(choice)[ColourIndex(choice)].Name);
+        }
     }
 
     /// <summary>

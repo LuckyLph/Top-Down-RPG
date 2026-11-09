@@ -5,6 +5,8 @@ Shader "TopDownRPG/Sprite Pixel Lit"
         _MainTex("Diffuse", 2D) = "white" {}
         [NoScaleOffset] _GlowTex("Glow", 2D) = "black" {}
         [NoScaleOffset] _NormalTex("Normals", 2D) = "black" {}
+        [NoScaleOffset] _PaletteMap("Palette Map", 2D) = "black" {}
+        [NoScaleOffset] _PaletteTex("Palette", 2D) = "black" {}
         _FlashColor("Flash Color", Color) = (1,1,1,1)
         _FlashAmount("Flash Amount", Range(0, 1)) = 0
         _FlameFrames("Flame Frames", Float) = 1
@@ -37,6 +39,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
             #include "Assets/Shaders/Include/PixelLight.hlsl"
             #include "Assets/Shaders/Include/PixelRelief.hlsl"
             #include "Assets/Shaders/Include/LampShadow.hlsl"
+            #include "Assets/Shaders/Include/CharacterPalette.hlsl"
 
             #pragma multi_compile_instancing
             #pragma multi_compile _ USE_SHAPE_LIGHT_TYPE_0
@@ -103,6 +106,8 @@ Shader "TopDownRPG/Sprite Pixel Lit"
                     discard;
                 }
 
+                main.rgb = CharacterPaletteColour(main.rgb, input.color.rgb, input.uv);
+
                 half shadowed = input.shadowed >= 0.0 ? input.shadowed
                     : CasterReadsByColumn(input.feet.z) ? SunShadowColumn(float2(centre.x, input.feet.y + 0.5 / ART_PIXELS_PER_UNIT))
                     : SunShadowAt(floor(centre * ART_PIXELS_PER_UNIT));
@@ -133,6 +138,8 @@ Shader "TopDownRPG/Sprite Pixel Lit"
             #pragma vertex UnlitVertex
             #pragma fragment UnlitFragment
             #pragma editor_sync_compilation
+
+            #include "Assets/Shaders/Include/CharacterPalette.hlsl"
 
             #pragma multi_compile_instancing
 
@@ -178,6 +185,7 @@ Shader "TopDownRPG/Sprite Pixel Lit"
             half4 UnlitFragment(Varyings input) : SV_Target
             {
                 half4 unlit = input.color * SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv);
+                unlit.rgb = CharacterPaletteColour(unlit.rgb, input.color.rgb, input.uv);
                 unlit.rgb = lerp(unlit.rgb, _FlashColor.rgb, _FlashAmount);
                 return unlit;
             }

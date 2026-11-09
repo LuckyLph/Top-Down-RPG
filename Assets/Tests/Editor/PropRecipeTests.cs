@@ -16,8 +16,9 @@ using UnityEngine;
 /// a light prop glows only where its flame, coals or glass are drawn, its flame's pixels flickering to the tones next to
 /// theirs, and stands its light on the ground under where it shines from (Docs/Lighting.md, Phases 5 and 6); a moving
 /// flame bakes a loop of frames whose flame moves, a still one and a lamp's one frame; charred wood smoulders with
-/// steady embers in its bark and cut ends, keeping its footprint (Phase 6); a waystone's states share their shape, only
-/// the awake one's runes glowing, a signpost points west then east and a doormat lies across, along and on one cell
+/// steady embers in its bark and cut ends, keeping its footprint (Phase 6); a torch's flame stands on its head whatever
+/// its seed; a waystone's states share their shape, only the awake one's runes glowing, and its stone never narrows
+/// toward its foot whatever its seed, a signpost points west then east and a doormat lies across, along and on one cell
 /// (Docs/KnownGaps.md, Phase 3); and a recipe refuses names, frames and, for a marker, variant counts it cannot bake.
 /// </summary>
 public class PropRecipeTests
@@ -414,6 +415,52 @@ public class PropRecipeTests
     }
 
     /// <summary>
+    /// A waystone's stone never narrows toward its foot, whatever its seed, since its hewn faces all tilt up: down its
+    /// silhouette, from its top to the first row where its plinth shows, neither side steps back in by more than a pixel
+    /// from where it reached higher up.
+    /// </summary>
+    [Test]
+    public void Waystone_NeverNarrowsTowardItsFoot()
+    {
+        MarkerRecipe asset = AssetDatabase.LoadAssetAtPath<MarkerRecipe>($"{RecipesFolder}/Waystone.asset");
+        for (int seed = 1; seed <= 20; seed++)
+        {
+            MarkerRecipe recipe = Copy(asset);
+            Set(recipe, "seed", seed);
+            PropVariant variant = PropBaker.Bake(recipe, MarkerRecipe.DormantVariant);
+            ArtCanvas canvas = PropBaker.Render(recipe, MarkerRecipe.DormantVariant, out _);
+            int width = canvas.Width;
+            int plinth = canvas.PartIdAt(recipe.BasePixel.x, variant.Drawn.yMin + 2);
+            int reachedLeft = int.MaxValue;
+            int reachedRight = int.MinValue;
+            int stepLeft = 0;
+            int stepRight = 0;
+            for (int y = variant.Drawn.yMax - 1; y > variant.Drawn.yMin; y--)
+            {
+                if (Enumerable.Range(0, width).Any(x => canvas.PartIdAt(x, y) == plinth))
+                {
+                    break;
+                }
+
+                int[] drawn = Enumerable.Range(0, width).Where(x => variant.Pixels[y * width + x].a > 0).ToArray();
+                if (drawn.Length == 0)
+                {
+                    continue;
+                }
+
+                reachedLeft = Mathf.Min(reachedLeft, drawn[0]);
+                reachedRight = Mathf.Max(reachedRight, drawn[^1]);
+                stepLeft = Mathf.Max(stepLeft, drawn[0] - reachedLeft);
+                stepRight = Mathf.Max(stepRight, reachedRight - drawn[^1]);
+            }
+
+            Assert.That(reachedRight - reachedLeft, Is.GreaterThan(10), $"Seed {seed}'s stone was measured.");
+            Assert.That(stepLeft, Is.LessThanOrEqualTo(1), $"Seed {seed}'s stone narrows toward its foot on the left.");
+            Assert.That(stepRight, Is.LessThanOrEqualTo(1), $"Seed {seed}'s stone narrows toward its foot on the right.");
+        }
+    }
+
+    /// <summary>
     /// A signpost's first variant points west and its second east; a doormat's lies across two cells, along two cells,
     /// then on one; a waystone, a signpost or a doormat with fewer variants than its states, directions or sizes cannot
     /// bake.
@@ -490,6 +537,43 @@ public class PropRecipeTests
         Set(lamp, "form", (int)LightForm.LampPost);
         Assert.That(lamp.Frames, Is.EqualTo(1), "A lamp's wick stands still.");
         Assert.That(PropBaker.Bake(lamp, 0).FramePixels.Count, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// A torch's flame stands on its head, whatever its seed, since its tongues are moved sideways to reach as far either
+    /// side of it: across the loop, the middle of each variant's glowing pixels lies within three quarters of a pixel of
+    /// its base, which its pole stands on.
+    /// </summary>
+    [Test]
+    public void Torch_StandsItsFlameOnItsHead()
+    {
+        LightRecipe asset = AssetDatabase.LoadAssetAtPath<LightRecipe>($"{RecipesFolder}/Torch.asset");
+        for (int seed = 1; seed <= 20; seed++)
+        {
+            LightRecipe torch = Copy(asset);
+            Set(torch, "seed", seed);
+            int width = torch.FrameSize.x;
+            for (int v = 0; v < torch.VariantCount; v++)
+            {
+                PropVariant variant = PropBaker.Bake(torch, v);
+                float sum = 0f;
+                int count = 0;
+                foreach (Color32[] frame in variant.FrameGlow)
+                {
+                    for (int i = 0; i < frame.Length; i++)
+                    {
+                        if (frame[i].a > 0)
+                        {
+                            sum += i % width + 0.5f;
+                            count++;
+                        }
+                    }
+                }
+
+                Assert.That(count, Is.GreaterThan(0), $"Seed {seed}'s variant {v} burns.");
+                Assert.That(sum / count, Is.EqualTo(torch.BasePixel.x).Within(0.75f), $"Seed {seed}'s variant {v}'s flame stands on its head.");
+            }
+        }
     }
 
     /// <summary>
@@ -774,5 +858,16 @@ public class PropRecipeTests
     {
         created.Add(instance);
         return instance;
+    }
+
+    /// <summary>
+    /// A new recipe instance holding <paramref name="asset"/>'s settings, destroyed in <see cref="TearDown"/>, so a test
+    /// changes the copy and never the asset.
+    /// </summary>
+    private T Copy<T>(T asset) where T : PropRecipe
+    {
+        T copy = Track(ScriptableObject.CreateInstance<T>());
+        EditorUtility.CopySerialized(asset, copy);
+        return copy;
     }
 }

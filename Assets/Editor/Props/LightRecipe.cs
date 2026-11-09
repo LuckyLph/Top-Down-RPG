@@ -202,7 +202,7 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
             canvas.Capsule(middle, top, logRadius, logRadius * 0.85f, charredId, part);
         }
 
-        Flame(drawing, Vector3.zero, tongues, flameHeight, flameWidth, FlameSpread);
+        Flame(drawing, Vector3.zero, tongues, flameHeight, flameWidth, FlameSpread, false);
 
         drawing.MarkLight(new Vector3(0f, 0f, FlameFoot + flameHeight.x * 0.5f), 1f);
     }
@@ -263,8 +263,8 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
     }
 
     /// <summary>
-    /// A standing torch: a wooden pole staked among a few stones, an iron collar, a wrapped head and a small flame on
-    /// it; the light shines from under the flame.
+    /// A standing torch: a wooden pole staked among a few stones, an iron collar, a wrapped head and a small flame
+    /// centred on it; the light shines from under the flame.
     /// </summary>
     private void DrawTorch(PropDrawing drawing)
     {
@@ -287,7 +287,7 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
         canvas.Capsule(new Vector3(0f, 0f, poleHeight - CollarHeight), new Vector3(0f, 0f, poleHeight), poleRadius * 1.5f, poleRadius * 1.5f, ironId, drawing.NewPart());
         canvas.Capsule(new Vector3(0f, 0f, poleHeight), new Vector3(0f, 0f, poleHeight + head.y), head.x, head.x * 1.1f, wrapId, drawing.NewPart());
         Vector3 foot = new(0f, 0f, poleHeight + head.y * 0.75f);
-        Flame(drawing, foot, tongues, flameHeight, flameWidth, FlameSpread);
+        Flame(drawing, foot, tongues, flameHeight, flameWidth, FlameSpread, true);
         drawing.MarkLight(foot, 1f);
     }
 
@@ -330,7 +330,7 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
         float heap = bowl.x * 0.86f;
         canvas.Ellipsoid(new Vector3(0f, 0f, rim - 0.01f), Vector3.right * heap, Vector3.up * heap, Vector3.forward * CoalsHeight * 1.2f, coalsId, drawing.NewPart());
         Vector3 foot = new(0f, 0f, rim);
-        Flame(drawing, foot, tongues, flameHeight, flameWidth, FlameSpread);
+        Flame(drawing, foot, tongues, flameHeight, flameWidth, FlameSpread, false);
         drawing.MarkLight(foot, 1f);
     }
 
@@ -338,9 +338,10 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
     /// Tongues of flame rising from around <paramref name="centre"/>, the first the tallest, each three flat, unlined,
     /// glowing layers drawn nearer the camera in turn, each layer's pixels flickering to the next layer's tone. A moving
     /// flame (more than one frame) swells and sways each tongue round its loop at the drawing's phase, from offsets of
-    /// its own, and its tallest tongue sheds a lick of flame that rises and shrinks.
+    /// its own, and its tallest tongue sheds a lick of flame that rises and shrinks. A <paramref name="centred"/> flame
+    /// is moved sideways so its tongues' feet spread evenly to either side of <paramref name="centre"/>.
     /// </summary>
-    private void Flame(PropDrawing drawing, Vector3 centre, int count, Vector2 heights, float width, float spread)
+    private void Flame(PropDrawing drawing, Vector3 centre, int count, Vector2 heights, float width, float spread, bool centred)
     {
         int outerId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Shadow), true, false, glow: 1f, flicker: new[] { flame.Middle }), false);
         int middleId = drawing.AddMaterial(new ArtMaterial(Flat(flame.Middle), true, false, glow: 1f, flicker: new[] { flame.Shadow, flame.Light }), false);
@@ -349,17 +350,34 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
         int part = drawing.NewPart();
         bool moving = Frames > 1;
         float turn = 2f * Mathf.PI * drawing.Phase;
+        FlameTongue[] placed = new FlameTongue[count];
+        float left = float.MaxValue;
+        float right = float.MinValue;
         for (int k = 0; k < count; k++)
         {
             float height = k == 0 ? heights.y : drawing.Range(heights);
             float reach = k == 0 ? 0f : spread;
             Vector3 foot = centre + new Vector3(drawing.Range(-reach, reach), drawing.Range(-reach, reach) * 0.5f, FlameFoot);
-            Vector3 tip = foot + new Vector3(drawing.Range(-FlameLean, FlameLean), 0f, height);
+            float lean = drawing.Range(-FlameLean, FlameLean);
             float radius = width * (k == 0 ? 1f : drawing.Range(0.7f, 0.9f));
+            float swell = moving ? drawing.Range(0f, 2f * Mathf.PI) : 0f;
+            float sway = moving ? drawing.Range(0f, 2f * Mathf.PI) : 0f;
+            placed[k] = new FlameTongue(height, foot, lean, radius, swell, sway);
+            left = Mathf.Min(left, foot.x - radius);
+            right = Mathf.Max(right, foot.x + radius);
+        }
+
+        Vector3 shift = centred ? new Vector3(centre.x - (left + right) * 0.5f, 0f, 0f) : Vector3.zero;
+        for (int k = 0; k < count; k++)
+        {
+            float height = placed[k].Height;
+            Vector3 foot = placed[k].Foot + shift;
+            Vector3 tip = foot + new Vector3(placed[k].Lean, 0f, height);
+            float radius = placed[k].Radius;
             if (moving)
             {
-                float swell = drawing.Range(0f, 2f * Mathf.PI);
-                float sway = drawing.Range(0f, 2f * Mathf.PI);
+                float swell = placed[k].Swell;
+                float sway = placed[k].Sway;
                 float scale = 1f + FlamePulse * Mathf.Sin(turn + swell);
                 tip = foot + new Vector3(tip.x - foot.x + FlameSway * (Mathf.Sin(turn + sway) + 0.5f * Mathf.Sin(2f * turn + swell)), 0f, height * scale);
                 radius *= 1f + FlamePulse * 0.4f * Mathf.Sin(turn + swell + 1f);
@@ -402,5 +420,33 @@ public sealed class LightRecipe : PropRecipe, IPropLightSettings
     private static ColourRamp Flat(Color32 colour)
     {
         return new ColourRamp(colour, colour, colour, colour);
+    }
+
+    /// <summary>
+    /// One tongue of a flame as placed from the drawing's random numbers, before it is moved, swelled or swayed.
+    /// </summary>
+    private readonly struct FlameTongue
+    {
+        public FlameTongue(float height, Vector3 foot, float lean, float radius, float swell, float sway)
+        {
+            Height = height;
+            Foot = foot;
+            Lean = lean;
+            Radius = radius;
+            Swell = swell;
+            Sway = sway;
+        }
+
+        public float Height { get; }
+
+        public Vector3 Foot { get; }
+
+        public float Lean { get; }
+
+        public float Radius { get; }
+
+        public float Swell { get; }
+
+        public float Sway { get; }
     }
 }

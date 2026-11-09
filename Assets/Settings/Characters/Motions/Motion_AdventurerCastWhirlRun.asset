@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ecc8c5091ca935489793468587ad0dd, type: 3}
   m_Name: Motion_AdventurerCastWhirlRun
   m_EditorClassIdentifier: TopDownRPG.Editor::OverGaitMotion
-  upper: {fileID: 11400000, guid: 5f729294ea62bc44099503f761a5046a, type: 2}
+  upper: {fileID: 11400000, guid: d140b08042624fb48be4cb0e05321ef2, type: 2}
   gait: {fileID: 11400000, guid: 3255699690179d34a8727bf3c3ca057f, type: 2}
   gaitLean: 0.5

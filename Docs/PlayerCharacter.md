@@ -49,6 +49,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | Attacks and casts on a new body | A keyed motion names the body its keys were posed on and fits each pose to the body it is baked on (Animation.md's Motions): the legs' and arms' lengths scale the pelvis, feet and hands. |
 | Gaits | The adventurer's own walk, run and sprint, styled on top of the stride (Phase 2): a bob big enough to read at this size with its top and bottom on frames, a bounce in the run and the sprint, the head a beat and the hair's tips two beats behind the bob, a torso that stretches and squashes with it, hands that rise at both ends of their swing like a pendulum, and longer strides, so the steps come slower. The rogue's gaits stay as they were. |
 | Idle | A still frame, the standing pose, as before. A breathing loop was turned down in favour of idle animations that play once after the player has stood still for a while, as champions' do in League of Legends: looking around, a stretch, a scratch of the head, a tapped foot and a yawn (Phase 3). |
+| Casts | One animation each, restyled like the attacks, with the head and the hair late and the torso stretching and squashing (Phase 4). The weapon casts were reworked so they read as more than an attack: the whirl and the sweep spin a whole turn, the lunge thrusts from a coil, the charge leaps and slams the greatsword down, the volley shoots into the sky, and the roll tumbles unarmed. |
 | Attacks | Two attacks a weapon for now, which flow into each other: each ends in the pose the other starts from, so attacking again carries on from where the last attack stopped (Phase 4). After equipping a weapon its first attack plays, then each attack is followed by one of the others at random, never by itself, so two alternate. Three a weapon, picked that way, was the first ask; two came first so they could flow. A weapon can list more. |
 
 ## Phases
@@ -152,7 +153,7 @@ Phase 3 notes:
 
 - [x] The sword, greatsword and bow attacks restyled to match the gaits on the new body, settled with the user on previews: two attacks a weapon that flow into each other, their contact frames kept on the timeline.
 - [x] A weapon's attacks played in turn, never the same twice in a row, the owner naming the attack it made to the other machines; a look without a weapon's other attacks plays its first.
-- [ ] The casts restyled to match.
+- [x] The casts restyled to match, settled with the user on previews, each looked at in every direction.
 
 Phase 4 notes:
 
@@ -181,6 +182,34 @@ Phase 4 notes:
   - `WeaponCatalogTests`: every weapon has its two attacks in the set, each showing its contact frame at contact under attack speed.
   - `CharacterAnimatorTests` adds: a weapon's three attacks start with the first, never repeat, are picked at random among the others and start over on equipping; two alternate without a random source; a copy plays the attack the owner made, or the first where its set lacks it, and nothing for an attack past the weapon's.
   - `NetworkWeaponsPlayModeTests`: a client's second attack plays the second attack's clip on the host's copy.
+- **How the casts were settled.** On previews at each ability's in-game timing (`Recordings/RogueRework/phase4/casts1`, `casts2` and `charge3`).
+  - Round 1 put each cast as it was beside three steps: the attacks' style (c1), a hold at the gather's top with a settle after the release (c2), and 40% bigger poses (c3). The user picked c1 for all of them and asked for each to be looked at on its own.
+  - Two problems came back. The bow went through the player again: the volley's draw hand sat behind the head and its upper limb crossed over it, and the roll swung the bow flat through the body. The sword's and the greatsword's casts were underwhelming: the whirl looked like an attack.
+  - Round 2 reworked each cast, checked frame by frame in all eight directions. "Much better"; the charge needed more.
+  - The charge, round 3: a rush that drives the greatsword forward and cuts across, beside a leap that slams it down. The leap was picked.
+- **The casts.** Copies of the rogue's motions, still posed on `Recipe_Rogue`, all with the attacks' style. The rogue's casts are untouched.
+
+  | Cast | What it does |
+  |---|---|
+  | `CastBolt` | Winds the glowing hand back above the shoulder, the other hand pointing ahead, then throws it forward with a step. |
+  | `CastLeap` | From a crouch, jumps clear of the ground with the arms raised and the legs tucked, then lands in a crouch and stands. |
+  | `CastMend` | Opens the arms wide at the chest with the chin up, then brings the hands together forward. |
+  | `CastSmite` | Raises the glowing hand up beside the head, where it pulses through the channel, then slams down into a crouch, the burst on the ground. |
+  | `CastWhirl` | Crouches and winds the sword back, then spins a whole turn with the blade held out at the waist, its smear a ring. |
+  | `CastLunge` | Coils with the weight back, then thrusts in a deep lunge, the blade straight ahead and the back leg and arm stretched behind. |
+  | `CastSweep` | Lifts the greatsword overhead, drops into a deep coil, then spins a whole turn low with the tip near the ground, dust behind it. |
+  | `CastCharge` | Raises the greatsword overhead, crouches and jumps, then lands in a deep crouch bringing the blade down to the ground, with dust. |
+  | `CastVolley` | The bow's upright shot tilted back about 25 degrees, the chin up, shooting into the sky. |
+  | `CastRoll` | Dives into a tuck and comes back up, unarmed. |
+
+  `CastSmiteRun` and `CastWhirlRun` draw the new smite and whirl over the adventurer's run; the whirl spins over the running legs.
+- **The bow.** At 38 rig units the bow is as long as the character, so held near the body it crosses it somewhere. The volley keeps the approved upright shot's hold, tilted back with the archer, so the bow sits where it sits in that shot in every direction (across the face from the front, as there). The roll draws no weapon: the character already moves unarmed, and the bow held at the side crossed the body in the side views however it was turned.
+- **What the rig gained.** A key's `spin` turns the whole character, weapon included, from the way it faces (`CharacterPose.Spin`). The baker draws a frame facing its direction plus its spin, and turns each smear sample by its own spin against the frame's, so a spin's smear is a ring; the light stays where it is. A cast over the run takes the cast's spin and adds the cast's stretch and head's and hair's lift to the run's. All are 0 by default, so the rogue's and the Weasel's sheets did not change by a byte.
+- **Checked by eye.** The baked cast sheets are the approved previews to the pixel.
+- **Tests.** `AdventurerRecipeTests` adds:
+  - the ten casts are the adventurer's own and styled, the whirl and the sweep spinning a whole turn and no other cast spinning, the casts over the run drawing its own smite and whirl, the roll unarmed, the rogue's casts plain;
+  - a spin turns the whole character: the lunge spun a quarter turn draws facing east what it draws facing north;
+  - a cast over the run takes the cast's spin and adds its style to the run's.
 
 ### Phase 5: colours
 
@@ -196,7 +225,7 @@ Phase 4 notes:
 
 ## Testing
 
-- EditMode: the recipe's pixels are repeatable and the standing height is right. The face, the locks and the outfit's options draw as set (Phase 0). Every look holds every clip the player plays (Phase 1). The gaits' style shows where it should and the speed bands keep the feet (Phase 2). The idle animations start after the wait, never twice in a row, and stop on anything else (Phase 3). A weapon's attacks flow into each other and never play twice in a row (Phase 4). Customization: a player's choice resolves to the right colours and parts (Phases 5 to 7).
+- EditMode: the recipe's pixels are repeatable and the standing height is right. The face, the locks and the outfit's options draw as set (Phase 0). Every look holds every clip the player plays (Phase 1). The gaits' style shows where it should and the speed bands keep the feet (Phase 2). The idle animations start after the wait, never twice in a row, and stop on anything else (Phase 3). A weapon's attacks flow into each other and never play twice in a row; the casts are the adventurer's own, and a spin turns the whole character (Phase 4). Customization: a player's choice resolves to the right colours and parts (Phases 5 to 7).
 - PlayMode: the idle animations play on the other machines' copies of a standing player (Phase 3). The attack the owner made plays on the other machines' copies (Phase 4). A player's look, colours and parts reach the other machines through the in-process host and client, a late joiner's included (Phases 5 to 7).
 
 ## Open questions

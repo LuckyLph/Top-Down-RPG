@@ -96,4 +96,10 @@ public sealed class CharacterPose
     /// How many rows the mouth opens below its line.
     /// </summary>
     public float MouthOpen { get; set; }
+
+    /// <summary>
+    /// How far the whole character, weapon included, is turned from the way it faces, in degrees counterclockwise
+    /// seen from above: a spin.
+    /// </summary>
+    public float Spin { get; set; }
 }

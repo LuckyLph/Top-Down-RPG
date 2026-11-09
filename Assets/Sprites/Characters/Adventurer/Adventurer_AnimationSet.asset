@@ -647,129 +647,129 @@ MonoBehaviour:
     lights:
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.026906008, y: 0.2584323}
+    - offset: {x: -0.042305384, y: 0.3040274}
       strength: 0.5
-    - offset: {x: -0.091534354, y: 0.31995198}
+    - offset: {x: -0.09643471, y: 0.3845396}
       strength: 0.75
-    - offset: {x: -0.12458812, y: 0.35299513}
+    - offset: {x: -0.16901064, y: 0.49378276}
       strength: 1
-    - offset: {x: 0.3705058, y: 0.5051166}
+    - offset: {x: 0.423953, y: 0.5130825}
       strength: 1
-    - offset: {x: 0.34654105, y: 0.47692198}
+    - offset: {x: 0.38309857, y: 0.47479296}
       strength: 0.5
-    - offset: {x: 0.27492636, y: 0.42278928}
+    - offset: {x: 0.30300546, y: 0.42052546}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.13115624, y: 0.28002325}
+    - offset: {x: 0.12712866, y: 0.32159486}
       strength: 0.5
-    - offset: {x: 0.116004, y: 0.3250198}
+    - offset: {x: 0.10042266, y: 0.38536555}
       strength: 0.75
-    - offset: {x: 0.1076017, y: 0.3494771}
+    - offset: {x: 0.0572555, y: 0.4706375}
       strength: 1
-    - offset: {x: 0.29584718, y: 0.6431228}
+    - offset: {x: 0.34504592, y: 0.67234737}
       strength: 1
-    - offset: {x: 0.2916185, y: 0.60908914}
+    - offset: {x: 0.3293832, y: 0.6223528}
       strength: 0.5
-    - offset: {x: 0.26003426, y: 0.5335832}
+    - offset: {x: 0.2894007, y: 0.5432168}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21238895, y: 0.3511738}
+    - offset: {x: 0.22209246, y: 0.39392093}
       strength: 0.5
-    - offset: {x: 0.25558877, y: 0.4019792}
+    - offset: {x: 0.2384538, y: 0.45554918}
       strength: 0.75
-    - offset: {x: 0.27675992, y: 0.42908102}
+    - offset: {x: 0.24998213, y: 0.5342685}
       strength: 1
-    - offset: {x: 0.047885265, y: 0.71431214}
+    - offset: {x: 0.06401561, y: 0.7570668}
       strength: 1
-    - offset: {x: 0.06586978, y: 0.6831274}
+    - offset: {x: 0.08271962, y: 0.70770204}
       strength: 0.5
-    - offset: {x: 0.0928176, y: 0.60666126}
+    - offset: {x: 0.106268905, y: 0.62516266}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1692071, y: 0.4302049}
+    - offset: {x: 0.18695751, y: 0.47863796}
       strength: 0.5
-    - offset: {x: 0.24545313, y: 0.5057484}
+    - offset: {x: 0.23680194, y: 0.55397785}
       strength: 0.75
-    - offset: {x: 0.2837959, y: 0.5451759}
+    - offset: {x: 0.29627264, y: 0.6474016}
       strength: 1
-    - offset: {x: -0.22812715, y: 0.6769828}
+    - offset: {x: -0.25451416, y: 0.7176133}
       strength: 1
-    - offset: {x: -0.19846454, y: 0.6556661}
+    - offset: {x: -0.21239999, y: 0.68084437}
       strength: 0.5
-    - offset: {x: -0.12877034, y: 0.5992152}
+    - offset: {x: -0.13911374, y: 0.6183603}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.026905987, y: 0.47082126}
+    - offset: {x: 0.04230536, y: 0.5261199}
       strength: 0.5
-    - offset: {x: 0.09153433, y: 0.5755408}
+    - offset: {x: 0.09643469, y: 0.6229934}
       strength: 0.75
-    - offset: {x: 0.124588095, y: 0.629755}
+    - offset: {x: 0.16901062, y: 0.7437649}
       strength: 1
-    - offset: {x: -0.3705058, y: 0.5530018}
+    - offset: {x: -0.423953, y: 0.5770981}
       strength: 1
-    - offset: {x: -0.34654105, y: 0.5427918}
+    - offset: {x: -0.38309857, y: 0.5575126}
       strength: 0.5
-    - offset: {x: -0.27492636, y: 0.5156069}
+    - offset: {x: -0.30300546, y: 0.5267944}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13115622, y: 0.44923034}
+    - offset: {x: -0.12712865, y: 0.5085524}
       strength: 0.5
-    - offset: {x: -0.116003975, y: 0.57047296}
+    - offset: {x: -0.100422636, y: 0.62216747}
       strength: 0.75
-    - offset: {x: -0.10760168, y: 0.633273}
+    - offset: {x: -0.057255473, y: 0.76691014}
       strength: 1
-    - offset: {x: -0.29584718, y: 0.41499564}
+    - offset: {x: -0.34504595, y: 0.41783324}
       strength: 1
-    - offset: {x: -0.2916185, y: 0.41062462}
+    - offset: {x: -0.32938325, y: 0.40995282}
       strength: 0.5
-    - offset: {x: -0.26003426, y: 0.40481293}
+    - offset: {x: -0.2894007, y: 0.40410307}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21238895, y: 0.37807977}
+    - offset: {x: -0.22209246, y: 0.4362263}
       strength: 0.5
-    - offset: {x: -0.25558877, y: 0.49351355}
+    - offset: {x: -0.2384538, y: 0.5519839}
       strength: 0.75
-    - offset: {x: -0.27675992, y: 0.55366915}
+    - offset: {x: -0.24998213, y: 0.70327914}
       strength: 1
-    - offset: {x: -0.04788528, y: 0.34380633}
+    - offset: {x: -0.06401563, y: 0.3331138}
       strength: 1
-    - offset: {x: -0.065869786, y: 0.33658636}
+    - offset: {x: -0.082719624, y: 0.3246035}
       strength: 0.5
-    - offset: {x: -0.092817605, y: 0.3317349}
+    - offset: {x: -0.10626892, y: 0.3221572}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.1692071, y: 0.29904866}
+    - offset: {x: -0.18695754, y: 0.3515093}
       strength: 0.5
-    - offset: {x: -0.24545313, y: 0.3897444}
+    - offset: {x: -0.23680195, y: 0.4535552}
       strength: 0.75
-    - offset: {x: -0.28379592, y: 0.43757424}
+    - offset: {x: -0.29627264, y: 0.5901461}
       strength: 1
-    - offset: {x: 0.2281271, y: 0.3811356}
+    - offset: {x: 0.2545141, y: 0.37256733}
       strength: 1
-    - offset: {x: 0.19846451, y: 0.36404762}
+    - offset: {x: 0.21239991, y: 0.35146117}
       strength: 0.5
-    - offset: {x: 0.12877029, y: 0.33918095}
+    - offset: {x: 0.1391137, y: 0.32895958}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
@@ -918,129 +918,129 @@ MonoBehaviour:
     lights:
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.014007527, y: 0.34828553}
+    - offset: {x: 0.018575547, y: 0.3704918}
       strength: 0.5
-    - offset: {x: 0.024500683, y: 0.40107065}
+    - offset: {x: 0.037547145, y: 0.46452546}
       strength: 0.75
-    - offset: {x: 0.030006215, y: 0.42878762}
+    - offset: {x: 0.04749902, y: 0.5138929}
       strength: 1
-    - offset: {x: 0.3120961, y: 0.50298667}
+    - offset: {x: 0.32335764, y: 0.5438667}
       strength: 1
-    - offset: {x: 0.29063302, y: 0.48850885}
+    - offset: {x: 0.30206504, y: 0.524378}
       strength: 0.5
-    - offset: {x: 0.23060857, y: 0.45255595}
+    - offset: {x: 0.2396645, y: 0.4806749}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.009904817, y: 0.35323793}
+    - offset: {x: 0.013134889, y: 0.37705922}
       strength: 0.5
-    - offset: {x: 0.017324604, y: 0.40973294}
+    - offset: {x: 0.026549831, y: 0.47780037}
       strength: 0.75
-    - offset: {x: 0.021217592, y: 0.4393964}
+    - offset: {x: 0.033586875, y: 0.5306864}
       strength: 1
-    - offset: {x: 0.22068526, y: 0.6133293}
+    - offset: {x: 0.22864838, y: 0.65819085}
       strength: 1
-    - offset: {x: 0.20550859, y: 0.5912632}
+    - offset: {x: 0.21359223, y: 0.63117415}
       strength: 0.5
-    - offset: {x: 0.16306487, y: 0.5340884}
+    - offset: {x: 0.16946839, y: 0.56540906}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0, y: 0.35528928}
+    - offset: {x: 0, y: 0.37977955}
       strength: 0.5
-    - offset: {x: 0, y: 0.413321}
+    - offset: {x: 0, y: 0.48329902}
       strength: 0.75
-    - offset: {x: 0, y: 0.44379073}
+    - offset: {x: 0, y: 0.5376424}
       strength: 1
-    - offset: {x: -0.000000013642153, y: 0.6590347}
+    - offset: {x: -0.000000014134412, y: 0.7055455}
       strength: 1
-    - offset: {x: -0.000000012703973, y: 0.63382536}
+    - offset: {x: -0.000000013203683, y: 0.6754105}
       strength: 0.5
-    - offset: {x: -0.00000001008022, y: 0.56786025}
+    - offset: {x: -0.000000010476068, y: 0.60050714}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.009904817, y: 0.35323793}
+    - offset: {x: -0.013134889, y: 0.37705922}
       strength: 0.5
-    - offset: {x: -0.017324604, y: 0.40973294}
+    - offset: {x: -0.026549831, y: 0.47780037}
       strength: 0.75
-    - offset: {x: -0.021217592, y: 0.4393964}
+    - offset: {x: -0.033586875, y: 0.5306864}
       strength: 1
-    - offset: {x: -0.22068526, y: 0.6133293}
+    - offset: {x: -0.22864838, y: 0.65819085}
       strength: 1
-    - offset: {x: -0.20550859, y: 0.5912632}
+    - offset: {x: -0.21359223, y: 0.63117415}
       strength: 0.5
-    - offset: {x: -0.16306487, y: 0.5340884}
+    - offset: {x: -0.16946839, y: 0.56540906}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.014007527, y: 0.34828553}
+    - offset: {x: -0.01857555, y: 0.3704918}
       strength: 0.5
-    - offset: {x: -0.024500683, y: 0.40107065}
+    - offset: {x: -0.037547145, y: 0.46452546}
       strength: 0.75
-    - offset: {x: -0.030006215, y: 0.42878762}
+    - offset: {x: -0.04749902, y: 0.5138929}
       strength: 1
-    - offset: {x: -0.3120961, y: 0.50298667}
+    - offset: {x: -0.32335764, y: 0.54386663}
       strength: 1
-    - offset: {x: -0.29063302, y: 0.48850885}
+    - offset: {x: -0.30206504, y: 0.524378}
       strength: 0.5
-    - offset: {x: -0.23060857, y: 0.45255592}
+    - offset: {x: -0.2396645, y: 0.48067486}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.009904817, y: 0.34333313}
+    - offset: {x: -0.013134897, y: 0.36392432}
       strength: 0.5
-    - offset: {x: -0.017324597, y: 0.39240834}
+    - offset: {x: -0.026549846, y: 0.45125055}
       strength: 0.75
-    - offset: {x: -0.021217592, y: 0.4181788}
+    - offset: {x: -0.03358689, y: 0.4970995}
       strength: 1
-    - offset: {x: -0.22068527, y: 0.39264405}
+    - offset: {x: -0.2286484, y: 0.42954248}
       strength: 1
-    - offset: {x: -0.2055086, y: 0.3857546}
+    - offset: {x: -0.21359226, y: 0.4175819}
       strength: 0.5
-    - offset: {x: -0.16306488, y: 0.37102354}
+    - offset: {x: -0.1694684, y: 0.3959407}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0, y: 0.34128177}
+    - offset: {x: 0, y: 0.361204}
       strength: 0.5
-    - offset: {x: 0, y: 0.3888203}
+    - offset: {x: 0, y: 0.44575188}
       strength: 0.75
-    - offset: {x: 0, y: 0.4137845}
+    - offset: {x: 0, y: 0.49014342}
       strength: 1
-    - offset: {x: 0.0000000037217085, y: 0.3469386}
+    - offset: {x: 0.0000000038560013, y: 0.38218784}
       strength: 1
-    - offset: {x: 0.0000000034657641, y: 0.34319234}
+    - offset: {x: 0.0000000036020897, y: 0.3733455}
       strength: 0.5
-    - offset: {x: 0.0000000027499796, y: 0.33725166}
+    - offset: {x: 0.0000000028579705, y: 0.36084265}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.009904817, y: 0.34333313}
+    - offset: {x: 0.013134889, y: 0.36392432}
       strength: 0.5
-    - offset: {x: 0.017324597, y: 0.39240834}
+    - offset: {x: 0.026549831, y: 0.45125055}
       strength: 0.75
-    - offset: {x: 0.0212176, y: 0.41817883}
+    - offset: {x: 0.033586867, y: 0.49709946}
       strength: 1
-    - offset: {x: 0.22068521, y: 0.39264402}
+    - offset: {x: 0.22864835, y: 0.42954245}
       strength: 1
-    - offset: {x: 0.20550856, y: 0.38575456}
+    - offset: {x: 0.2135922, y: 0.41758186}
       strength: 0.5
-    - offset: {x: 0.16306485, y: 0.3710235}
+    - offset: {x: 0.16946837, y: 0.39594066}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
@@ -1131,129 +1131,129 @@ MonoBehaviour:
     lights:
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.007967554, y: 0.31687263}
+    - offset: {x: -0.014829264, y: 0.4395273}
       strength: 0.5
-    - offset: {x: -0.038230203, y: 0.4856158}
+    - offset: {x: -0.03787009, y: 0.6534112}
       strength: 0.75
-    - offset: {x: -0.054056153, y: 0.57433045}
+    - offset: {x: -0.04368518, y: 0.6873132}
       strength: 1
-    - offset: {x: 0.32290372, y: 0.30509156}
+    - offset: {x: 0.26091754, y: 0.13101551}
       strength: 1
-    - offset: {x: 0.3051947, y: 0.29858747}
+    - offset: {x: 0.24671042, y: 0.15509747}
       strength: 0.5
-    - offset: {x: 0.24238405, y: 0.28294748}
+    - offset: {x: 0.2035732, y: 0.16680309}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.14811814, y: 0.34589875}
+    - offset: {x: 0.15458037, y: 0.4684707}
       strength: 0.5
-    - offset: {x: 0.16579154, y: 0.5120346}
+    - offset: {x: 0.17019963, y: 0.6808176}
       strength: 0.75
-    - offset: {x: 0.17491274, y: 0.59936064}
+    - offset: {x: 0.15375663, y: 0.7101098}
       strength: 1
-    - offset: {x: 0.28498977, y: 0.43099043}
+    - offset: {x: 0.257104, y: 0.23830128}
       strength: 1
-    - offset: {x: 0.2807052, y: 0.41993132}
+    - offset: {x: 0.25127214, y: 0.25823304}
       strength: 0.5
-    - offset: {x: 0.2510404, y: 0.38513902}
+    - offset: {x: 0.2299058, y: 0.25657955}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.42160794}
+    - offset: {x: 0.23343892, y: 0.5488321}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.6028481}
+    - offset: {x: 0.27856874, y: 0.77376056}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.6980124}
+    - offset: {x: 0.26112992, y: 0.7960356}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.5066098}
+    - offset: {x: 0.10268244, y: 0.3128155}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.49707603}
+    - offset: {x: 0.10864207, y: 0.33277372}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.46045986}
+    - offset: {x: 0.121562704, y: 0.32937106}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.15938595, y: 0.4996508}
+    - offset: {x: 0.17555213, y: 0.63353693}
       strength: 0.5
-    - offset: {x: 0.21985722, y: 0.70485896}
+    - offset: {x: 0.22375603, y: 0.8777954}
       strength: 0.75
-    - offset: {x: 0.25135967, y: 0.8124969}
+    - offset: {x: 0.21553682, y: 0.8947565}
       strength: 1
-    - offset: {x: -0.17166501, y: 0.4876528}
+    - offset: {x: -0.1118891, y: 0.31090873}
       strength: 1
-    - offset: {x: -0.15090528, y: 0.4848313}
+    - offset: {x: -0.09762905, y: 0.33505458}
       strength: 0.5
-    - offset: {x: -0.09174241, y: 0.46478802}
+    - offset: {x: -0.057990175, y: 0.34253734}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.007967535, y: 0.5343108}
+    - offset: {x: 0.0148292435, y: 0.67296624}
       strength: 0.5
-    - offset: {x: 0.038230177, y: 0.7583106}
+    - offset: {x: 0.037870064, y: 0.93197995}
       strength: 0.75
-    - offset: {x: 0.054056127, y: 0.87575054}
+    - offset: {x: 0.043685157, y: 0.9484431}
       strength: 1
-    - offset: {x: -0.32290372, y: 0.38522425}
+    - offset: {x: -0.26091754, y: 0.23369794}
       strength: 1
-    - offset: {x: -0.3051947, y: 0.3903699}
+    - offset: {x: -0.24671043, y: 0.26373953}
       strength: 0.5
-    - offset: {x: -0.24238408, y: 0.39558816}
+    - offset: {x: -0.20357321, y: 0.28836578}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.14811812, y: 0.5052847}
+    - offset: {x: -0.15458035, y: 0.6440228}
       strength: 0.5
-    - offset: {x: -0.16579153, y: 0.7318918}
+    - offset: {x: -0.17019962, y: 0.9045736}
       strength: 0.75
-    - offset: {x: -0.17491272, y: 0.85072035}
+    - offset: {x: -0.15375662, y: 0.9256466}
       strength: 1
-    - offset: {x: -0.28498983, y: 0.2593254}
+    - offset: {x: -0.25710404, y: 0.1264122}
       strength: 1
-    - offset: {x: -0.2807052, y: 0.26902607}
+    - offset: {x: -0.25127217, y: 0.16060399}
       strength: 0.5
-    - offset: {x: -0.25104043, y: 0.29339662}
+    - offset: {x: -0.22990581, y: 0.19858937}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.4295755}
+    - offset: {x: -0.23343892, y: 0.5636614}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.6410783}
+    - offset: {x: -0.27856874, y: 0.81163067}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.7520686}
+    - offset: {x: -0.26112992, y: 0.8397207}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.18370605}
+    - offset: {x: -0.10268245, y: 0.051897965}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.19188134}
+    - offset: {x: -0.10864209, y: 0.086063296}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.2180758}
+    - offset: {x: -0.12156271, y: 0.12579785}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.15938596, y: 0.35153267}
+    - offset: {x: -0.17555214, y: 0.47895658}
       strength: 0.5
-    - offset: {x: -0.21985723, y: 0.53906745}
+    - offset: {x: -0.22375606, y: 0.7075958}
       strength: 0.75
-    - offset: {x: -0.2513597, y: 0.63758415}
+    - offset: {x: -0.21553682, y: 0.7409999}
       strength: 1
-    - offset: {x: 0.17166497, y: 0.20266299}
+    - offset: {x: 0.11188906, y: 0.053804718}
       strength: 1
-    - offset: {x: 0.15090522, y: 0.20412607}
+    - offset: {x: 0.09762901, y: 0.08378243}
       strength: 0.5
-    - offset: {x: 0.09174236, y: 0.21374762}
+    - offset: {x: 0.05799014, y: 0.112631544}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
@@ -1792,1025 +1792,1025 @@ MonoBehaviour:
     lights:
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.30683827}
+    - offset: {x: 0.016951868, y: 0.4483526}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.4776297}
+    - offset: {x: -0.006028295, y: 0.66276735}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.56741756}
+    - offset: {x: -0.011153255, y: 0.69672954}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.32257137}
+    - offset: {x: 0.2946266, y: 0.1934693}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.313012}
+    - offset: {x: 0.28169948, y: 0.21027136}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.2918507}
+    - offset: {x: 0.23833218, y: 0.21189792}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.22670282}
+    - offset: {x: 0.013350061, y: 0.30869806}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.39749417}
+    - offset: {x: -0.0030263646, y: 0.5230878}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.4872821}
+    - offset: {x: -0.0081513245, y: 0.55705005}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.24243589}
+    - offset: {x: 0.2536903, y: 0.06542341}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.23287658}
+    - offset: {x: 0.24446906, y: 0.08000941}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.21171519}
+    - offset: {x: 0.20656177, y: 0.078892544}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.30683827}
+    - offset: {x: 0.016951868, y: 0.4483526}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.4776297}
+    - offset: {x: -0.006028295, y: 0.66276735}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.56741756}
+    - offset: {x: -0.011153255, y: 0.69672954}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.32257137}
+    - offset: {x: 0.2946266, y: 0.1934693}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.313012}
+    - offset: {x: 0.28169948, y: 0.21027136}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.2918507}
+    - offset: {x: 0.23833218, y: 0.21189792}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.33355013}
+    - offset: {x: 0.018152473, y: 0.4949041}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.50434154}
+    - offset: {x: -0.0070289383, y: 0.7093272}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.5941294}
+    - offset: {x: -0.012153898, y: 0.7432894}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.34928322}
+    - offset: {x: 0.30827203, y: 0.23615132}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.33972386}
+    - offset: {x: 0.29410958, y: 0.25369203}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.3185625}
+    - offset: {x: 0.24892235, y: 0.25623307}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.30683827}
+    - offset: {x: 0.016951868, y: 0.4483526}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.4776297}
+    - offset: {x: -0.006028295, y: 0.66276735}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.56741756}
+    - offset: {x: -0.011153255, y: 0.69672954}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.32257137}
+    - offset: {x: 0.2946266, y: 0.1934693}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.313012}
+    - offset: {x: 0.28169948, y: 0.21027136}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.2918507}
+    - offset: {x: 0.23833218, y: 0.21189792}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.22670282}
+    - offset: {x: 0.013350061, y: 0.30869806}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.39749417}
+    - offset: {x: -0.0030263646, y: 0.5230878}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.4872821}
+    - offset: {x: -0.0081513245, y: 0.55705005}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.24243589}
+    - offset: {x: 0.2536903, y: 0.06542341}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.23287658}
+    - offset: {x: 0.24446906, y: 0.08000941}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.21171519}
+    - offset: {x: 0.20656177, y: 0.078892544}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.30683827}
+    - offset: {x: 0.016951868, y: 0.4483526}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.4776297}
+    - offset: {x: -0.006028295, y: 0.66276735}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.56741756}
+    - offset: {x: -0.011153255, y: 0.69672954}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.32257137}
+    - offset: {x: 0.2946266, y: 0.1934693}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.313012}
+    - offset: {x: 0.28169948, y: 0.21027136}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.2918507}
+    - offset: {x: 0.23833218, y: 0.21189792}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.020155292, y: 0.33355013}
+    - offset: {x: 0.018152473, y: 0.4949041}
       strength: 0.5
-    - offset: {x: -0.010097033, y: 0.50434154}
+    - offset: {x: -0.0070289383, y: 0.7093272}
       strength: 0.75
-    - offset: {x: -0.025997063, y: 0.5941294}
+    - offset: {x: -0.012153898, y: 0.7432894}
       strength: 1
-    - offset: {x: 0.3489606, y: 0.34928322}
+    - offset: {x: 0.30827203, y: 0.23615132}
       strength: 1
-    - offset: {x: 0.33174324, y: 0.33972386}
+    - offset: {x: 0.29410958, y: 0.25369203}
       strength: 0.5
-    - offset: {x: 0.26940155, y: 0.3185625}
+    - offset: {x: 0.24892235, y: 0.25623307}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.34580734}
+    - offset: {x: 0.17705303, y: 0.48853236}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.5139951}
+    - offset: {x: 0.19271518, y: 0.7014315}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.6023682}
+    - offset: {x: 0.17676018, y: 0.73102784}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.45768273}
+    - offset: {x: 0.28093994, y: 0.31267303}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.4437422}
+    - offset: {x: 0.27601317, y: 0.32577744}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.40359434}
+    - offset: {x: 0.25448412, y: 0.3139635}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.26567188}
+    - offset: {x: 0.17450617, y: 0.34760436}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.43385956}
+    - offset: {x: 0.19483787, y: 0.5628133}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.5222327}
+    - offset: {x: 0.17888288, y: 0.5924097}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.37754726}
+    - offset: {x: 0.2519936, y: 0.17015398}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.36360675}
+    - offset: {x: 0.24968728, y: 0.18235254}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.32345888}
+    - offset: {x: 0.23201904, y: 0.16972561}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.34580734}
+    - offset: {x: 0.17705303, y: 0.48853236}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.5139951}
+    - offset: {x: 0.19271518, y: 0.7014315}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.6023682}
+    - offset: {x: 0.17676018, y: 0.73102784}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.45768273}
+    - offset: {x: 0.28093994, y: 0.31267303}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.4437422}
+    - offset: {x: 0.27601317, y: 0.32577744}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.40359434}
+    - offset: {x: 0.25448412, y: 0.3139635}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.37251917}
+    - offset: {x: 0.177902, y: 0.53550833}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.54070693}
+    - offset: {x: 0.19200762, y: 0.74763757}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.62908}
+    - offset: {x: 0.17605262, y: 0.77723396}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.48439458}
+    - offset: {x: 0.29058874, y: 0.36017945}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.47045404}
+    - offset: {x: 0.28478843, y: 0.37358573}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.4303062}
+    - offset: {x: 0.2619725, y: 0.36204284}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.34580734}
+    - offset: {x: 0.17705303, y: 0.48853236}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.5139951}
+    - offset: {x: 0.19271518, y: 0.7014315}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.6023682}
+    - offset: {x: 0.17676018, y: 0.73102784}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.45768273}
+    - offset: {x: 0.28093994, y: 0.31267303}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.4437422}
+    - offset: {x: 0.27601317, y: 0.32577744}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.40359434}
+    - offset: {x: 0.25448412, y: 0.3139635}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.26567188}
+    - offset: {x: 0.17450617, y: 0.34760436}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.43385956}
+    - offset: {x: 0.19483787, y: 0.5628133}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.5222327}
+    - offset: {x: 0.17888288, y: 0.5924097}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.37754726}
+    - offset: {x: 0.2519936, y: 0.17015398}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.36360675}
+    - offset: {x: 0.24968728, y: 0.18235254}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.32345888}
+    - offset: {x: 0.23201904, y: 0.16972561}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.34580734}
+    - offset: {x: 0.17705303, y: 0.48853236}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.5139951}
+    - offset: {x: 0.19271518, y: 0.7014315}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.6023682}
+    - offset: {x: 0.17676018, y: 0.73102784}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.45768273}
+    - offset: {x: 0.28093994, y: 0.31267303}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.4437422}
+    - offset: {x: 0.27601317, y: 0.32577744}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.40359434}
+    - offset: {x: 0.25448412, y: 0.3139635}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.16800398, y: 0.37251917}
+    - offset: {x: 0.177902, y: 0.53550833}
       strength: 0.5
-    - offset: {x: 0.1856847, y: 0.54070693}
+    - offset: {x: 0.19200762, y: 0.74763757}
       strength: 0.75
-    - offset: {x: 0.1947535, y: 0.62908}
+    - offset: {x: 0.17605262, y: 0.77723396}
       strength: 1
-    - offset: {x: 0.3034148, y: 0.48439458}
+    - offset: {x: 0.29058874, y: 0.36017945}
       strength: 1
-    - offset: {x: 0.29947788, y: 0.47045404}
+    - offset: {x: 0.28478843, y: 0.37358573}
       strength: 0.5
-    - offset: {x: 0.27014464, y: 0.4303062}
+    - offset: {x: 0.2619725, y: 0.36204284}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.42563504}
+    - offset: {x: 0.23343892, y: 0.573548}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.6089286}
+    - offset: {x: 0.27856874, y: 0.7990376}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.7051291}
+    - offset: {x: 0.26112992, y: 0.82171786}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.537118}
+    - offset: {x: 0.102682434, y: 0.39212382}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.52477485}
+    - offset: {x: 0.10864207, y: 0.40544215}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.4828718}
+    - offset: {x: 0.121562704, y: 0.39184538}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.34549958}
+    - offset: {x: 0.23343892, y: 0.43209258}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.5287931}
+    - offset: {x: 0.27856874, y: 0.660859}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.6249936}
+    - offset: {x: 0.26112992, y: 0.68353933}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.45698255}
+    - offset: {x: 0.10268244, y: 0.24360979}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.4446394}
+    - offset: {x: 0.10864207, y: 0.25656497}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.4027363}
+    - offset: {x: 0.121562704, y: 0.24295479}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.42563504}
+    - offset: {x: 0.23343892, y: 0.573548}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.6089286}
+    - offset: {x: 0.27856874, y: 0.7990376}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.7051291}
+    - offset: {x: 0.26112992, y: 0.82171786}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.537118}
+    - offset: {x: 0.102682434, y: 0.39212382}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.52477485}
+    - offset: {x: 0.10864207, y: 0.40544215}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.4828718}
+    - offset: {x: 0.121562704, y: 0.39184538}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.45234686}
+    - offset: {x: 0.23343892, y: 0.6206998}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.63564044}
+    - offset: {x: 0.27856874, y: 0.8450971}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.7318409}
+    - offset: {x: 0.26112992, y: 0.8677774}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.5638299}
+    - offset: {x: 0.102682434, y: 0.44162858}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.5514867}
+    - offset: {x: 0.10864207, y: 0.45506787}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.50958365}
+    - offset: {x: 0.121562704, y: 0.4414756}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.42563504}
+    - offset: {x: 0.23343892, y: 0.573548}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.6089286}
+    - offset: {x: 0.27856874, y: 0.7990376}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.7051291}
+    - offset: {x: 0.26112992, y: 0.82171786}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.537118}
+    - offset: {x: 0.102682434, y: 0.39212382}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.52477485}
+    - offset: {x: 0.10864207, y: 0.40544215}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.4828718}
+    - offset: {x: 0.121562704, y: 0.39184538}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.34549958}
+    - offset: {x: 0.23343892, y: 0.43209258}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.5287931}
+    - offset: {x: 0.27856874, y: 0.660859}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.6249936}
+    - offset: {x: 0.26112992, y: 0.68353933}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.45698255}
+    - offset: {x: 0.10268244, y: 0.24360979}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.4446394}
+    - offset: {x: 0.10864207, y: 0.25656497}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.4027363}
+    - offset: {x: 0.121562704, y: 0.24295479}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.42563504}
+    - offset: {x: 0.23343892, y: 0.573548}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.6089286}
+    - offset: {x: 0.27856874, y: 0.7990376}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.7051291}
+    - offset: {x: 0.26112992, y: 0.82171786}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.537118}
+    - offset: {x: 0.102682434, y: 0.39212382}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.52477485}
+    - offset: {x: 0.10864207, y: 0.40544215}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.4828718}
+    - offset: {x: 0.121562704, y: 0.39184538}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.21743822, y: 0.45234686}
+    - offset: {x: 0.23343892, y: 0.6206998}
       strength: 0.5
-    - offset: {x: 0.27269486, y: 0.63564044}
+    - offset: {x: 0.27856874, y: 0.8450971}
       strength: 0.75
-    - offset: {x: 0.30142012, y: 0.7318409}
+    - offset: {x: 0.26112992, y: 0.8677774}
       strength: 1
-    - offset: {x: 0.08013271, y: 0.5638299}
+    - offset: {x: 0.102682434, y: 0.44162858}
       strength: 1
-    - offset: {x: 0.0917824, y: 0.5514867}
+    - offset: {x: 0.10864207, y: 0.45506787}
       strength: 0.5
-    - offset: {x: 0.11264069, y: 0.50958365}
+    - offset: {x: 0.121562704, y: 0.4414756}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.49955937}
+    - offset: {x: 0.15307947, y: 0.6535986}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.7068195}
+    - offset: {x: 0.20124048, y: 0.8984093}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.8155044}
+    - offset: {x: 0.19253327, y: 0.91567457}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.5143451}
+    - offset: {x: -0.135725, y: 0.3852805}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.50864214}
+    - offset: {x: -0.12237006, y: 0.40259898}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.48324335}
+    - offset: {x: -0.08256848, y: 0.39992133}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.4194239}
+    - offset: {x: 0.15562633, y: 0.51267064}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.62668395}
+    - offset: {x: 0.19911778, y: 0.7597911}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.7353689}
+    - offset: {x: 0.19041058, y: 0.7770564}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.43420964}
+    - offset: {x: -0.106778674, y: 0.24276143}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.42850673}
+    - offset: {x: -0.09604418, y: 0.25917408}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.40310785}
+    - offset: {x: -0.060103416, y: 0.25568342}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.49955937}
+    - offset: {x: 0.15307947, y: 0.6535986}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.7068195}
+    - offset: {x: 0.20124048, y: 0.8984093}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.8155044}
+    - offset: {x: 0.19253327, y: 0.91567457}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.5143451}
+    - offset: {x: -0.135725, y: 0.3852805}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.50864214}
+    - offset: {x: -0.12237006, y: 0.40259898}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.48324335}
+    - offset: {x: -0.08256848, y: 0.39992133}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.5262712}
+    - offset: {x: 0.15223052, y: 0.7005746}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.7335313}
+    - offset: {x: 0.20194805, y: 0.9446154}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.8422162}
+    - offset: {x: 0.19324084, y: 0.9618807}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.541057}
+    - offset: {x: -0.14537379, y: 0.4327869}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.535354}
+    - offset: {x: -0.13114533, y: 0.45040727}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.50995517}
+    - offset: {x: -0.090056874, y: 0.44800067}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.49955937}
+    - offset: {x: 0.15307947, y: 0.6535986}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.7068195}
+    - offset: {x: 0.20124048, y: 0.8984093}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.8155044}
+    - offset: {x: 0.19253327, y: 0.91567457}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.5143451}
+    - offset: {x: -0.135725, y: 0.3852805}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.50864214}
+    - offset: {x: -0.12237006, y: 0.40259898}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.48324335}
+    - offset: {x: -0.08256848, y: 0.39992133}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.4194239}
+    - offset: {x: 0.15562633, y: 0.51267064}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.62668395}
+    - offset: {x: 0.19911778, y: 0.7597911}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.7353689}
+    - offset: {x: 0.19041058, y: 0.7770564}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.43420964}
+    - offset: {x: -0.106778674, y: 0.24276143}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.42850673}
+    - offset: {x: -0.09604418, y: 0.25917408}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.40310785}
+    - offset: {x: -0.060103416, y: 0.25568342}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.49955937}
+    - offset: {x: 0.15307947, y: 0.6535986}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.7068195}
+    - offset: {x: 0.20124048, y: 0.8984093}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.8155044}
+    - offset: {x: 0.19253327, y: 0.91567457}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.5143451}
+    - offset: {x: -0.135725, y: 0.3852805}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.50864214}
+    - offset: {x: -0.12237006, y: 0.40259898}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.48324335}
+    - offset: {x: -0.08256848, y: 0.39992133}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: 0.1395001, y: 0.5262712}
+    - offset: {x: 0.15223052, y: 0.7005746}
       strength: 0.5
-    - offset: {x: 0.19996406, y: 0.7335313}
+    - offset: {x: 0.20194805, y: 0.9446154}
       strength: 0.75
-    - offset: {x: 0.23151891, y: 0.8422162}
+    - offset: {x: 0.19324084, y: 0.9618807}
       strength: 1
-    - offset: {x: -0.19009002, y: 0.541057}
+    - offset: {x: -0.14537379, y: 0.4327869}
       strength: 1
-    - offset: {x: -0.16967793, y: 0.535354}
+    - offset: {x: -0.13114533, y: 0.45040727}
       strength: 0.5
-    - offset: {x: -0.11084666, y: 0.50995517}
+    - offset: {x: -0.090056874, y: 0.44800067}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.5242765}
+    - offset: {x: -0.016951889, y: 0.68179154}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.75032455}
+    - offset: {x: 0.006028271, y: 0.9413361}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.86883765}
+    - offset: {x: 0.011153232, y: 0.95785946}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.40270406}
+    - offset: {x: -0.2946266, y: 0.29615173}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.40479442}
+    - offset: {x: -0.2816995, y: 0.31891343}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.40449136}
+    - offset: {x: -0.2383322, y: 0.33346063}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.44414103}
+    - offset: {x: -0.013350081, y: 0.542137}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.670189}
+    - offset: {x: 0.0030263402, y: 0.80165654}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.7887022}
+    - offset: {x: 0.008151301, y: 0.81817997}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.3225686}
+    - offset: {x: -0.25369033, y: 0.16810584}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.324659}
+    - offset: {x: -0.24446908, y: 0.18865149}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.32435587}
+    - offset: {x: -0.20656179, y: 0.20045525}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.5242765}
+    - offset: {x: -0.016951889, y: 0.68179154}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.75032455}
+    - offset: {x: 0.006028271, y: 0.9413361}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.86883765}
+    - offset: {x: 0.011153232, y: 0.95785946}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.40270406}
+    - offset: {x: -0.2946266, y: 0.29615173}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.40479442}
+    - offset: {x: -0.2816995, y: 0.31891343}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.40449136}
+    - offset: {x: -0.2383322, y: 0.33346063}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.5509883}
+    - offset: {x: -0.018152496, y: 0.72834307}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.77703637}
+    - offset: {x: 0.007028914, y: 0.98789597}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.8955495}
+    - offset: {x: 0.012153875, y: 1.0044193}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.4294159}
+    - offset: {x: -0.30827203, y: 0.33883375}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.43150625}
+    - offset: {x: -0.29410958, y: 0.3623341}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.4312032}
+    - offset: {x: -0.24892238, y: 0.37779576}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.5242765}
+    - offset: {x: -0.016951889, y: 0.68179154}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.75032455}
+    - offset: {x: 0.006028271, y: 0.9413361}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.86883765}
+    - offset: {x: 0.011153232, y: 0.95785946}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.40270406}
+    - offset: {x: -0.2946266, y: 0.29615173}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.40479442}
+    - offset: {x: -0.2816995, y: 0.31891343}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.40449136}
+    - offset: {x: -0.2383322, y: 0.33346063}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.44414103}
+    - offset: {x: -0.013350081, y: 0.542137}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.670189}
+    - offset: {x: 0.0030263402, y: 0.80165654}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.7887022}
+    - offset: {x: 0.008151301, y: 0.81817997}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.3225686}
+    - offset: {x: -0.25369033, y: 0.16810584}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.324659}
+    - offset: {x: -0.24446908, y: 0.18865149}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.32435587}
+    - offset: {x: -0.20656179, y: 0.20045525}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.5242765}
+    - offset: {x: -0.016951889, y: 0.68179154}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.75032455}
+    - offset: {x: 0.006028271, y: 0.9413361}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.86883765}
+    - offset: {x: 0.011153232, y: 0.95785946}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.40270406}
+    - offset: {x: -0.2946266, y: 0.29615173}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.40479442}
+    - offset: {x: -0.2816995, y: 0.31891343}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.40449136}
+    - offset: {x: -0.2383322, y: 0.33346063}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.02015531, y: 0.5509883}
+    - offset: {x: -0.018152496, y: 0.72834307}
       strength: 0.5
-    - offset: {x: 0.01009701, y: 0.77703637}
+    - offset: {x: 0.007028914, y: 0.98789597}
       strength: 0.75
-    - offset: {x: 0.025997037, y: 0.8955495}
+    - offset: {x: 0.012153875, y: 1.0044193}
       strength: 1
-    - offset: {x: -0.3489606, y: 0.4294159}
+    - offset: {x: -0.30827203, y: 0.33883375}
       strength: 1
-    - offset: {x: -0.33174324, y: 0.43150625}
+    - offset: {x: -0.29410958, y: 0.3623341}
       strength: 0.5
-    - offset: {x: -0.26940158, y: 0.4312032}
+    - offset: {x: -0.24892238, y: 0.37779576}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.48530743}
+    - offset: {x: -0.17705302, y: 0.6416118}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.71395916}
+    - offset: {x: -0.19271517, y: 0.902672}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.8338871}
+    - offset: {x: -0.17676017, y: 0.92356116}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.26759273}
+    - offset: {x: -0.28093994, y: 0.17694803}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.27406427}
+    - offset: {x: -0.27601317, y: 0.20340739}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.2927477}
+    - offset: {x: -0.25448412, y: 0.23139504}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.405172}
+    - offset: {x: -0.17450616, y: 0.5032307}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.63382363}
+    - offset: {x: -0.19483785, y: 0.76193106}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.75375164}
+    - offset: {x: -0.17888287, y: 0.7828203}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.18745725}
+    - offset: {x: -0.2519936, y: 0.0633753}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.19392884}
+    - offset: {x: -0.2496873, y: 0.08630837}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.21261221}
+    - offset: {x: -0.23201904, y: 0.1096222}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.48530743}
+    - offset: {x: -0.17705302, y: 0.6416118}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.71395916}
+    - offset: {x: -0.19271517, y: 0.902672}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.8338871}
+    - offset: {x: -0.17676017, y: 0.92356116}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.26759273}
+    - offset: {x: -0.28093994, y: 0.17694803}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.27406427}
+    - offset: {x: -0.27601317, y: 0.20340739}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.2927477}
+    - offset: {x: -0.25448412, y: 0.23139504}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.5120193}
+    - offset: {x: -0.17790197, y: 0.68773884}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.740671}
+    - offset: {x: -0.1920076, y: 0.9495856}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.8605989}
+    - offset: {x: -0.1760526, y: 0.9704748}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.29430458}
+    - offset: {x: -0.29058874, y: 0.21480566}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.3007761}
+    - offset: {x: -0.28478843, y: 0.24244042}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.31945953}
+    - offset: {x: -0.2619725, y: 0.271986}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.48530743}
+    - offset: {x: -0.17705302, y: 0.6416118}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.71395916}
+    - offset: {x: -0.19271517, y: 0.902672}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.8338871}
+    - offset: {x: -0.17676017, y: 0.92356116}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.26759273}
+    - offset: {x: -0.28093994, y: 0.17694803}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.27406427}
+    - offset: {x: -0.27601317, y: 0.20340739}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.2927477}
+    - offset: {x: -0.25448412, y: 0.23139504}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.405172}
+    - offset: {x: -0.17450616, y: 0.5032307}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.63382363}
+    - offset: {x: -0.19483785, y: 0.76193106}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.75375164}
+    - offset: {x: -0.17888287, y: 0.7828203}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.18745725}
+    - offset: {x: -0.2519936, y: 0.0633753}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.19392884}
+    - offset: {x: -0.2496873, y: 0.08630837}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.21261221}
+    - offset: {x: -0.23201904, y: 0.1096222}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.48530743}
+    - offset: {x: -0.17705302, y: 0.6416118}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.71395916}
+    - offset: {x: -0.19271517, y: 0.902672}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.8338871}
+    - offset: {x: -0.17676017, y: 0.92356116}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.26759273}
+    - offset: {x: -0.28093994, y: 0.17694803}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.27406427}
+    - offset: {x: -0.27601317, y: 0.20340739}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.2927477}
+    - offset: {x: -0.25448412, y: 0.23139504}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.16800398, y: 0.5120193}
+    - offset: {x: -0.17790197, y: 0.68773884}
       strength: 0.5
-    - offset: {x: -0.18568468, y: 0.740671}
+    - offset: {x: -0.1920076, y: 0.9495856}
       strength: 0.75
-    - offset: {x: -0.19475348, y: 0.8605989}
+    - offset: {x: -0.1760526, y: 0.9704748}
       strength: 1
-    - offset: {x: -0.3034148, y: 0.29430458}
+    - offset: {x: -0.29058874, y: 0.21480566}
       strength: 1
-    - offset: {x: -0.29947788, y: 0.3007761}
+    - offset: {x: -0.28478843, y: 0.24244042}
       strength: 0.5
-    - offset: {x: -0.27014467, y: 0.31945953}
+    - offset: {x: -0.2619725, y: 0.271986}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.40547973}
+    - offset: {x: -0.23343892, y: 0.55659616}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.61902565}
+    - offset: {x: -0.27856874, y: 0.8050659}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.7311261}
+    - offset: {x: -0.26112992, y: 0.83287114}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.18815744}
+    - offset: {x: -0.10268245, y: 0.097497225}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.1930316}
+    - offset: {x: -0.10864209, y: 0.12374266}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.21347025}
+    - offset: {x: -0.12156271, y: 0.15351318}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.3253443}
+    - offset: {x: -0.23343892, y: 0.4187425}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.5388901}
+    - offset: {x: -0.27856874, y: 0.66388535}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.65099066}
+    - offset: {x: -0.26112992, y: 0.6916906}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.108021945}
+    - offset: {x: -0.10268245, y: -0.010080517}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.112896174}
+    - offset: {x: -0.10864209, y: 0.012095917}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.13333476}
+    - offset: {x: -0.12156271, y: 0.036393017}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.40547973}
+    - offset: {x: -0.23343892, y: 0.55659616}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.61902565}
+    - offset: {x: -0.27856874, y: 0.8050659}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.7311261}
+    - offset: {x: -0.26112992, y: 0.83287114}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.18815744}
+    - offset: {x: -0.10268245, y: 0.097497225}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.1930316}
+    - offset: {x: -0.10864209, y: 0.12374266}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.21347025}
+    - offset: {x: -0.12156271, y: 0.15351318}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.43219158}
+    - offset: {x: -0.23343892, y: 0.60254735}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.64573747}
+    - offset: {x: -0.27856874, y: 0.85212606}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.75783795}
+    - offset: {x: -0.26112992, y: 0.87993133}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.21486928}
+    - offset: {x: -0.10268245, y: 0.13335653}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.21974345}
+    - offset: {x: -0.10864209, y: 0.16095828}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.24018209}
+    - offset: {x: -0.12156271, y: 0.19255325}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.40547973}
+    - offset: {x: -0.23343892, y: 0.55659616}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.61902565}
+    - offset: {x: -0.27856874, y: 0.8050659}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.7311261}
+    - offset: {x: -0.26112992, y: 0.83287114}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.18815744}
+    - offset: {x: -0.10268245, y: 0.097497225}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.1930316}
+    - offset: {x: -0.10864209, y: 0.12374266}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.21347025}
+    - offset: {x: -0.12156271, y: 0.15351318}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.3253443}
+    - offset: {x: -0.23343892, y: 0.4187425}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.5388901}
+    - offset: {x: -0.27856874, y: 0.66388535}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.65099066}
+    - offset: {x: -0.26112992, y: 0.6916906}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.108021945}
+    - offset: {x: -0.10268245, y: -0.010080517}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.112896174}
+    - offset: {x: -0.10864209, y: 0.012095917}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.13333476}
+    - offset: {x: -0.12156271, y: 0.036393017}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.40547973}
+    - offset: {x: -0.23343892, y: 0.55659616}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.61902565}
+    - offset: {x: -0.27856874, y: 0.8050659}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.7311261}
+    - offset: {x: -0.26112992, y: 0.83287114}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.18815744}
+    - offset: {x: -0.10268245, y: 0.097497225}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.1930316}
+    - offset: {x: -0.10864209, y: 0.12374266}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.21347025}
+    - offset: {x: -0.12156271, y: 0.15351318}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.21743822, y: 0.43219158}
+    - offset: {x: -0.23343892, y: 0.60254735}
       strength: 0.5
-    - offset: {x: -0.27269486, y: 0.64573747}
+    - offset: {x: -0.27856874, y: 0.85212606}
       strength: 0.75
-    - offset: {x: -0.30142012, y: 0.75783795}
+    - offset: {x: -0.26112992, y: 0.87993133}
       strength: 1
-    - offset: {x: -0.08013272, y: 0.21486928}
+    - offset: {x: -0.10268245, y: 0.13335653}
       strength: 1
-    - offset: {x: -0.09178241, y: 0.21974345}
+    - offset: {x: -0.10864209, y: 0.16095828}
       strength: 0.5
-    - offset: {x: -0.112640694, y: 0.24018209}
+    - offset: {x: -0.12156271, y: 0.19255325}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.3315554}
+    - offset: {x: -0.1530795, y: 0.47654557}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.5211348}
+    - offset: {x: -0.20124051, y: 0.70569414}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.6207509}
+    - offset: {x: -0.1925333, y: 0.73891443}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.21093033}
+    - offset: {x: 0.13572496, y: 0.104340546}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.20916428}
+    - offset: {x: 0.122370005, y: 0.12658581}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.21309869}
+    - offset: {x: 0.082568444, y: 0.14543721}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.25141996}
+    - offset: {x: -0.15562634, y: 0.33816448}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.44099927}
+    - offset: {x: -0.19911782, y: 0.5649532}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.54061544}
+    - offset: {x: -0.1904106, y: 0.59817356}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.13079484}
+    - offset: {x: 0.10677864, y: -0.009232163}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.12902884}
+    - offset: {x: 0.09604413, y: 0.009486801}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.13296321}
+    - offset: {x: 0.060103364, y: 0.023664383}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.3315554}
+    - offset: {x: -0.1530795, y: 0.47654557}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.5211348}
+    - offset: {x: -0.20124051, y: 0.70569414}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.6207509}
+    - offset: {x: -0.1925333, y: 0.73891443}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.21093033}
+    - offset: {x: 0.13572496, y: 0.104340546}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.20916428}
+    - offset: {x: 0.122370005, y: 0.12658581}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.21309869}
+    - offset: {x: 0.082568444, y: 0.14543721}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.35826725}
+    - offset: {x: -0.15223053, y: 0.5226726}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.5478466}
+    - offset: {x: -0.20194808, y: 0.7526078}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.6474627}
+    - offset: {x: -0.19324087, y: 0.78582805}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.23764217}
+    - offset: {x: 0.14537373, y: 0.14219819}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.23587611}
+    - offset: {x: 0.13114528, y: 0.16561884}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.23981053}
+    - offset: {x: 0.09005682, y: 0.18602815}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.3315554}
+    - offset: {x: -0.1530795, y: 0.47654557}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.5211348}
+    - offset: {x: -0.20124051, y: 0.70569414}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.6207509}
+    - offset: {x: -0.1925333, y: 0.73891443}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.21093033}
+    - offset: {x: 0.13572496, y: 0.104340546}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.20916428}
+    - offset: {x: 0.122370005, y: 0.12658581}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.21309869}
+    - offset: {x: 0.082568444, y: 0.14543721}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.25141996}
+    - offset: {x: -0.15562634, y: 0.33816448}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.44099927}
+    - offset: {x: -0.19911782, y: 0.5649532}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.54061544}
+    - offset: {x: -0.1904106, y: 0.59817356}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.13079484}
+    - offset: {x: 0.10677864, y: -0.009232163}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.12902884}
+    - offset: {x: 0.09604413, y: 0.009486801}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.13296321}
+    - offset: {x: 0.060103364, y: 0.023664383}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.3315554}
+    - offset: {x: -0.1530795, y: 0.47654557}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.5211348}
+    - offset: {x: -0.20124051, y: 0.70569414}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.6207509}
+    - offset: {x: -0.1925333, y: 0.73891443}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.21093033}
+    - offset: {x: 0.13572496, y: 0.104340546}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.20916428}
+    - offset: {x: 0.122370005, y: 0.12658581}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.21309869}
+    - offset: {x: 0.082568444, y: 0.14543721}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
     - offset: {x: 0, y: 0}
       strength: 0
-    - offset: {x: -0.13950011, y: 0.35826725}
+    - offset: {x: -0.15223053, y: 0.5226726}
       strength: 0.5
-    - offset: {x: -0.19996408, y: 0.5478466}
+    - offset: {x: -0.20194808, y: 0.7526078}
       strength: 0.75
-    - offset: {x: -0.23151894, y: 0.6474627}
+    - offset: {x: -0.19324087, y: 0.78582805}
       strength: 1
-    - offset: {x: 0.19008996, y: 0.23764217}
+    - offset: {x: 0.14537373, y: 0.14219819}
       strength: 1
-    - offset: {x: 0.16967787, y: 0.23587611}
+    - offset: {x: 0.13114528, y: 0.16561884}
       strength: 0.5
-    - offset: {x: 0.11084661, y: 0.23981053}
+    - offset: {x: 0.09005682, y: 0.18602815}
       strength: 0.25
     - offset: {x: 0, y: 0}
       strength: 0
@@ -3777,7 +3777,7 @@ MonoBehaviour:
     idleAnimation: 0
   - name: CastRoll
     gait: 0
-    armed: 1
+    armed: 0
     sprites:
     - {fileID: 191883770, guid: b8ca255174df51c4e96be5a36cf18b76, type: 3}
     - {fileID: -592289044, guid: b8ca255174df51c4e96be5a36cf18b76, type: 3}

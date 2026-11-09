@@ -16,7 +16,9 @@ using UnityEngine;
 /// hair's tips moving, and the hands rising at both ends of their swing; its idle animations start and end on the
 /// idle's pose, the first frame the idle's to the pixel, without a contact frame; the yawn shuts the eyes and opens the
 /// mouth; its attacks are its own, two a weapon, each ending with the weapon where the other starts, styled while the
-/// rogue's stay plain; and the project's sheets and animation set are what the recipe bakes.
+/// rogue's stay plain; its casts are its own and styled, the whirl and the sweep spinning a whole turn and the roll
+/// unarmed, while the rogue's stay plain; a spin turns the whole character; a cast over the run takes the cast's spin and
+/// adds its style to the run's; and the project's sheets and animation set are what the recipe bakes.
 /// </summary>
 public class AdventurerRecipeTests
 {
@@ -26,6 +28,7 @@ public class AdventurerRecipeTests
     private const int North = 2;
     private const int South = 6;
     private static readonly string[] IdleAnimations = { "IdleLookAround", "IdleStretch", "IdleScratch", "IdleTapFoot", "IdleYawn" };
+    private static readonly string[] Casts = { "CastBolt", "CastLeap", "CastMend", "CastSmite", "CastWhirl", "CastLunge", "CastSweep", "CastCharge", "CastVolley", "CastRoll" };
     private static readonly string[][] AttackPairs =
     {
         new[] { "SwordSlash", "SwordBackhand" },
@@ -473,6 +476,116 @@ public class AdventurerRecipeTests
                 Assert.That(pose.Stretch, Is.Zero, $"the rogue's {pair[0]} {frame}");
             }
         }
+    }
+
+    /// <summary>
+    /// The adventurer's ten casts are its own keyed motions, not the rogue's, styled like its attacks: the head follows its
+    /// own rise and fall late and the torso stretches or squashes on some frame, while the rogue's casts stay plain. The
+    /// whirl and the sweep spin a whole turn, starting and ending facing the way the character faces; no other cast
+    /// spins. The casts over the run draw its own smite and whirl. Its roll draws no weapon, where the rogue's holds the
+    /// bow (Docs/PlayerCharacter.md, Phase 4).
+    /// </summary>
+    [Test]
+    public void TheCasts_AreTheAdventurersOwn_TheWhirlAndTheSweepSpinning()
+    {
+        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RoguePath);
+        foreach (string name in Casts)
+        {
+            CharacterClip clip = recipe.Clips.First(c => c.Name == name);
+            Assert.That(clip.Motion, Is.InstanceOf<KeyedMotion>(), name);
+            Assert.That(clip.Motion, Is.Not.EqualTo(MotionOf(rogue, name)), name);
+            float lift = 0f;
+            float stretch = 0f;
+            float spin = 0f;
+            for (int frame = 0; frame < clip.Motion.FrameCount; frame++)
+            {
+                CharacterPose pose = clip.Motion.PoseAt(frame, recipe, clip.Weapon);
+                lift = Mathf.Max(lift, Mathf.Abs(pose.HeadLift));
+                stretch = Mathf.Max(stretch, Mathf.Abs(pose.Stretch));
+                spin = Mathf.Max(spin, Mathf.Abs(pose.Spin));
+            }
+
+            Assert.That(lift, Is.GreaterThan(0.1f), $"{name}: the head follows late.");
+            Assert.That(stretch, Is.GreaterThan(0.05f), $"{name}: the torso stretches or squashes.");
+            if (name == "CastWhirl" || name == "CastSweep")
+            {
+                Assert.That(spin, Is.GreaterThan(90f), name);
+                Assert.That(clip.Motion.PoseAtTime(0f, recipe, clip.Weapon).Spin, Is.Zero, name);
+                Assert.That(clip.Motion.PoseAtTime(1f, recipe, clip.Weapon).Spin, Is.EqualTo(360f).Within(1e-3f), name);
+            }
+            else
+            {
+                Assert.That(spin, Is.Zero, name);
+            }
+
+            CharacterClip roguesClip = rogue.Clips.First(c => c.Name == name);
+            for (int frame = 0; frame < roguesClip.Motion.FrameCount; frame++)
+            {
+                CharacterPose pose = roguesClip.Motion.PoseAt(frame, rogue, roguesClip.Weapon);
+                Assert.That(pose.HeadLift, Is.Zero, $"the rogue's {name} {frame}");
+                Assert.That(pose.Stretch, Is.Zero, $"the rogue's {name} {frame}");
+                Assert.That(pose.Spin, Is.Zero, $"the rogue's {name} {frame}");
+            }
+        }
+
+        Assert.That(((OverGaitMotion)MotionOf(recipe, "CastSmiteRun")).Upper, Is.EqualTo(MotionOf(recipe, "CastSmite")));
+        Assert.That(((OverGaitMotion)MotionOf(recipe, "CastWhirlRun")).Upper, Is.EqualTo(MotionOf(recipe, "CastWhirl")));
+        Assert.That(recipe.Clips.First(c => c.Name == "CastRoll").Weapon, Is.Null);
+        Assert.That(rogue.Clips.First(c => c.Name == "CastRoll").Weapon, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// A spin turns the whole character, weapon and smear included, while the light stays where it is: the lunge with
+    /// every key spun a quarter turn draws, facing east, what the plain lunge draws facing north, frame for frame.
+    /// </summary>
+    [Test]
+    public void ASpin_TurnsTheWholeCharacter()
+    {
+        CharacterClip lunge = recipe.Clips.First(clip => clip.Name == "CastLunge");
+        KeyedMotion spun = Object.Instantiate((KeyedMotion)lunge.Motion);
+        created.Add(spun);
+        SerializedObject serialized = new(spun);
+        SerializedProperty keys = serialized.FindProperty("keys");
+        for (int i = 0; i < keys.arraySize; i++)
+        {
+            keys.GetArrayElementAtIndex(i).FindPropertyRelative("spin").floatValue = 90f;
+        }
+
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        CharacterSheet plain = baker.Bake(lunge);
+        CharacterSheet turned = baker.Bake(new CharacterClip("Spun", spun, lunge.Weapon, lunge.FrameSize, lunge.Pivot));
+        Assert.That(lunge.Motion.TryGetSmear(4, out _), Is.True, "The lunge's release frame has a smear.");
+        for (int frame = 0; frame < plain.FrameCount; frame++)
+        {
+            Assert.That(FramePixels(turned, East, frame), Is.EqualTo(FramePixels(plain, North, frame)), $"frame {frame}");
+        }
+    }
+
+    /// <summary>
+    /// A cast over the run takes the cast's spin, and adds the cast's stretch and its head's and hair's lift to the
+    /// run's, so the whirl spins over the running legs and the run's bob still shows under it.
+    /// </summary>
+    [Test]
+    public void ACastOverTheRun_TakesTheCastsSpin_AndAddsItsStyleToTheRuns()
+    {
+        CharacterClip clip = recipe.Clips.First(c => c.Name == "CastWhirlRun");
+        OverGaitMotion whirlRun = (OverGaitMotion)clip.Motion;
+        int frames = whirlRun.Upper.FrameCount;
+        bool spins = false;
+        for (int frame = 0; frame < whirlRun.FrameCount; frame++)
+        {
+            string name = $"frame {frame}";
+            CharacterPose legs = whirlRun.Legs.PoseAt(frame / frames, recipe, null);
+            CharacterPose upper = whirlRun.Upper.PoseAt(frame % frames, recipe, clip.Weapon);
+            CharacterPose pose = whirlRun.PoseAt(frame, recipe, clip.Weapon);
+            Assert.That(pose.Spin, Is.EqualTo(upper.Spin), name);
+            Assert.That(pose.Stretch, Is.EqualTo(legs.Stretch + upper.Stretch).Within(1e-5f), name);
+            Assert.That(pose.HeadLift, Is.EqualTo(legs.HeadLift + upper.HeadLift).Within(1e-5f), name);
+            Assert.That(pose.HairLift, Is.EqualTo(legs.HairLift + upper.HairLift).Within(1e-5f), name);
+            spins |= pose.Spin > 90f;
+        }
+
+        Assert.That(spins, Is.True);
     }
 
     /// <summary>

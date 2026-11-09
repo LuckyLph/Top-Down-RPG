@@ -51,22 +51,22 @@ MonoBehaviour:
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: CastBolt
-    motion: {fileID: 11400000, guid: baa612dd69097ee428ba98292f5bb01f, type: 2}
+    motion: {fileID: 11400000, guid: 00f5ded0d18c19b46b59ca0c8409b847, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: CastLeap
-    motion: {fileID: 11400000, guid: cd9e6fc30384788468dcf6d30a794b1c, type: 2}
+    motion: {fileID: 11400000, guid: 352fada5c228ca54ca8035653d2a55a2, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: CastMend
-    motion: {fileID: 11400000, guid: 7bc276af4057c3e49baa23667fac6d83, type: 2}
+    motion: {fileID: 11400000, guid: 1f7eecc80cbe3d6429729b06e153a58c, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: CastSmite
-    motion: {fileID: 11400000, guid: e23ff5a4b1f0274459e62cfa5c3beea3, type: 2}
+    motion: {fileID: 11400000, guid: 7ae47e173596f3d4fb41f320b176ddbd, type: 2}
     weapon: {fileID: 0}
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
@@ -76,7 +76,7 @@ MonoBehaviour:
     frameSize: {x: 64, y: 64}
     pivot: {x: 32, y: 12}
   - name: CastWhirl
-    motion: {fileID: 11400000, guid: 5f729294ea62bc44099503f761a5046a, type: 2}
+    motion: {fileID: 11400000, guid: d140b08042624fb48be4cb0e05321ef2, type: 2}
     weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
@@ -86,28 +86,28 @@ MonoBehaviour:
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: CastLunge
-    motion: {fileID: 11400000, guid: aef7ed4f275d702438b7ecba668da315, type: 2}
+    motion: {fileID: 11400000, guid: b8ada0fc7f0cb044f8066e07916a2287, type: 2}
     weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: CastSweep
-    motion: {fileID: 11400000, guid: e8974fe0a309f3a4f8a655ba31e76639, type: 2}
+    motion: {fileID: 11400000, guid: 0e9dce6f67fd90a47a1a79a0f73e4367, type: 2}
     weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
     frameSize: {x: 96, y: 96}
     pivot: {x: 48, y: 28}
   - name: CastCharge
-    motion: {fileID: 11400000, guid: 8154fa5d8daafac408c9338a16666e33, type: 2}
+    motion: {fileID: 11400000, guid: d193d535cc740e649b20e2e281c7048b, type: 2}
     weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
     frameSize: {x: 96, y: 96}
     pivot: {x: 48, y: 28}
   - name: CastVolley
-    motion: {fileID: 11400000, guid: eef6f6ff6738286448ce619a4e188996, type: 2}
+    motion: {fileID: 11400000, guid: 4933e837f5cd45c4e96deac2ff3cd731, type: 2}
     weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: CastRoll
-    motion: {fileID: 11400000, guid: 0ae9acdf5b8584544a2783677fbcb07c, type: 2}
-    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    motion: {fileID: 11400000, guid: f53ac9ead56e25740b6e68a4e84ebb12, type: 2}
+    weapon: {fileID: 0}
     frameSize: {x: 80, y: 80}
     pivot: {x: 40, y: 22}
   - name: IdleLookAround

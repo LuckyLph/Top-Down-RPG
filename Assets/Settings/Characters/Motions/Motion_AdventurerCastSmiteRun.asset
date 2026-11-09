@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ecc8c5091ca935489793468587ad0dd, type: 3}
   m_Name: Motion_AdventurerCastSmiteRun
   m_EditorClassIdentifier: TopDownRPG.Editor::OverGaitMotion
-  upper: {fileID: 11400000, guid: e23ff5a4b1f0274459e62cfa5c3beea3, type: 2}
+  upper: {fileID: 11400000, guid: 7ae47e173596f3d4fb41f320b176ddbd, type: 2}
   gait: {fileID: 11400000, guid: 3255699690179d34a8727bf3c3ca057f, type: 2}
   gaitLean: 0.5

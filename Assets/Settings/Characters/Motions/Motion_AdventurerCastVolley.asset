@@ -1,0 +1,222 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b9a1372f36dc8d4fb5066fa2487f2e3, type: 3}
+  m_Name: Motion_AdventurerCastVolley
+  m_EditorClassIdentifier: TopDownRPG.Editor::KeyedMotion
+  keys:
+  - time: 0
+    easing: 0
+    pelvisHeight: 14.2
+    lean: 2
+    twist: 18
+    hipTwist: 6
+    headTurn: 0
+    leftFoot: {x: -2.4, y: 2.4, z: 1.5}
+    rightFoot: {x: 2.8, y: -2.2, z: 1.5}
+    leftHand: {x: -3.6, y: 7, z: 20}
+    rightHand: {x: -1, y: 4, z: 20}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.25, y: 0.1, z: 0.96}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 1
+    kick: 0
+    stretch: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.2
+    easing: 0
+    pelvisHeight: 14
+    lean: -7
+    twist: 42
+    hipTwist: 18
+    headTurn: 0
+    leftFoot: {x: -2.1, y: 3.6, z: 1.5}
+    rightFoot: {x: 2.9, y: -3.1999998, z: 1.5}
+    leftHand: {x: -2.6, y: 8.334308, z: 22.240103}
+    rightHand: {x: -0.4, y: 4.4877853, z: 22.305407}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.22, y: -0.016165746, z: 0.9772608}
+    bowAim: {x: 0, y: 0.99026805, z: 0.1391731}
+    draw: 0.15
+    arrow: 1
+    kick: 0
+    stretch: 0.04
+    headTilt: 4
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.4
+    easing: 0
+    pelvisHeight: 13.8
+    lean: -26
+    twist: 68
+    hipTwist: 36
+    headTurn: 0
+    leftFoot: {x: -1.8, y: 4.2, z: 1.5}
+    rightFoot: {x: 3, y: -3.6, z: 1.5}
+    leftHand: {x: -0.4, y: 7.9714193, z: 27.857615}
+    rightHand: {x: 1.8000001, y: -5.326316, z: 22.81279}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.42, y: -0.37013036, z: 0.83132637}
+    bowAim: {x: 0, y: 0.9135454, z: 0.40673664}
+    draw: 1
+    arrow: 1
+    kick: 0
+    stretch: 0.1
+    headTilt: 12
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.47
+    easing: 4
+    pelvisHeight: 13.8
+    lean: -26
+    twist: 69
+    hipTwist: 36
+    headTurn: 0
+    leftFoot: {x: -1.8, y: 4.2, z: 1.5}
+    rightFoot: {x: 3, y: -3.6, z: 1.5}
+    leftHand: {x: -0.4, y: 8.062774, z: 27.898287}
+    rightHand: {x: 2, y: -5.6917343, z: 22.650095}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.42, y: -0.37013036, z: 0.83132637}
+    bowAim: {x: 0, y: 0.9135454, z: 0.40673664}
+    draw: 1
+    arrow: 1
+    kick: 0
+    stretch: 0.1
+    headTilt: 12
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.5
+    easing: 1
+    pelvisHeight: 13.9
+    lean: -30
+    twist: 70
+    hipTwist: 36
+    headTurn: 0
+    leftFoot: {x: -1.8, y: 4.2, z: 1.5}
+    rightFoot: {x: 3, y: -3.6, z: 1.5}
+    leftHand: {x: -0.4, y: 8.019646, z: 28.937462}
+    rightHand: {x: 4, y: -9.263395, z: 22.399384}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.42, y: -0.39891776, z: 0.8179026}
+    bowAim: {x: 0, y: 0.89879405, z: 0.43837115}
+    draw: 0
+    arrow: 0
+    kick: 1
+    stretch: 0.06
+    headTilt: 12
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.66
+    easing: 0
+    pelvisHeight: 14
+    lean: -19
+    twist: 62
+    hipTwist: 32
+    headTurn: 0
+    leftFoot: {x: -1.8, y: 4.2, z: 1.5}
+    rightFoot: {x: 3, y: -3.6, z: 1.5}
+    leftHand: {x: -0.6, y: 9.135554, z: 26.010897}
+    rightHand: {x: 4.2, y: -5.258701, z: 21.123627}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.38, y: -0.23674281, z: 0.8904229}
+    bowAim: {x: 0, y: 0.95105654, z: 0.309017}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: 0.03
+    headTilt: 8
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 1
+    easing: 0
+    pelvisHeight: 14.2
+    lean: 2
+    twist: 18
+    hipTwist: 6
+    headTurn: 0
+    leftFoot: {x: -2.4, y: 2.4, z: 1.5}
+    rightFoot: {x: 2.8, y: -2.2, z: 1.5}
+    leftHand: {x: -3.6, y: 7, z: 20}
+    rightHand: {x: -1, y: 4, z: 20}
+    leftPole: {x: -0.6, y: -0.4, z: -0.7}
+    rightPole: {x: 0.6, y: -1, z: -0.2}
+    blade: {x: 0, y: 1, z: 0}
+    bowUp: {x: 0.25, y: 0.1, z: 0.96}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 1
+    kick: 0
+    stretch: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  frameTimes:
+  - 0
+  - 0.14
+  - 0.28
+  - 0.4
+  - 0.5
+  - 0.62
+  - 0.76
+  - 0.9
+  frameMilliseconds: 640000006400000078000000b40000005a0000006e0000007800000078000000
+  contactFrame: 4
+  hipsFollowKeys: 1
+  capeFlow: 0.12
+  smears: []
+  smearSamples: 24
+  effects:
+  - frame: 4
+    kind: 1
+    size: 1
+    hands: 0
+  light:
+    outline:
+      serializedVersion: 2
+      rgba: 0
+    shadow:
+      serializedVersion: 2
+      rgba: 0
+    middle:
+      serializedVersion: 2
+      rgba: 0
+    light:
+      serializedVersion: 2
+      rgba: 0
+  posedOn: {fileID: 11400000, guid: b94799e667524ff45803916f0da9c8a9, type: 2}
+  idleAnimation: 0
+  headFollow: 1
+  headLag: 0.06
+  hairFollow: 1.5
+  hairLag: 0.1

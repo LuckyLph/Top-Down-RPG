@@ -205,8 +205,9 @@ public sealed class CharacterBaker
     }
 
     /// <summary>
-    /// Draws frame <paramref name="frame"/> of <paramref name="clip"/> facing direction <paramref name="direction"/>,
-    /// unshaded, so tests can read what each pixel is.
+    /// Draws frame <paramref name="frame"/> of <paramref name="clip"/> facing direction <paramref name="direction"/>
+    /// turned by the pose's spin, unshaded, so tests can read what each pixel is. A smear's samples are turned by their
+    /// own spin against the frame's.
     /// </summary>
     public CharacterCanvas Render(CharacterClip clip, int direction, int frame)
     {
@@ -221,11 +222,12 @@ public sealed class CharacterBaker
             for (int i = 0; i < count; i++)
             {
                 CharacterPose sample = motion.SmearPoseAt(frame, Mathf.Lerp(span.From, span.To, i / (float)(count - 1)), recipe, weapon);
-                smear.Add(new BladeSample(CharacterRig.Solve(recipe, sample, weapon).RightHand, sample.Blade.normalized));
+                Quaternion turn = Quaternion.AngleAxis(sample.Spin - pose.Spin, Vector3.forward);
+                smear.Add(new BladeSample(turn * CharacterRig.Solve(recipe, sample, weapon).RightHand, turn * sample.Blade.normalized));
             }
         }
 
-        return RenderPose(pose, weapon, CharacterDirections.Angle(direction), clip.FrameSize, clip.Pivot, smear, motion.EffectsOn(frame), Scale);
+        return RenderPose(pose, weapon, CharacterDirections.Angle(direction) + pose.Spin, clip.FrameSize, clip.Pivot, smear, motion.EffectsOn(frame), Scale);
     }
 
     /// <summary>
@@ -242,7 +244,7 @@ public sealed class CharacterBaker
 
         CharacterPose pose = clip.Motion.PoseAt(frame, recipe, clip.Weapon);
         CharacterJoints joints = CharacterRig.Solve(recipe, pose, clip.Weapon);
-        recipe.CreatePainter(clip.Weapon, canvas).PaintLantern(recipe.Lantern, CharacterDirections.Angle(direction), pose, joints);
+        recipe.CreatePainter(clip.Weapon, canvas).PaintLantern(recipe.Lantern, CharacterDirections.Angle(direction) + pose.Spin, pose, joints);
     }
 
     /// <summary>

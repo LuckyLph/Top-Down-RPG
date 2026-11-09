@@ -12,7 +12,7 @@ using UnityEngine;
 /// body (<see cref="PosedOn"/>); baked on another, each pose is fitted to it (<see cref="FitToBody"/>). An idle
 /// animation (<see cref="IsIdleAnimation"/>) plays at its frames' durations, with no contact frame. Its Style settings,
 /// off by default, have the head and the hair's tips follow the head's own rise and fall late, and a key can stretch or
-/// squash the torso.
+/// squash the torso and spin the whole character.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Keyed Motion", fileName = "Motion_Keyed")]
 public sealed class KeyedMotion : CharacterMotion
@@ -281,6 +281,8 @@ public sealed class MotionKey
     [SerializeField, Range(0f, 1f)] private float eyesClosed;
     [Tooltip("How many rows the mouth opens below its line.")]
     [SerializeField, Min(0f)] private float mouthOpen;
+    [Tooltip("How far the whole character is turned from the way it faces, in degrees counterclockwise seen from above; 360 is a whole spin.")]
+    [SerializeField] private float spin;
 
     public float Time => time;
     public MotionEasing Easing => easing;
@@ -314,6 +316,7 @@ public sealed class MotionKey
             HeadTilt = Mathf.LerpUnclamped(a.headTilt, b.headTilt, share),
             EyesClosed = Mathf.LerpUnclamped(a.eyesClosed, b.eyesClosed, share),
             MouthOpen = Mathf.LerpUnclamped(a.mouthOpen, b.mouthOpen, share),
+            Spin = Mathf.LerpUnclamped(a.spin, b.spin, share),
             CapeFlow = capeFlow
         };
     }

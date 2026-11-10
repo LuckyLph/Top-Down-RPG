@@ -44,6 +44,7 @@ public enum CharacterMaterial
     MouthInside,
     Strap,
     Pouch,
+    Headwear,
     Steel,
     Guard,
     Grip,
@@ -100,7 +101,11 @@ public enum CharacterPart
     Lantern,
     LanternBail,
     LanternGlass,
-    LanternWick
+    LanternWick,
+    Headwear,
+    Scabbard,
+    Quiver,
+    Sling
 }
 
 /// <summary>

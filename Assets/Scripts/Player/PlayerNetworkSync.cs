@@ -7,8 +7,8 @@ using VContainer;
 /// Replicates a networked player. The owner binds it as the local player, writes its move (its actual speed over the
 /// base move speed, so a slowed or hasted copy shows the same gait), facing, equipped weapon (its
 /// <see cref="WeaponCatalog"/> index), look (its <see cref="CharacterLookCatalog"/> index) and colours (a
-/// <see cref="CharacterColourPicks"/>, a swatch per colour choice; both of which binding it makes follow the local
-/// settings) to owner network variables, and sends its attacks' starts, contacts and early
+/// <see cref="CharacterColourPicks"/>, a swatch per colour choice) and parts (a <see cref="CharacterPartPicks"/>, an
+/// option per part slot; all of which binding it makes follow the local settings) to owner network variables, and sends its attacks' starts, contacts and early
 /// ends and its casts' starts, completions and cancels to the other machines, which play them on their copy; the host
 /// also resolves a client's completed casts.
 /// Attack and cast messages name the weapon they were made with, so they play and land right even before a weapon
@@ -16,7 +16,7 @@ using VContainer;
 /// resolves a melee hit, and every machine flies a projectile, which only hits on the host; the host also resolves a
 /// client's completed casts there. The owner's teleports (arriving at an entry, a waystone included) snap on the other
 /// machines instead of sliding there. Every other machine binds it as a remote copy with a kinematic body showing that
-/// movement, equips the replicated weapon and shows the replicated look and colours, a late joiner included. The host
+/// movement, equips the replicated weapon and shows the replicated look, colours and parts, a late joiner included. The host
 /// writes the weapon a client's player holds in the save (<see cref="SetSavedWeapon"/>) to a server network variable as
 /// it spawns: the owner equips it, and every copy shows it until the owner writes a weapon of its own.
 /// </summary>
@@ -34,6 +34,7 @@ public class PlayerNetworkSync : NetworkBehaviour
     private readonly NetworkVariable<int> savedWeapon = new(NoWeapon, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     private readonly NetworkVariable<int> look = new(NoLook, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
     private readonly NetworkVariable<CharacterColourPicks> colours = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+    private readonly NetworkVariable<CharacterPartPicks> parts = new(default, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
     private PlayerController controller;
     private PlayerWeaponController weapon;
@@ -85,11 +86,12 @@ public class PlayerNetworkSync : NetworkBehaviour
     }
 
     /// <summary>
-    /// The host writes the saved weapon it was given. The owner binds the player as local (which shows the look and
-    /// colours the local settings choose), equips the saved weapon, now or when it arrives, writes its weapon, look and
-    /// colours, and starts relaying its weapon switches, look and colour changes, attacks, teleports and casts; any
-    /// other machine makes the body kinematic without interpolation, binds it as remote, shows the current replicated
-    /// movement, equips the replicated weapon and shows the replicated look and colours, following them from then on. Logs an error and does nothing
+    /// The host writes the saved weapon it was given. The owner binds the player as local (which shows the look, colours
+    /// and parts the local settings choose), equips the saved weapon, now or when it arrives, writes its weapon, look,
+    /// colours and parts, and starts relaying its weapon switches, look, colour and part changes, attacks, teleports and
+    /// casts; any other machine makes the body kinematic without interpolation, binds it as remote, shows the current
+    /// replicated movement, equips the replicated weapon and shows the replicated look, colours and parts, following them
+    /// from then on. Logs an error and does nothing
     /// when the prefab was spawned without injection.
     /// </summary>
     public override void OnNetworkSpawn()
@@ -131,6 +133,8 @@ public class PlayerNetworkSync : NetworkBehaviour
                 HandleLocalLookChosen(playerLook.Index);
                 playerLook.ColoursChosen += HandleLocalColoursChosen;
                 HandleLocalColoursChosen(playerLook.ShownColours);
+                playerLook.PartsChosen += HandleLocalPartsChosen;
+                HandleLocalPartsChosen(playerLook.ShownParts);
             }
 
             if (abilities != null)
@@ -157,8 +161,10 @@ public class PlayerNetworkSync : NetworkBehaviour
         EquipReplicatedWeapon(CopyWeaponIndex());
         look.OnValueChanged += HandleLookReplicated;
         colours.OnValueChanged += HandleColoursReplicated;
+        parts.OnValueChanged += HandlePartsReplicated;
         if (playerLook != null)
         {
+            playerLook.ShowParts(parts.Value);
             playerLook.Show(look.Value);
             playerLook.ShowColours(colours.Value);
         }
@@ -183,10 +189,12 @@ public class PlayerNetworkSync : NetworkBehaviour
         savedWeapon.OnValueChanged -= HandleSavedWeaponReplicated;
         look.OnValueChanged -= HandleLookReplicated;
         colours.OnValueChanged -= HandleColoursReplicated;
+        parts.OnValueChanged -= HandlePartsReplicated;
         if (playerLook != null)
         {
             playerLook.Chosen -= HandleLocalLookChosen;
             playerLook.ColoursChosen -= HandleLocalColoursChosen;
+            playerLook.PartsChosen -= HandleLocalPartsChosen;
             playerLook.StopFollowing();
         }
 
@@ -477,6 +485,29 @@ public class PlayerNetworkSync : NetworkBehaviour
         if (IsSpawned && IsOwner && !picks.Equals(colours.Value))
         {
             colours.Value = picks;
+        }
+    }
+
+    /// <summary>
+    /// On the owner, writes the parts the local settings chose when they differ from what the other machines know (the
+    /// default, the look's own parts, until written).
+    /// </summary>
+    private void HandleLocalPartsChosen(CharacterPartPicks picks)
+    {
+        if (IsSpawned && IsOwner && !picks.Equals(parts.Value))
+        {
+            parts.Value = picks;
+        }
+    }
+
+    /// <summary>
+    /// On the other machines, shows the parts the owner chose.
+    /// </summary>
+    private void HandlePartsReplicated(CharacterPartPicks previous, CharacterPartPicks current)
+    {
+        if (playerLook != null)
+        {
+            playerLook.ShowParts(current);
         }
     }
 

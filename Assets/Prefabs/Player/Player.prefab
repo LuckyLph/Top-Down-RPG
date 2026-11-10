@@ -635,6 +635,7 @@ MonoBehaviour:
   visuals: {fileID: 4451734619522619835}
   colours: {fileID: 11400000, guid: fdc585b5f9c89a14c8b9639a63694965, type: 2}
   palette: {fileID: 2840482547276852834}
+  weapon: {fileID: 7019887641318625157}
 --- !u!210 &3466547070987228911
 SortingGroup:
   m_ObjectHideFlags: 0

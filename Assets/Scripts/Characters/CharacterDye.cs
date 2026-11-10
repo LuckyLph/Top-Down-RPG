@@ -21,5 +21,8 @@ public enum CharacterDye
     Buckle = 13,
     Gloves = 14,
     Strap = 15,
-    Pouch = 16
+    Pouch = 16,
+    Headwear = 17,
+    Cape = 18,
+    CapeLining = 19
 }

@@ -90,6 +90,71 @@ public abstract class CharacterRecipe : ScriptableObject
     }
 
     /// <summary>
+    /// How many options of <paramref name="slot"/> the character can wear (Docs/PlayerCharacter.md, Phase 6), the first
+    /// its own; none for a body plan whose parts are its own.
+    /// </summary>
+    public virtual int PartOptions(CharacterSlot slot)
+    {
+        return 0;
+    }
+
+    /// <summary>
+    /// The name of option <paramref name="option"/> of <paramref name="slot"/>.
+    /// </summary>
+    public virtual string PartName(CharacterSlot slot, int option)
+    {
+        return null;
+    }
+
+    /// <summary>
+    /// The slot whose option <paramref name="slot"/>'s layers are drawn under (as a <see cref="CharacterSlot"/> index),
+    /// one layer per option of it; -1 for a slot drawn on its own.
+    /// </summary>
+    public virtual int PartVariesWith(CharacterSlot slot)
+    {
+        return -1;
+    }
+
+    /// <summary>
+    /// The weapon option <paramref name="option"/> of <paramref name="slot"/> carries outside its attacks
+    /// (Docs/PlayerCharacter.md, Phase 7), whose colours its layer draws it in where a clip holds no weapon; none for
+    /// a part that carries none.
+    /// </summary>
+    public virtual CharacterWeaponArt PartWeapon(CharacterSlot slot, int option)
+    {
+        return null;
+    }
+
+    /// <summary>
+    /// Whether the character wears parts, so it is drawn a layer at a time, the body then each part over it.
+    /// </summary>
+    public bool HasParts
+    {
+        get
+        {
+            foreach (CharacterSlot slot in (CharacterSlot[])System.Enum.GetValues(typeof(CharacterSlot)))
+            {
+                if (PartOptions(slot) > 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// A painter drawing only <paramref name="layer"/> of the character holding <paramref name="weapon"/> (or none)
+    /// onto <paramref name="canvas"/>: the body's layer draws the weapon and a cast's light too. A body plan without
+    /// parts draws all of it.
+    /// </summary>
+    public virtual CharacterPainter CreatePainter(CharacterWeaponArt weapon, CharacterCanvas canvas, CharacterLayerKey layer)
+    {
+        return CreatePainter(weapon, canvas);
+    }
+
+    /// <summary>
     /// Whether any of the character's materials takes a player's colours, so its sheets carry palette maps.
     /// </summary>
     public bool HasDyes

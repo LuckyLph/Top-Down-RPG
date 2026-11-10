@@ -185,6 +185,36 @@ public sealed class CharacterAnimator
     }
 
     /// <summary>
+    /// Goes on with <paramref name="to"/>, a set of the same clips as <paramref name="from"/>, the set played until now,
+    /// drawn by other sprites (a composed outfit of the same look, Docs/PlayerCharacter.md, Phase 7): the action, the
+    /// gait and its phase, an idle animation, a cast waiting and a hold all carry on, the sprite held taking the new
+    /// set's. Returns false, changing nothing, for a set of other clips.
+    /// </summary>
+    public bool Rebind(CharacterAnimationSet from, CharacterAnimationSet to)
+    {
+        if (from == null || to == null || !from.SameClipsAs(to))
+        {
+            return false;
+        }
+
+        locomotion.Rebind(from, to);
+        action.Rebind(from, to);
+        idle.Rebind(from, to);
+        if (queued.IsSet)
+        {
+            queued = queued.Rebound(from, to);
+        }
+
+        Sprite matched = from.SpriteMatching(Sprite, to);
+        if (matched != null)
+        {
+            Sprite = matched;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Holds the sprite the next update shows on screen for <paramref name="seconds"/> on the clock (a hit-stop),
     /// longer when a hold already runs that long. The action keeps its time underneath: a hold ends early when the
     /// action reaches its contact, so the contact frame still shows on the update the hit lands, and playing or stopping
@@ -426,6 +456,16 @@ public sealed class CharacterAnimator
         }
 
         public bool IsSet => Clip != null;
+
+        /// <summary>
+        /// This cast with <paramref name="to"/>'s clips where it names <paramref name="from"/>'s, a set of the same
+        /// clips.
+        /// </summary>
+        public QueuedCast Rebound(CharacterAnimationSet from, CharacterAnimationSet to)
+        {
+            return new QueuedCast(from.Matching(Clip, to) ?? Clip, from.Matching(MovingClip, to) ?? MovingClip, Direction, FollowsFacing, Timeline, Beat, UntilRelease, Since, After) { Released = Released };
+        }
+
         public CharacterAnimationClip Clip { get; }
         public CharacterAnimationClip MovingClip { get; }
         public int Direction { get; }

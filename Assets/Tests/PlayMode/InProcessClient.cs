@@ -188,6 +188,9 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));
         builder.RegisterInstance(new UserSettings(new MemorySaveStore()));
+        builder.Register<CharacterOutfits>(Lifetime.Singleton)
+            .WithParameter("spareOutfits", 2)
+            .WithParameter("spritesPerFrame", 500);
         return builder.Build();
     }
 

@@ -10,13 +10,14 @@ using UnityEngine;
 /// palette gives each choice's dyes the ramps of the swatch it shows, opaque, and leaves the dyes no choice colours
 /// clear; and the project's colours colour every dye the adventurer's recipe gives a material, once, each choice's own
 /// swatch the colours the adventurer is baked in, with no more choices than picks carry, the nine its sheets carry
-/// among them.
+/// among them and three more its parts carry (the headwear, the cape and its lining).
 /// </summary>
 public class CharacterColoursTests
 {
     private const string ColoursPath = "Assets/Data/Characters/CharacterColours.asset";
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Adventurer.asset";
     private const string SetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
+    private const string PartsPath = "Assets/Sprites/Characters/Adventurer/Parts/Adventurer_Parts.asset";
 
     private static readonly ColourRamp Blue = Ramp(20, 60, 160);
     private static readonly ColourRamp Red = Ramp(160, 40, 30);
@@ -128,7 +129,9 @@ public class CharacterColoursTests
     /// swatch has a ramp for each of its choice's dyes and a name of its own in its list; every dye the adventurer's
     /// recipe gives a material is coloured by exactly one choice, whose own swatch gives it the ramp the adventurer is
     /// baked in, so the default palette is the baked colours; and of the choices, the adventurer's sheets carry the nine
-    /// from the skin to the buckle, not the gloves, the strap or the pouch its outfit does not show.
+    /// from the skin to the buckle, not the gloves, the strap or the pouch its own outfit does not show, and its parts
+    /// those three (the gloves, the satchel; Docs/PlayerCharacter.md, Phase 7) and the headwear, the cape and the lining
+    /// too.
     /// </summary>
     [Test]
     public void TheProjectsColours_ColourEveryDyeOfTheAdventurer_InTheColoursItIsBakedIn()
@@ -178,9 +181,12 @@ public class CharacterColoursTests
             }
         }
 
-        Assert.That(dyed, Is.EqualTo(16));
+        Assert.That(dyed, Is.EqualTo(19));
         string[] carried = Enumerable.Range(0, colours.Count).Where(c => colours.Colours(c, set.Dyes)).Select(c => colours.Get(c).Name).ToArray();
         Assert.That(carried, Is.EqualTo(new[] { "Skin", "Hair", "Eyes", "Tunic", "Shirt", "Trousers", "Boots", "Belt", "Buckle" }));
+        CharacterParts parts = AssetDatabase.LoadAssetAtPath<CharacterParts>(PartsPath);
+        string[] worn = Enumerable.Range(0, colours.Count).Where(c => colours.Colours(c, set.Dyes | parts.Dyes)).Select(c => colours.Get(c).Name).ToArray();
+        Assert.That(worn, Is.EqualTo(new[] { "Skin", "Hair", "Eyes", "Tunic", "Shirt", "Trousers", "Boots", "Belt", "Buckle", "Gloves", "Strap", "Pouch", "Headwear", "Cape", "Lining" }));
     }
 
     /// <summary>

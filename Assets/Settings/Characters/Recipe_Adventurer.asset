@@ -167,39 +167,255 @@ MonoBehaviour:
   lightThreshold: 0.64
   shadowThreshold: 0.28
   innerLineGap: 2.6
-  bootSize: 1.1
-  bootTop: 0.35
-  skirtLength: 1.4
-  sleeves: 0
-  gloves: 0
-  strap: 0
+  hairOptions:
+  - name: Tousled
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 18, y: 6, z: 20, w: 0.12}
+    locks:
+    - root: {x: 0, y: 75}
+      tip: {x: 0.05, y: 0.42, z: -0.1}
+      radius: {x: 0.3, y: 0.06}
+    - root: {x: 35, y: 65}
+      tip: {x: 0.32, y: 0.32, z: -0.05}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: -35, y: 65}
+      tip: {x: -0.3, y: 0.36, z: -0.1}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: 180, y: 40}
+      tip: {x: 0, y: 0.15, z: -0.38}
+      radius: {x: 0.3, y: 0.06}
+    - root: {x: -30, y: 45}
+      tip: {x: 0.5, y: -0.3, z: 0.2}
+      radius: {x: 0.3, y: 0.08}
+    - root: {x: 70, y: 15}
+      tip: {x: 0.05, y: -0.4, z: 0.05}
+      radius: {x: 0.22, y: 0.07}
+    - root: {x: -70, y: 15}
+      tip: {x: -0.05, y: -0.4, z: 0.05}
+      radius: {x: 0.22, y: 0.07}
+  - name: Crop
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 26, y: 3, z: 14, w: 0.08}
+    locks:
+    - root: {x: 0, y: 72}
+      tip: {x: 0, y: 0.16, z: 0.06}
+      radius: {x: 0.27, y: 0.12}
+    - root: {x: 40, y: 60}
+      tip: {x: 0.12, y: 0.13, z: 0}
+      radius: {x: 0.25, y: 0.1}
+    - root: {x: -40, y: 60}
+      tip: {x: -0.12, y: 0.13, z: 0}
+      radius: {x: 0.25, y: 0.1}
+  - name: Long
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 18, y: 6, z: 20, w: 0.12}
+    locks:
+    - root: {x: 0, y: 75}
+      tip: {x: 0.05, y: 0.42, z: -0.1}
+      radius: {x: 0.3, y: 0.06}
+    - root: {x: 35, y: 65}
+      tip: {x: 0.32, y: 0.32, z: -0.05}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: -35, y: 65}
+      tip: {x: -0.3, y: 0.36, z: -0.1}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: -30, y: 45}
+      tip: {x: 0.5, y: -0.3, z: 0.2}
+      radius: {x: 0.3, y: 0.08}
+    - root: {x: 180, y: 30}
+      tip: {x: 0, y: -1, z: -0.3}
+      radius: {x: 0.42, y: 0.3}
+    - root: {x: 140, y: 20}
+      tip: {x: 0.2, y: -0.95, z: -0.2}
+      radius: {x: 0.36, y: 0.26}
+    - root: {x: -140, y: 20}
+      tip: {x: -0.2, y: -0.95, z: -0.2}
+      radius: {x: 0.36, y: 0.26}
+    - root: {x: 80, y: 10}
+      tip: {x: 0.08, y: -0.85, z: 0.02}
+      radius: {x: 0.26, y: 0.18}
+    - root: {x: -80, y: 10}
+      tip: {x: -0.08, y: -0.85, z: 0.02}
+      radius: {x: 0.26, y: 0.18}
+  - name: Ponytail
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 24, y: 4, z: 16, w: 0.1}
+    locks:
+    - root: {x: 180, y: 25}
+      tip: {x: 0, y: -0.25, z: -0.55}
+      radius: {x: 0.3, y: 0.22}
+    - root: {x: 180, y: 10}
+      tip: {x: 0, y: -0.95, z: -0.5}
+      radius: {x: 0.24, y: 0.12}
+    - root: {x: 75, y: 15}
+      tip: {x: 0.04, y: -0.25, z: 0}
+      radius: {x: 0.2, y: 0.08}
+    - root: {x: -75, y: 15}
+      tip: {x: -0.04, y: -0.25, z: 0}
+      radius: {x: 0.2, y: 0.08}
+  - name: Spiky
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 18, y: 6, z: 20, w: 0.12}
+    locks:
+    - root: {x: -30, y: 45}
+      tip: {x: 0.5, y: -0.3, z: 0.2}
+      radius: {x: 0.3, y: 0.08}
+    - root: {x: 0, y: 80}
+      tip: {x: 0, y: 0.6, z: -0.05}
+      radius: {x: 0.28, y: 0.03}
+    - root: {x: 35, y: 70}
+      tip: {x: 0.35, y: 0.5, z: 0}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: -35, y: 70}
+      tip: {x: -0.35, y: 0.5, z: 0}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: 70, y: 55}
+      tip: {x: 0.45, y: 0.3, z: -0.05}
+      radius: {x: 0.24, y: 0.03}
+    - root: {x: -70, y: 55}
+      tip: {x: -0.45, y: 0.3, z: -0.05}
+      radius: {x: 0.24, y: 0.03}
+    - root: {x: 150, y: 50}
+      tip: {x: 0.2, y: 0.35, z: -0.4}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: -150, y: 50}
+      tip: {x: -0.2, y: 0.35, z: -0.4}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: 180, y: 45}
+      tip: {x: 0, y: 0.3, z: -0.5}
+      radius: {x: 0.28, y: 0.03}
+  headwearOptions:
+  - name: None
+    kind: 0
+    hood: {x: 1.18, y: 1.2, z: 0.45}
+    hoodOpening: {x: 62, y: -10, z: 48}
+    cap: {x: 1.1, y: 20, z: 0.6}
+  - name: Hood
+    kind: 1
+    hood: {x: 1.18, y: 1.2, z: 0.45}
+    hoodOpening: {x: 62, y: -10, z: 48}
+    cap: {x: 1.1, y: 20, z: 0.6}
+  - name: Cap
+    kind: 2
+    hood: {x: 1.18, y: 1.2, z: 0.45}
+    hoodOpening: {x: 62, y: -10, z: 48}
+    cap: {x: 1.1, y: 20, z: 0.6}
+  topOptions:
+  - name: Tunic
+    tunic: 1
+    sleeves: 0
+    skirtLength: 1.4
+  - name: Short sleeves
+    tunic: 1
+    sleeves: 1
+    skirtLength: 1.4
+  - name: Layered
+    tunic: 1
+    sleeves: 2
+    skirtLength: 1.4
+  - name: Shirt
+    tunic: 0
+    sleeves: 0
+    skirtLength: 1.4
+  - name: Long tunic
+    tunic: 1
+    sleeves: 0
+    skirtLength: 2.6
+  capeOptions:
+  - name: None
+    cape: 0
+    strips: 5
+    hem: 0.45
+    lining: 1
+  - name: Cape
+    cape: 1
+    strips: 5
+    hem: 0.45
+    lining: 1
+  - name: Unlined
+    cape: 1
+    strips: 5
+    hem: 0.45
+    lining: 0
+  - name: Long
+    cape: 1
+    strips: 5
+    hem: 0.15
+    lining: 1
+  legOptions:
+  - name: Trousers
+    shorts: 0
+  - name: Shorts
+    shorts: 1
+  bootOptions:
+  - name: Tall
+    size: 1.1
+    top: 0.35
+  - name: Short
+    size: 1.1
+    top: 0.8
+  handOptions:
+  - name: Bare
+    gloves: 0
+  - name: Gloves
+    gloves: 1
+  bagOptions:
+  - name: None
+    satchel: 0
+    pouch: {x: 4.4, y: -1.6, z: -0.6}
+    pouchSize: {x: 1.5, y: 2, z: 1.9}
+  - name: Satchel
+    satchel: 1
+    pouch: {x: 4.4, y: -1.6, z: -0.6}
+    pouchSize: {x: 1.5, y: 2, z: 1.9}
+  weaponOptions:
+  - name: Sword
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    place: 0
+    side: -1
+    offset: {x: 5, y: 1.2, z: 1.2}
+    angles: {x: 35, y: 8}
+    scabbard: 1
+    sling: 0
+    quiver: 0
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  - name: Greatsword
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    place: 1
+    side: 1
+    offset: {x: 1, y: 1.6, z: 2.2}
+    angles: {x: 35, y: 0}
+    scabbard: 0
+    sling: 1
+    quiver: 0
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  - name: Longbow
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    place: 1
+    side: -1
+    offset: {x: 0, y: 2.6, z: 3}
+    angles: {x: 40, y: 0}
+    scabbard: 0
+    sling: 1
+    quiver: 1
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  - name: None
+    weapon: {fileID: 0}
+    place: 0
+    side: -1
+    offset: {x: 0, y: 0, z: 0}
+    angles: {x: 0, y: 0}
+    scabbard: 0
+    sling: 0
+    quiver: 0
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
   hairSize: 1.1
   faceTilt: 20
-  locks:
-  - root: {x: 0, y: 75}
-    tip: {x: 0.05, y: 0.42, z: -0.1}
-    radius: {x: 0.3, y: 0.06}
-  - root: {x: 35, y: 65}
-    tip: {x: 0.32, y: 0.32, z: -0.05}
-    radius: {x: 0.28, y: 0.05}
-  - root: {x: -35, y: 65}
-    tip: {x: -0.3, y: 0.36, z: -0.1}
-    radius: {x: 0.28, y: 0.05}
-  - root: {x: 180, y: 40}
-    tip: {x: 0, y: 0.15, z: -0.38}
-    radius: {x: 0.3, y: 0.06}
-  - root: {x: -30, y: 45}
-    tip: {x: 0.5, y: -0.3, z: 0.2}
-    radius: {x: 0.3, y: 0.08}
-  - root: {x: 70, y: 15}
-    tip: {x: 0.05, y: -0.4, z: 0.05}
-    radius: {x: 0.22, y: 0.07}
-  - root: {x: -70, y: 15}
-    tip: {x: -0.05, y: -0.4, z: 0.05}
-    radius: {x: 0.22, y: 0.07}
   ears: {x: 90, y: -8, z: 0.22}
-  face: {x: 78, y: -6, z: 46}
-  fringe: {x: 18, y: 6, z: 20, w: 0.12}
   eyes: {x: 18, y: -2}
   eyeHeight: 2
   eyeWidth: 2
@@ -421,13 +637,65 @@ MonoBehaviour:
   pouch:
     outline:
       serializedVersion: 2
-      rgba: 4278849562
+      rgba: 4279114280
     shadow:
       serializedVersion: 2
-      rgba: 4280169554
+      rgba: 4281621124
     middle:
       serializedVersion: 2
-      rgba: 4281092720
+      rgba: 4282939562
     light:
       serializedVersion: 2
-      rgba: 4282411158
+      rgba: 4285046990
+  headwearColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4279641106
+    shadow:
+      serializedVersion: 2
+      rgba: 4282016308
+    middle:
+      serializedVersion: 2
+      rgba: 4283204682
+    light:
+      serializedVersion: 2
+      rgba: 4285049460
+  hoodInside:
+    outline:
+      serializedVersion: 2
+      rgba: 4279243288
+    shadow:
+      serializedVersion: 2
+      rgba: 4279243288
+    middle:
+      serializedVersion: 2
+      rgba: 4279243288
+    light:
+      serializedVersion: 2
+      rgba: 4279243288
+  cloak:
+    outline:
+      serializedVersion: 2
+      rgba: 4279373870
+    shadow:
+      serializedVersion: 2
+      rgba: 4280821376
+    middle:
+      serializedVersion: 2
+      rgba: 4281612458
+    light:
+      serializedVersion: 2
+      rgba: 4283457750
+  lining:
+    outline:
+      serializedVersion: 2
+      rgba: 4280164388
+    shadow:
+      serializedVersion: 2
+      rgba: 4286221462
+    middle:
+      serializedVersion: 2
+      rgba: 4288985796
+    light:
+      serializedVersion: 2
+      rgba: 4291617000

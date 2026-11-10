@@ -11,7 +11,10 @@ using UnityEngine;
 /// Its colours (Docs/PlayerCharacter.md, Phase 5) follow the local settings' picks the same way, the look's own for an
 /// unknown swatch or the choice's own, shown on its palette, and a copy shows the picks it is given; the local settings
 /// keep a swatch per colour choice across a restart, an empty one forgetting the pick, and read a file from before
-/// colours with none.
+/// colours with none. Its parts (Phase 6), on the project's adventurer: the composed outfit of the parts shown, and its
+/// own set for its own parts; the owner follows the settings' part picks, the first option for an unknown name, leaving
+/// the weapon's slot to the weapon; and the settings keep an option per slot across a restart. Its weapon's slot
+/// (Phase 7) shows the gear of the weapon shown, none for a weapon without gear, whatever the picks.
 /// </summary>
 public class CharacterLookTests
 {
@@ -102,7 +105,7 @@ public class CharacterLookTests
         UserSettings settings = new(new MemorySaveStore());
         settings.SetCharacterLook("Bandit");
         PlayerLook look = CreatePlayer(out CharacterVisuals visuals);
-        look.Construct(settings);
+        look.Construct(settings, null);
         List<int> chosen = new();
         look.Chosen += chosen.Add;
 
@@ -169,7 +172,7 @@ public class CharacterLookTests
         UserSettings settings = new(new MemorySaveStore());
         settings.SetCharacterColour("Tunic", "Red");
         PlayerLook look = CreateColouredPlayer(out CharacterPalette palette, out CharacterColours colours);
-        look.Construct(settings);
+        look.Construct(settings, null);
         List<CharacterColourPicks> chosen = new();
         look.ColoursChosen += chosen.Add;
         int tunic = colours.IndexOf("Tunic");
@@ -230,6 +233,113 @@ public class CharacterLookTests
 
         Assert.That(UserSettingsData.TryParse("{\"version\":1,\"characterLook\":\"Bandit\"}", out UserSettingsData old), Is.True);
         Assert.That(old.CharacterColours, Is.Empty);
+    }
+
+    /// <summary>
+    /// The adventurer's look shows the outfit its parts pick, composed by its outfits (composed here before it is worn,
+    /// so it shows at once), and its own set for its own parts, letting go of the outfit, which is kept as a spare.
+    /// </summary>
+    [Test]
+    public void ShowParts_WearsTheComposedOutfit_AndTheLooksSetForItsOwn()
+    {
+        using CharacterOutfits outfits = new(2, 700);
+        PlayerLook look = CreateAdventurer(outfits, out CharacterVisuals visuals, out CharacterParts parts);
+        CharacterPartPicks hood = default(CharacterPartPicks).With(CharacterSlot.Headwear, 1);
+        CharacterOutfitLease warm = outfits.WearNow(parts, hood);
+
+        Assert.That(look.Show(0), Is.True);
+        Assert.That(visuals.AnimationSet, Is.EqualTo(parts.Look));
+        look.ShowParts(hood);
+        Assert.That(look.ShownParts, Is.EqualTo(hood));
+        Assert.That(visuals.AnimationSet, Is.EqualTo(warm.Set));
+
+        warm.Release();
+        look.ShowParts(default);
+        Assert.That(visuals.AnimationSet, Is.EqualTo(parts.Look));
+        Assert.That(outfits.SpareCount, Is.EqualTo(1), "Nobody wears the hood any more.");
+    }
+
+    /// <summary>
+    /// The adventurer's weapon slot shows the gear of the weapon shown (Docs/PlayerCharacter.md, Phase 7): the look's own
+    /// set with its own sword, the composed outfit with the greatsword on its back, which is not a pick of the player's,
+    /// and the option drawing nothing for a weapon without gear or none; the gear stays as the picks change.
+    /// </summary>
+    [Test]
+    public void ShowWeapon_WearsTheWeaponsGear_WhateverThePicks()
+    {
+        using CharacterOutfits outfits = new(2, 700);
+        PlayerLook look = CreateAdventurer(outfits, out CharacterVisuals visuals, out CharacterParts parts);
+        PlayerWeapon sword = Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], gearName: "Sword"));
+        PlayerWeapon greatsword = Track(PlayerWeapon.Create("Greatsword", 1, 1f, 0.5f, new Vector2[4], gearName: "Greatsword"));
+        PlayerWeapon club = Track(PlayerWeapon.Create("Club", 1, 1f, 0.5f, new Vector2[4]));
+        int none = parts.Get(CharacterSlot.Weapon).IndexOf("None");
+        CharacterOutfitLease warm = outfits.WearNow(parts, default(CharacterPartPicks).With(CharacterSlot.Weapon, 1));
+
+        Assert.That(look.Show(0), Is.True);
+        look.ShowWeapon(sword);
+        Assert.That(visuals.AnimationSet, Is.EqualTo(parts.Look), "the sword is the look's own gear");
+        look.ShowWeapon(greatsword);
+        Assert.That(look.WornParts.Get(CharacterSlot.Weapon), Is.EqualTo(1));
+        Assert.That(look.ShownParts.IsDefault, Is.True, "the gear is not a pick");
+        Assert.That(visuals.AnimationSet, Is.EqualTo(warm.Set));
+
+        look.ShowParts(default(CharacterPartPicks).With(CharacterSlot.Weapon, 2));
+        Assert.That(look.WornParts.Get(CharacterSlot.Weapon), Is.EqualTo(1), "a pick of the weapon's slot changes nothing");
+        Assert.That(visuals.AnimationSet, Is.EqualTo(warm.Set));
+
+        look.ShowWeapon(club);
+        Assert.That(look.WornParts.Get(CharacterSlot.Weapon), Is.EqualTo(none));
+        look.ShowWeapon(null);
+        Assert.That(look.WornParts.Get(CharacterSlot.Weapon), Is.EqualTo(none));
+        look.ShowWeapon(sword);
+        Assert.That(visuals.AnimationSet, Is.EqualTo(parts.Look));
+        warm.Release();
+    }
+
+    /// <summary>
+    /// The owner shows the parts its settings pick of the look shown and raises them, then follows each change; an
+    /// unknown option shows the slot's first, and the weapon's slot is never the settings'. The settings keep an option per slot across a restart, an empty one
+    /// forgetting the pick.
+    /// </summary>
+    [Test]
+    public void FollowLocalChoice_ShowsTheSettingsParts_WhichTheSettingsKeep()
+    {
+        using CharacterOutfits outfits = new(2, 700);
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        settings.SetCharacterPart("Cape", "Long");
+        settings.SetCharacterPart("Weapon", "Longbow");
+        PlayerLook look = CreateAdventurer(outfits, out _, out CharacterParts parts);
+        look.Construct(settings, outfits);
+        List<CharacterPartPicks> chosen = new();
+        look.PartsChosen += chosen.Add;
+
+        look.FollowLocalChoice();
+        Assert.That(chosen.Count, Is.EqualTo(1));
+        Assert.That(chosen[0].Get(CharacterSlot.Cape), Is.EqualTo(parts.Get(CharacterSlot.Cape).IndexOf("Long")));
+        Assert.That(look.ShownParts, Is.EqualTo(chosen[0]));
+        Assert.That(chosen[0].Get(CharacterSlot.Weapon), Is.Zero, "the weapon's slot is the weapon's, not the settings'");
+
+        settings.SetCharacterPart("Cape", "Ermine");
+        Assert.That(chosen[1].IsDefault, Is.True, "An unknown option shows the first.");
+        Assert.That(new UserSettings(store).CharacterPart("Cape"), Is.EqualTo("Ermine"));
+        Assert.That(settings.SetCharacterPart("Cape", "Ermine"), Is.False);
+        Assert.That(settings.SetCharacterPart("Cape", ""), Is.True);
+        Assert.That(new UserSettings(store).CharacterPart("Cape"), Is.Empty);
+        look.StopFollowing();
+    }
+
+    /// <summary>
+    /// A player drawn as the project's adventurer, the only look of a catalog of its own, wearing parts through
+    /// <paramref name="outfits"/>.
+    /// </summary>
+    private PlayerLook CreateAdventurer(CharacterOutfits outfits, out CharacterVisuals visuals, out CharacterParts parts)
+    {
+        parts = AssetDatabase.LoadAssetAtPath<CharacterParts>("Assets/Sprites/Characters/Adventurer/Parts/Adventurer_Parts.asset");
+        CharacterLookCatalog adventurer = Track(CharacterLookCatalog.Create(new CharacterLook("Adventurer", parts.Look, locomotion, parts)));
+        PlayerLook look = CreatePlayer(out visuals);
+        look.Configure(adventurer, visuals, null, null, outfits);
+        return look;
     }
 
     /// <summary>

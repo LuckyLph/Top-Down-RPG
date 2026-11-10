@@ -84,8 +84,9 @@ public class WeaponCatalogTests
     /// <summary>
     /// Every catalog weapon has two attacks, each playing a clip of the adventurer's set (the player's default look) that
     /// has a contact frame and draws a weapon, its own generated HUD icon and two abilities no other weapon has, and a
-    /// timeline that fills its cooldown at most. The greatsword is melee with a wider and deeper area than the sword; the longbow fires
-    /// a homing projectile that flies past its attack range, with its arrow's visual.
+    /// timeline that fills its cooldown at most, and names the gear it shows outside its attacks (Docs/PlayerCharacter.md,
+    /// Phase 7). The greatsword is melee with a wider and deeper area than the sword; the longbow fires a homing projectile
+    /// that flies past its attack range, with its arrow's visual.
     /// </summary>
     [Test]
     public void EveryCatalogWeapon_HasItsClipIconAbilitiesAndHit()
@@ -129,6 +130,7 @@ public class WeaponCatalogTests
         Assert.That(greatsword.AttackClipOf(1), Is.EqualTo("GreatswordSweep"));
         Assert.That(longbow.AttackClip, Is.EqualTo("BowShot"));
         Assert.That(longbow.AttackClipOf(1), Is.EqualTo("BowCantedShot"));
+        Assert.That(new[] { sword.Gear, greatsword.Gear, longbow.Gear }, Is.EqualTo(new[] { "Sword", "Greatsword", "Longbow" }), "the gear each shows outside its attacks");
         Assert.That(longbow.FiresProjectile, Is.True);
         ProjectileSpec arrow = longbow.Projectile;
         Assert.That(arrow.Homing, Is.True);

@@ -43,11 +43,24 @@ public sealed class WeaponPainter
     {
         Vector3 across = Vector3.Cross(direction, Up);
         across = across.magnitude < 0.2f ? shoulderAxis.normalized : across.normalized;
+        DrawBladeAcross(hand, direction, across, true);
+    }
+
+    /// <summary>
+    /// Draws the blade held at <paramref name="hand"/> pointing along <paramref name="direction"/>, its crossguard along
+    /// <paramref name="across"/>: the grip, the pommel, the crossguard and, with <paramref name="withBlade"/>, the blade
+    /// (a sheathed blade's hilt alone).
+    /// </summary>
+    public void DrawBladeAcross(Vector3 hand, Vector3 direction, Vector3 across, bool withBlade)
+    {
         Vector3 guard = hand + direction * weapon.GuardAt;
         canvas.Capsule(world(hand - direction * weapon.Pommel), world(guard), 0.6f, 0.6f, CharacterMaterial.Grip, CharacterPart.Weapon, minRadius: 0.6f);
         canvas.Sphere(world(hand - direction * (weapon.Pommel + 0.4f)), 0.8f, CharacterMaterial.Guard, CharacterPart.Weapon, 0.7f);
         canvas.Capsule(world(guard - across * weapon.GuardHalfWidth), world(guard + across * weapon.GuardHalfWidth), 0.65f, 0.65f, CharacterMaterial.Guard, CharacterPart.Weapon, minRadius: 0.6f);
-        canvas.Capsule(world(guard + direction * 0.4f), world(hand + direction * weapon.Length), weapon.BladeRadius.x, weapon.BladeRadius.y, CharacterMaterial.Steel, CharacterPart.Weapon, minRadius: 0.62f);
+        if (withBlade)
+        {
+            canvas.Capsule(world(guard + direction * 0.4f), world(hand + direction * weapon.Length), weapon.BladeRadius.x, weapon.BladeRadius.y, CharacterMaterial.Steel, CharacterPart.Weapon, minRadius: 0.62f);
+        }
     }
 
     /// <summary>

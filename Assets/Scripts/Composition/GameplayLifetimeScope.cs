@@ -23,7 +23,8 @@ public class GameplayLifetimeScope : LifetimeScope
 
     /// <summary>
     /// Registers the Gameplay services and entry points and, once built, the player network prefabs. Logs an error
-    /// and registers nothing without a parent scope, a player prefab, its control settings or the combat settings;
+    /// and registers nothing without a parent scope, a player prefab, its control settings, the combat settings or the
+    /// gameplay settings;
     /// skips pointer feedback, or hit feedback, with an error, when its layer, or its settings, are missing; without the
     /// prop fade settings it logs an error and props never fade; without the day and night settings it logs an error and
     /// the worlds keep their authored light.
@@ -57,6 +58,12 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
+        if (settings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(GameplaySettings)} assigned; respawns, trips and outfits cannot be set up.", this);
+            return;
+        }
+
         builder.RegisterInstance(playerPrefab.ControlSettings);
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
@@ -64,6 +71,9 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<LocalPlayerCommandSource>(Lifetime.Singleton);
         builder.Register<PlayerNavigation>(Lifetime.Singleton);
         builder.Register<PlayerBinder>(Lifetime.Singleton);
+        builder.Register<CharacterOutfits>(Lifetime.Singleton)
+            .WithParameter("spareOutfits", settings.SpareOutfits)
+            .WithParameter("spritesPerFrame", settings.OutfitSpritesPerFrame);
         builder.Register<PlayerRespawner>(Lifetime.Singleton);
         builder.Register<PlayerSpawner>(Lifetime.Singleton)
             .WithParameter(playerPrefab)

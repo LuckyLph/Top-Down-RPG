@@ -114,7 +114,10 @@ public sealed class CharacterSheet
 /// painted over each frame once the frame is shaded (<see cref="DrawLantern"/>), and the pixels that changed are the
 /// frame's lantern layer, so the sheets themselves stay as they are without it. A recipe whose materials take a
 /// player's colours (<see cref="CharacterRecipe.HasDyes"/>) also gets each frame's palette map (<see cref="PaletteMap"/>).
-/// The same recipe always gives the same pixels.
+/// A recipe whose character wears parts (<see cref="CharacterRecipe.HasParts"/>, Docs/PlayerCharacter.md, Phase 6) is
+/// drawn a layer at a time, its body then each part of its <see cref="Outfit"/> (its own until set) on a canvas of its own, merged by depth
+/// (<see cref="ArtCanvas.MergeFrom"/>), so a part drawn on the body's surface covers it; <see cref="BakeLayers"/> keeps
+/// every layer apart, before shading, for the runtime composer. The same recipe always gives the same pixels.
 /// </summary>
 public sealed class CharacterBaker
 {
@@ -127,6 +130,7 @@ public sealed class CharacterBaker
     private static readonly ColourRamp[] MaterialTones = MaterialToneRamps();
 
     private readonly CharacterRecipe recipe;
+    private IReadOnlyList<CharacterLayerKey> parts = new CharacterLayerKey[0];
 
     /// <summary>
     /// Creates a baker of <paramref name="characterRecipe"/>, measuring its scale.
@@ -134,6 +138,8 @@ public sealed class CharacterBaker
     public CharacterBaker(CharacterRecipe characterRecipe)
     {
         recipe = characterRecipe;
+        parts = PartsOf(default);
+
         int rows = FilledRows(RenderPose(CharacterRig.StandingPose(recipe), null, SouthDegrees, new Vector2Int(MeasureSize, MeasureSize), new Vector2Int(MeasureSize / 2, MeasureSize / 4), null, NoEffects, 1f));
         Scale = (recipe.TargetHeight - 2f) / Mathf.Max(rows, 1);
         int height = StandingHeight();
@@ -158,10 +164,63 @@ public sealed class CharacterBaker
     public float Scale { get; private set; }
 
     /// <summary>
+    /// The parts <see cref="Render"/> and <see cref="Bake"/> draw the character in (Docs/PlayerCharacter.md, Phase 6):
+    /// the first option of each slot until set, the recipe's own; the scale stays as measured on those.
+    /// </summary>
+    public CharacterPartPicks Outfit
+    {
+        get => outfit;
+        set
+        {
+            outfit = value;
+            parts = PartsOf(value);
+        }
+    }
+
+    private CharacterPartPicks outfit;
+
+    /// <summary>
+    /// The layers of the parts <paramref name="picks"/> pick, one per slot with options, a slot drawn under another's
+    /// option under the one picked there; an option the recipe lacks counts as the first.
+    /// </summary>
+    private IReadOnlyList<CharacterLayerKey> PartsOf(CharacterPartPicks picks)
+    {
+        List<CharacterLayerKey> keys = new();
+        foreach (CharacterSlot slot in (CharacterSlot[])Enum.GetValues(typeof(CharacterSlot)))
+        {
+            int options = recipe.PartOptions(slot);
+            if (options == 0)
+            {
+                continue;
+            }
+
+            int under = recipe.PartVariesWith(slot);
+            int variant = under >= 0 ? Picked(picks, (CharacterSlot)under) : 0;
+            keys.Add(new CharacterLayerKey((int)slot, Picked(picks, slot), variant));
+        }
+
+        return keys;
+    }
+
+    /// <summary>
+    /// The option <paramref name="picks"/> pick in <paramref name="slot"/>, the first for one the recipe lacks.
+    /// </summary>
+    private int Picked(CharacterPartPicks picks, CharacterSlot slot)
+    {
+        int option = picks.Get(slot);
+        return option < recipe.PartOptions(slot) ? option : 0;
+    }
+
+    /// <summary>
     /// Draws every frame of <paramref name="clip"/> in every direction as its sheet.
     /// </summary>
     public CharacterSheet Bake(CharacterClip clip)
     {
+        if (recipe.HasParts)
+        {
+            return BakeComposed(clip);
+        }
+
         int frames = clip.Motion.FrameCount;
         Vector2Int size = clip.FrameSize;
         int width = frames * size.x;
@@ -246,10 +305,183 @@ public sealed class CharacterBaker
     /// </summary>
     public CharacterCanvas Render(CharacterClip clip, int direction, int frame)
     {
+        CharacterPose pose = PoseOf(clip, frame, out List<BladeSample> smear);
+        return RenderPose(pose, clip.Weapon, CharacterDirections.Angle(direction) + pose.Spin, clip.FrameSize, clip.Pivot, smear, clip.Motion.EffectsOn(frame), Scale);
+    }
+
+    /// <summary>
+    /// The sheet of <paramref name="clip"/> for a recipe whose character wears parts: its body's layer and the
+    /// <see cref="Outfit"/>'s parts (<see cref="BakeLayers"/>) composed by the runtime's <see cref="CharacterComposer"/>,
+    /// so what the game composes for any outfit is what the editor bakes for it, with the palette map it gives and each
+    /// frame's cast light from the body's layer.
+    /// </summary>
+    private CharacterSheet BakeComposed(CharacterClip clip)
+    {
+        int frames = clip.Motion.FrameCount;
+        Vector2Int size = clip.FrameSize;
+        int width = frames * size.x;
+        Color32[] pixels = new Color32[width * CharacterDirections.Count * size.y];
+        byte[] paletteMap = new byte[pixels.Length];
+        List<CharacterLayerKey> keys = new() { CharacterLayerKey.Base };
+        keys.AddRange(parts);
+        Vector2[] lightCentres = new Vector2[CharacterDirections.Count * frames];
+        float[] lightStrengths = new float[lightCentres.Length];
+        CharacterLayerClip[] layers = BakeLayers(clip, keys, lightCentres, lightStrengths);
+        CharacterComposer composer = new();
+        List<CharacterLayerFrame> merged = new();
+        Color32[] colours = new Color32[size.x * size.y];
+        byte[] codes = new byte[colours.Length];
+        List<string> atEdge = new();
+        for (int direction = 0; direction < CharacterDirections.Count; direction++)
+        {
+            for (int frame = 0; frame < frames; frame++)
+            {
+                merged.Clear();
+                foreach (CharacterLayerClip layer in layers)
+                {
+                    merged.Add(layer.Frames[direction * frames + frame]);
+                }
+
+                composer.ComposeFrame(size.x, size.y, merged, CharacterComposer.MaterialsOf(layers), recipe.InnerLineGap, colours, codes);
+                if (TouchesEdge(colours, size))
+                {
+                    atEdge.Add($"{CharacterDirections.Name(direction)} {frame}");
+                }
+
+                RectInt rect = CharacterSheet.FrameRect(direction, frame, size);
+                for (int y = 0; y < size.y; y++)
+                {
+                    Array.Copy(colours, y * size.x, pixels, (rect.y + y) * width + rect.x, size.x);
+                    Array.Copy(codes, y * size.x, paletteMap, (rect.y + y) * width + rect.x, size.x);
+                }
+            }
+        }
+
+        return new CharacterSheet(clip, frames, pixels, atEdge, lightCentres, lightStrengths, paletteMap: recipe.HasDyes ? paletteMap : null);
+    }
+
+    /// <summary>
+    /// Every layer of the recipe's parts (Docs/PlayerCharacter.md, Phase 6): the body's, then each option of each slot,
+    /// for a slot drawn under another's option once per option of that slot; none for a recipe without parts.
+    /// </summary>
+    public IReadOnlyList<CharacterLayerKey> LayerKeys()
+    {
+        List<CharacterLayerKey> keys = new();
+        if (!recipe.HasParts)
+        {
+            return keys;
+        }
+
+        keys.Add(CharacterLayerKey.Base);
+        foreach (CharacterSlot slot in (CharacterSlot[])Enum.GetValues(typeof(CharacterSlot)))
+        {
+            int under = recipe.PartVariesWith(slot);
+            int variants = under >= 0 ? Mathf.Max(1, recipe.PartOptions((CharacterSlot)under)) : 1;
+            for (int option = 0; option < recipe.PartOptions(slot); option++)
+            {
+                for (int variant = 0; variant < variants; variant++)
+                {
+                    keys.Add(new CharacterLayerKey((int)slot, option, variant));
+                }
+            }
+        }
+
+        return keys;
+    }
+
+    /// <summary>
+    /// Draws every frame of <paramref name="clip"/> in every direction as each of <paramref name="keys"/>' layers, each
+    /// on a canvas of its own, kept before shading for the runtime composer (<see cref="CharacterLayer"/>): per frame the
+    /// box around what the layer draws and per pixel its material, part, tone, drawing step and depth, frames direction by direction
+    /// and within each frame by frame. The body's layer also holds the clip's material table: whether each material
+    /// lines its edges, its dye and the ramp <see cref="Shade(CharacterCanvas, CharacterWeaponArt, ColourRamp)"/>
+    /// colours it with. A frame's pose, solved once, draws every layer.
+    /// </summary>
+    public CharacterLayerClip[] BakeLayers(CharacterClip clip, IReadOnlyList<CharacterLayerKey> keys)
+    {
+        return BakeLayers(clip, keys, null, null);
+    }
+
+    /// <summary>
+    /// <see cref="BakeLayers(CharacterClip, IReadOnlyList{CharacterLayerKey})"/>, keeping where each frame's cast light
+    /// shines from and how strongly, as the body's layer marks it, in <paramref name="lightCentres"/> and
+    /// <paramref name="lightStrengths"/> (direction by direction, frame by frame) when given.
+    /// </summary>
+    private CharacterLayerClip[] BakeLayers(CharacterClip clip, IReadOnlyList<CharacterLayerKey> keys, Vector2[] lightCentres, float[] lightStrengths)
+    {
+        int frames = clip.Motion.FrameCount;
+        CharacterLayerFrame[][] layers = new CharacterLayerFrame[keys.Count][];
+        for (int k = 0; k < keys.Count; k++)
+        {
+            layers[k] = new CharacterLayerFrame[CharacterDirections.Count * frames];
+        }
+
+        for (int frame = 0; frame < frames; frame++)
+        {
+            CharacterPose pose = PoseOf(clip, frame, out List<BladeSample> smear);
+            CharacterJoints joints = CharacterRig.Solve(recipe, pose, clip.Weapon);
+            IReadOnlyList<MotionEffect> effects = clip.Motion.EffectsOn(frame);
+            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            {
+                float facing = CharacterDirections.Angle(direction) + pose.Spin;
+                for (int k = 0; k < keys.Count; k++)
+                {
+                    CharacterCanvas canvas = new(clip.FrameSize.x, clip.FrameSize.y, clip.Pivot, Scale);
+                    recipe.CreatePainter(clip.Weapon, canvas, keys[k]).Paint(facing, pose, joints, smear, effects);
+                    layers[k][direction * frames + frame] = Extract(canvas);
+                    if (keys[k].IsBase && lightCentres != null)
+                    {
+                        lightCentres[direction * frames + frame] = canvas.LightCentre;
+                        lightStrengths[direction * frames + frame] = canvas.LightStrength;
+                    }
+                }
+            }
+        }
+
+        CharacterLayerMaterial[] table = Table(clip.Weapon, clip.Motion.Light);
+        CharacterLayerClip[] clips = new CharacterLayerClip[keys.Count];
+        for (int k = 0; k < keys.Count; k++)
+        {
+            CharacterLayerMaterial[] own = keys[k].IsBase ? table : null;
+            CharacterWeaponArt carried = keys[k].IsBase ? null : recipe.PartWeapon((CharacterSlot)keys[k].Slot, keys[k].Option);
+            if (carried != null && clip.Weapon == null)
+            {
+                own = Table(carried, clip.Motion.Light);
+            }
+
+            clips[k] = new CharacterLayerClip(clip.FrameSize, clip.Pivot, layers[k], own);
+        }
+
+        return clips;
+    }
+
+    /// <summary>
+    /// The material table of a clip holding <paramref name="weapon"/> (or none) with <paramref name="light"/> for a
+    /// cast's light: whether each material lines its edges, its dye and its ramp.
+    /// </summary>
+    private CharacterLayerMaterial[] Table(CharacterWeaponArt weapon, ColourRamp light)
+    {
+        ColourRamp[] ramps = Ramps(weapon, light);
+        CharacterLayerMaterial[] table = new CharacterLayerMaterial[ramps.Length];
+        for (int i = 0; i < table.Length; i++)
+        {
+            CharacterMaterial material = (CharacterMaterial)i;
+            table[i] = new CharacterLayerMaterial(CharacterMaterials.HasOutline(material), recipe.DyeOf(material), ramps[i]);
+        }
+
+        return table;
+    }
+
+    /// <summary>
+    /// The pose of frame <paramref name="frame"/> of <paramref name="clip"/>, and the blade's smear samples drawn on it
+    /// (null for none), each turned by its own spin against the frame's.
+    /// </summary>
+    private CharacterPose PoseOf(CharacterClip clip, int frame, out List<BladeSample> smear)
+    {
         CharacterMotion motion = clip.Motion;
         CharacterWeaponArt weapon = clip.Weapon;
         CharacterPose pose = motion.PoseAt(frame, recipe, weapon);
-        List<BladeSample> smear = null;
+        smear = null;
         if (weapon != null && weapon.Kind == WeaponKind.Blade && motion.TryGetSmear(frame, out MotionSmear span))
         {
             int count = motion.SmearSamples;
@@ -262,7 +494,74 @@ public sealed class CharacterBaker
             }
         }
 
-        return RenderPose(pose, weapon, CharacterDirections.Angle(direction) + pose.Spin, clip.FrameSize, clip.Pivot, smear, motion.EffectsOn(frame), Scale);
+        return pose;
+    }
+
+    /// <summary>
+    /// A layer's frame drawn on <paramref name="canvas"/>: the box around its filled pixels and, per pixel of the box,
+    /// its material, part, tone before any line, drawing step and depth, the depth on the steps of
+    /// <see cref="CharacterLayer.DepthSteps"/> a pixel past the frame's nearest whole pixel
+    /// (<see cref="CharacterLayer.Quantize"/>), as the layer's file keeps it.
+    /// </summary>
+    private CharacterLayerFrame Extract(CharacterCanvas canvas)
+    {
+        int x0 = canvas.Width;
+        int y0 = canvas.Height;
+        int x1 = -1;
+        int y1 = -1;
+        for (int y = 0; y < canvas.Height; y++)
+        {
+            for (int x = 0; x < canvas.Width; x++)
+            {
+                if (!canvas.IsFilled(x, y))
+                {
+                    continue;
+                }
+
+                x0 = Mathf.Min(x0, x);
+                y0 = Mathf.Min(y0, y);
+                x1 = Mathf.Max(x1, x);
+                y1 = Mathf.Max(y1, y);
+            }
+        }
+
+        if (x1 < 0)
+        {
+            return new CharacterLayerFrame(new RectInt(0, 0, 0, 0), Array.Empty<byte>(), Array.Empty<byte>(), Array.Empty<byte>(), Array.Empty<byte>(), Array.Empty<float>());
+        }
+
+        RectInt box = new(x0, y0, x1 - x0 + 1, y1 - y0 + 1);
+        int count = box.width * box.height;
+        byte[] material = new byte[count];
+        byte[] part = new byte[count];
+        byte[] tone = new byte[count];
+        byte[] step = new byte[count];
+        float[] depth = new float[count];
+        for (int y = 0; y < box.height; y++)
+        {
+            for (int x = 0; x < box.width; x++)
+            {
+                int i = y * box.width + x;
+                int cx = box.x + x;
+                int cy = box.y + y;
+                if (!canvas.IsFilled(cx, cy))
+                {
+                    material[i] = CharacterLayer.Empty;
+                    depth[i] = float.PositiveInfinity;
+                    continue;
+                }
+
+                CharacterMaterial value = canvas.MaterialAt(cx, cy);
+                material[i] = (byte)value;
+                part[i] = (byte)canvas.PartAt(cx, cy);
+                tone[i] = (byte)canvas.BaseTone(cx, cy, CharacterMaterials.IsFlat(value), recipe.LightThreshold, recipe.ShadowThreshold);
+                step[i] = (byte)canvas.StepAt(cx, cy);
+                depth[i] = canvas.DepthAt(cx, cy);
+            }
+        }
+
+        CharacterLayer.Quantize(material, depth);
+        return new CharacterLayerFrame(box, material, part, tone, step, depth);
     }
 
     /// <summary>
@@ -299,6 +598,15 @@ public sealed class CharacterBaker
     /// </summary>
     public Color32[] Shade(CharacterCanvas canvas, CharacterWeaponArt weapon, ColourRamp light)
     {
+        return canvas.Shade(Ramps(weapon, light), recipe.LightThreshold, recipe.ShadowThreshold, recipe.InnerLineGap);
+    }
+
+    /// <summary>
+    /// The ramp each material is drawn in: the recipe's for the character, <paramref name="weapon"/>'s for the weapon and
+    /// its effects, <paramref name="light"/> for a cast's light and the recipe's lantern's for the lantern.
+    /// </summary>
+    private ColourRamp[] Ramps(CharacterWeaponArt weapon, ColourRamp light)
+    {
         ColourRamp[] ramps = new ColourRamp[CharacterMaterials.Count];
         for (int i = 0; i < ramps.Length; i++)
         {
@@ -319,7 +627,7 @@ public sealed class CharacterBaker
             ramps[i] = CharacterMaterials.IsWeapons(material) ? (weapon != null ? weapon.Ramp(material) : default) : recipe.Ramp(material);
         }
 
-        return canvas.Shade(ramps, recipe.LightThreshold, recipe.ShadowThreshold, recipe.InnerLineGap);
+        return ramps;
     }
 
     /// <summary>
@@ -367,13 +675,20 @@ public sealed class CharacterBaker
 
     /// <summary>
     /// Draws <paramref name="pose"/> holding <paramref name="weapon"/> facing <paramref name="facing"/> degrees onto
-    /// a new canvas.
+    /// a new canvas: for a recipe with parts, its body and the <see cref="Outfit"/>'s option of each part merged by depth.
     /// </summary>
     private CharacterCanvas RenderPose(CharacterPose pose, CharacterWeaponArt weapon, float facing, Vector2Int size, Vector2Int pivot, IReadOnlyList<BladeSample> smear, IReadOnlyList<MotionEffect> effects, float scale)
     {
         CharacterCanvas canvas = new(size.x, size.y, pivot, scale);
         CharacterJoints joints = CharacterRig.Solve(recipe, pose, weapon);
-        recipe.CreatePainter(weapon, canvas).Paint(facing, pose, joints, smear, effects);
+        recipe.CreatePainter(weapon, canvas, CharacterLayerKey.Base).Paint(facing, pose, joints, smear, effects);
+        foreach (CharacterLayerKey part in parts)
+        {
+            CharacterCanvas layer = new(size.x, size.y, pivot, scale);
+            recipe.CreatePainter(weapon, layer, part).Paint(facing, pose, joints, smear, effects);
+            canvas.MergeFrom(layer);
+        }
+
         return canvas;
     }
 

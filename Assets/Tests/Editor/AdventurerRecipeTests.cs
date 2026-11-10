@@ -5,12 +5,16 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 4), on the
+/// Tests for the adventurer's character recipe, the player's base body (Docs/PlayerCharacter.md, Phases 0 to 7), on the
 /// project's asset, which they only read, and on copies made in memory: baking gives the same pixels every time; the
 /// standing adventurer is its target height; its face shows both eyes, their glints, the brows and the mouth from the
 /// front, one eye in profile and nothing from behind; its ears show beside the head; its locks grow the hair past the
-/// head's ball from the front and in profile; the outfit's options (short sleeves, gloves, the satchel's strap, the
-/// skirt) draw as the recipe sets them; every clip has a row per direction and fits its frames; the attacks and casts
+/// head's ball from the front and in profile; the outfit draws as its parts are set (Docs/PlayerCharacter.md, Phase 6:
+/// sleeves, tops, legs, boots, capes, the hood and the cap; Phase 7: gloves and the satchel, its pouch showing), every
+/// layer drawing only its own in steps of its own, the project's parts name every option's layers, and the layer files
+/// compose exactly what the editor bakes; each weapon's gear shows the weapon stowed where it is carried in the clips
+/// without a weapon, only what stays on in its own clips and nothing in another weapon's, its weapon in the weapon's
+/// colours, and over a cape it shows further out; every clip has a row per direction and fits its frames; the attacks and casts
 /// keyed on the rogue's body fit its body; its gaits are its own, styled, while the rogue's stay plain: the bob's top and
 /// bottom on frames, the head following it late, the torso stretching at its top and squashing at its bottom, the
 /// hair's tips moving, and the hands rising at both ends of their swing; its idle animations start and end on the
@@ -27,6 +31,7 @@ public class AdventurerRecipeTests
 {
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Adventurer.asset";
     private const string RoguePath = "Assets/Settings/Characters/Recipe_Rogue.asset";
+    private const string PartsPath = "Assets/Sprites/Characters/Adventurer/Parts/Adventurer_Parts.asset";
     private const int East = 0;
     private const int North = 2;
     private const int South = 6;
@@ -153,42 +158,405 @@ public class AdventurerRecipeTests
     [Test]
     public void TheLocks_GrowTheHairPastTheHeadsBall()
     {
-        Assert.That(recipe.Locks, Is.Not.Empty);
-        CharacterBaker bald = new(Copy("{\"locks\":[]}"));
+        AdventurerHair tousled = recipe.Hairs[0];
+        Assert.That(tousled.Locks, Is.Not.Empty);
+        string bald = JsonUtility.ToJson(new AdventurerHair("Bald", tousled.Face, tousled.Fringe, new HairLock[0]));
+        CharacterBaker without = new(Copy($"{{\"hairOptions\":[{bald}]}}"));
         foreach (int direction in new[] { East, South })
         {
-            Assert.That(bald.Render(idle, direction, 0).Count(CharacterMaterial.Hair), Is.LessThan(baker.Render(idle, direction, 0).Count(CharacterMaterial.Hair)), $"direction {direction}");
+            Assert.That(without.Render(idle, direction, 0).Count(CharacterMaterial.Hair), Is.LessThan(baker.Render(idle, direction, 0).Count(CharacterMaterial.Hair)), $"direction {direction}");
         }
     }
 
     /// <summary>
-    /// The outfit's options draw as set: the project's adventurer wears long shirt sleeves, bare hands and no strap;
-    /// short sleeves bare the forearms, gloves cover the hands, the strap crosses the chest in a material of its own, and
-    /// without a skirt less of the tunic shows.
+    /// The outfit draws as set (Docs/PlayerCharacter.md, Phase 6): the project's adventurer wears its first part of each
+    /// slot, long shirt sleeves, bare hands and no satchel; short sleeves bare the forearms, the shirt alone shows no
+    /// tunic, the long tunic more; gloves cover the hands and the satchel's strap crosses the chest in a material of its
+    /// own, its pouch showing behind the right hip from the side and from behind (Phase 7); shorts bare the shins; short boots show less boot; a cape hangs lined behind, or unlined; a hood
+    /// shows the face in its opening and its inside around it, hiding the locks, and a cap hides the tufts on top.
     /// </summary>
     [Test]
-    public void TheOutfitsOptions_DrawAsTheRecipeSetsThem()
+    public void TheOutfit_DrawsAsItsPartsAreSet()
     {
         CharacterCanvas plain = baker.Render(idle, South, 0);
-        Assert.That(recipe.Sleeves, Is.EqualTo(AdventurerSleeves.Long));
+        Assert.That(recipe.Tops[0].Sleeves, Is.EqualTo(AdventurerSleeves.Long));
         Assert.That(MaterialOn(plain, CharacterMaterial.Skin, CharacterPart.LeftForearm, CharacterPart.RightForearm), Is.Zero);
         Assert.That(MaterialOn(plain, CharacterMaterial.Skin, CharacterPart.LeftHand, CharacterPart.RightHand), Is.Positive);
         Assert.That(plain.Count(CharacterMaterial.Strap) + plain.Count(CharacterMaterial.Pouch), Is.Zero);
+        Assert.That(plain.Count(CharacterMaterial.Headwear) + plain.Count(CharacterMaterial.Cloak), Is.Zero);
 
-        CharacterCanvas shortSleeves = new CharacterBaker(Copy("{\"sleeves\":1}")).Render(idle, South, 0);
+        CharacterCanvas shortSleeves = Outfit(CharacterSlot.Top, "Short sleeves", South);
         Assert.That(MaterialOn(shortSleeves, CharacterMaterial.Skin, CharacterPart.LeftForearm, CharacterPart.RightForearm), Is.Positive);
         Assert.That(MaterialOn(shortSleeves, CharacterMaterial.Jerkin, CharacterPart.LeftUpperArm, CharacterPart.RightUpperArm), Is.Positive);
+        Assert.That(Outfit(CharacterSlot.Top, "Shirt", South).Count(CharacterMaterial.Jerkin), Is.Zero);
+        Assert.That(Outfit(CharacterSlot.Top, "Long tunic", South).Count(CharacterMaterial.Jerkin), Is.GreaterThan(plain.Count(CharacterMaterial.Jerkin)));
 
-        CharacterCanvas gloved = new CharacterBaker(Copy("{\"gloves\":true}")).Render(idle, South, 0);
+        CharacterCanvas gloved = Outfit(CharacterSlot.Hands, "Gloves", South);
         Assert.That(MaterialOn(gloved, CharacterMaterial.Skin, CharacterPart.LeftHand, CharacterPart.RightHand), Is.Zero);
         Assert.That(MaterialOn(gloved, CharacterMaterial.Gloves, CharacterPart.LeftHand, CharacterPart.RightHand), Is.Positive);
-
-        CharacterCanvas strapped = new CharacterBaker(Copy("{\"strap\":true}")).Render(idle, South, 0);
+        CharacterCanvas strapped = Outfit(CharacterSlot.Bag, "Satchel", South);
         Assert.That(MaterialOn(strapped, CharacterMaterial.Strap, CharacterPart.Strap), Is.Positive);
         Assert.That(MaterialOn(strapped, CharacterMaterial.Belt, CharacterPart.Strap), Is.Zero);
+        Assert.That(Outfit(CharacterSlot.Bag, "Satchel", East).Count(CharacterMaterial.Pouch), Is.Positive, "the pouch from the side");
+        Assert.That(Outfit(CharacterSlot.Bag, "Satchel", North).Count(CharacterMaterial.Pouch), Is.Positive, "the pouch from behind");
 
-        CharacterCanvas skirtless = new CharacterBaker(Copy("{\"skirtLength\":0}")).Render(idle, South, 0);
-        Assert.That(skirtless.Count(CharacterMaterial.Jerkin), Is.LessThan(plain.Count(CharacterMaterial.Jerkin)));
+        baker.Outfit = Picks((CharacterSlot.Legs, "Shorts"), (CharacterSlot.Boots, "Short"));
+        CharacterCanvas shorts = baker.Render(idle, South, 0);
+        baker.Outfit = default;
+        Assert.That(MaterialOn(plain, CharacterMaterial.Skin, CharacterPart.LeftShin, CharacterPart.RightShin), Is.Zero);
+        Assert.That(MaterialOn(shorts, CharacterMaterial.Skin, CharacterPart.LeftShin, CharacterPart.RightShin), Is.Positive);
+        Assert.That(Outfit(CharacterSlot.Boots, "Short", South).Count(CharacterMaterial.Boots), Is.LessThan(plain.Count(CharacterMaterial.Boots)));
+
+        CharacterCanvas cape = Outfit(CharacterSlot.Cape, "Cape", North);
+        Assert.That(cape.Count(CharacterMaterial.Cloak), Is.Positive);
+        Assert.That(cape.Count(CharacterMaterial.Lining), Is.Positive);
+        CharacterCanvas unlined = Outfit(CharacterSlot.Cape, "Unlined", North);
+        Assert.That(unlined.Count(CharacterMaterial.Cloak), Is.Positive);
+        Assert.That(unlined.Count(CharacterMaterial.Lining), Is.Zero);
+
+        CharacterCanvas hood = Outfit(CharacterSlot.Headwear, "Hood", South);
+        Assert.That(hood.Count(CharacterMaterial.Headwear), Is.Positive);
+        Assert.That(hood.Count(CharacterMaterial.HoodInside), Is.Positive);
+        Assert.That(MaterialOn(hood, CharacterMaterial.Skin, CharacterPart.Head), Is.Positive, "the face shows in the opening");
+        Assert.That(hood.Count(CharacterMaterial.Hair), Is.LessThan(plain.Count(CharacterMaterial.Hair)), "the hood hides the locks");
+        CharacterCanvas cap = Outfit(CharacterSlot.Headwear, "Cap", East);
+        Assert.That(cap.Count(CharacterMaterial.Headwear), Is.Positive);
+        Assert.That(cap.Count(CharacterMaterial.Hair), Is.LessThan(baker.Render(idle, East, 0).Count(CharacterMaterial.Hair)), "the cap hides the tufts");
+    }
+
+    /// <summary>
+    /// Every layer draws only its own (Docs/PlayerCharacter.md, Phases 6 and 7): the body none of the parts' materials
+    /// and skin only on the head and ears, each hairstyle only hair, the headwear only itself and its inside, the tops
+    /// only the tunic, the shirt and bare forearms, the capes only the cape and its lining, the legs only trousers and
+    /// bare shins, the boots only boots, the hands only skin or gloves, the bag only its strap and pouch, and a weapon's
+    /// gear only the weapon, its leather, fittings and strap; and every layer draws in its own drawing steps.
+    /// </summary>
+    [Test]
+    public void EveryLayer_DrawsOnlyItsOwn()
+    {
+        IReadOnlyList<CharacterLayerKey> keys = baker.LayerKeys();
+        Assert.That(keys.Count, Is.EqualTo(1 + 5 * 3 + 3 + 5 + 4 + 2 + 2 + 2 + 2 + 4 * 4));
+        CharacterLayerClip[] layers = baker.BakeLayers(idle, keys);
+        Dictionary<int, CharacterMaterial[]> allowed = new()
+        {
+            { (int)CharacterSlot.Hair, new[] { CharacterMaterial.Hair } },
+            { (int)CharacterSlot.Headwear, new[] { CharacterMaterial.Headwear, CharacterMaterial.HoodInside } },
+            { (int)CharacterSlot.Top, new[] { CharacterMaterial.Jerkin, CharacterMaterial.Shirt, CharacterMaterial.Skin } },
+            { (int)CharacterSlot.Cape, new[] { CharacterMaterial.Cloak, CharacterMaterial.Lining } },
+            { (int)CharacterSlot.Legs, new[] { CharacterMaterial.Trousers, CharacterMaterial.Skin } },
+            { (int)CharacterSlot.Boots, new[] { CharacterMaterial.Boots } },
+            { (int)CharacterSlot.Hands, new[] { CharacterMaterial.Skin, CharacterMaterial.Gloves } },
+            { (int)CharacterSlot.Bag, new[] { CharacterMaterial.Strap, CharacterMaterial.Pouch } },
+            { (int)CharacterSlot.Weapon, new[] { CharacterMaterial.Steel, CharacterMaterial.Guard, CharacterMaterial.Grip, CharacterMaterial.Wood, CharacterMaterial.BowString, CharacterMaterial.Shaft, CharacterMaterial.Fletching, CharacterMaterial.Belt, CharacterMaterial.Fittings, CharacterMaterial.Strap } }
+        };
+        CharacterMaterial[] partsOnly = { CharacterMaterial.Hair, CharacterMaterial.Headwear, CharacterMaterial.HoodInside, CharacterMaterial.Jerkin, CharacterMaterial.Shirt, CharacterMaterial.Cloak, CharacterMaterial.Lining, CharacterMaterial.Trousers, CharacterMaterial.Boots, CharacterMaterial.Gloves, CharacterMaterial.Strap, CharacterMaterial.Pouch };
+        CharacterPart[] bodySkin = { CharacterPart.Head, CharacterPart.LeftEar, CharacterPart.RightEar };
+        Dictionary<int, HashSet<int>> steps = new();
+        for (int k = 0; k < keys.Count; k++)
+        {
+            foreach (CharacterLayerFrame frame in layers[k].Frames)
+            {
+                for (int i = 0; i < frame.Material.Length; i++)
+                {
+                    if (frame.Material[i] == CharacterLayer.Empty)
+                    {
+                        continue;
+                    }
+
+                    CharacterMaterial material = (CharacterMaterial)frame.Material[i];
+                    bool fits = keys[k].IsBase ? !partsOnly.Contains(material) : allowed[keys[k].Slot].Contains(material);
+                    Assert.That(fits, Is.True, $"layer {keys[k].Slot} {keys[k].Option} draws {material}");
+                    if (keys[k].IsBase && material == CharacterMaterial.Skin)
+                    {
+                        Assert.That(bodySkin, Does.Contain((CharacterPart)frame.Part[i]), "the body's skin is the head's and the ears'");
+                    }
+
+                    if (!steps.TryGetValue(frame.Step[i], out HashSet<int> owners))
+                    {
+                        steps[frame.Step[i]] = owners = new HashSet<int>();
+                    }
+
+                    owners.Add(keys[k].Slot);
+                }
+            }
+        }
+
+        foreach (KeyValuePair<int, HashSet<int>> step in steps)
+        {
+            Assert.That(step.Value.Count, Is.EqualTo(1), $"step {step.Key} is drawn by one layer");
+        }
+    }
+
+    /// <summary>
+    /// The project's parts (Docs/PlayerCharacter.md, Phase 6) are the recipe's: over the adventurer's set and its body's
+    /// layer file, with the recipe's line gap, a slot per <see cref="CharacterSlot"/> in order with the recipe's options
+    /// by name, the hair drawn under each headwear (a layer per headwear option), an option drawing nothing (no
+    /// headwear, no cape, no bag, no weapon's gear) without a layer, and each option naming the dyes its layers draw; the
+    /// weapon's slot follows the weapon, drawn under each cape, a weapon's gear named by its name and none for a weapon
+    /// without gear, the sword at the hip alike under every cape, the greatsword and the longbow on the back further out
+    /// over a cape, alike under every cape (Docs/PlayerCharacter.md, Phase 7).
+    /// </summary>
+    [Test]
+    public void TheProjectsParts_NameEveryOptionsLayers()
+    {
+        CharacterParts parts = AssetDatabase.LoadAssetAtPath<CharacterParts>(PartsPath);
+        Assert.That(parts, Is.Not.Null);
+        Assert.That(parts.Look, Is.EqualTo(AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(recipe))));
+        Assert.That(AssetDatabase.GetAssetPath(parts.Body), Does.EndWith("Adventurer_Body.bytes"));
+        Assert.That(parts.InnerLineGap, Is.EqualTo(recipe.InnerLineGap));
+        Assert.That(parts.Slots.Select(slot => slot.Slot), Is.EqualTo(System.Enum.GetValues(typeof(CharacterSlot))));
+        foreach (CharacterPartSlot slot in parts.Slots)
+        {
+            Assert.That(slot.Options.Select(option => option.Name), Is.EqualTo(Enumerable.Range(0, recipe.PartOptions(slot.Slot)).Select(o => recipe.PartName(slot.Slot, o))), slot.Slot.ToString());
+            Assert.That(slot.VariesWith, Is.EqualTo(recipe.PartVariesWith(slot.Slot)));
+            int layers = slot.VariesWith >= 0 ? recipe.PartOptions((CharacterSlot)slot.VariesWith) : 1;
+            foreach (CharacterPartOption option in slot.Options)
+            {
+                Assert.That(option.Layers.Count, Is.EqualTo(layers), $"{slot.Slot} {option.Name}");
+            }
+        }
+
+        Assert.That(parts.Get(CharacterSlot.Headwear).Options[0].Layers[0], Is.Null, "no headwear draws nothing");
+        Assert.That(parts.Get(CharacterSlot.Cape).Options[0].Layers[0], Is.Null, "no cape draws nothing");
+        Assert.That(parts.Get(CharacterSlot.Headwear).Options[1].Dyes & (1 << (int)CharacterDye.Headwear), Is.Not.Zero);
+        Assert.That(parts.Get(CharacterSlot.Cape).Options[1].Dyes & (1 << (int)CharacterDye.CapeLining), Is.Not.Zero);
+        Assert.That(parts.Get(CharacterSlot.Cape).Options[2].Dyes & (1 << (int)CharacterDye.CapeLining), Is.Zero, "unlined");
+        Assert.That(parts.Get(CharacterSlot.Bag).Options[0].Layers[0], Is.Null, "no bag draws nothing");
+        Assert.That(parts.Get(CharacterSlot.Bag).Options[1].Dyes & (1 << (int)CharacterDye.Pouch), Is.Not.Zero);
+        Assert.That(parts.Get(CharacterSlot.Hands).Options[1].Dyes & (1 << (int)CharacterDye.Gloves), Is.Not.Zero);
+        Assert.That(parts.Slots.Where(slot => slot.FollowsWeapon).Select(slot => slot.Slot), Is.EqualTo(new[] { CharacterSlot.Weapon }));
+
+        CharacterPartSlot weapons = parts.Get(CharacterSlot.Weapon);
+        Assert.That(weapons.Options.Select(option => option.Name), Is.EqualTo(new[] { "Sword", "Greatsword", "Longbow", "None" }));
+        Assert.That(weapons.VariesWith, Is.EqualTo((int)CharacterSlot.Cape));
+        Assert.That(weapons.GearOption("Longbow"), Is.EqualTo(2));
+        Assert.That(weapons.GearOption("Halberd"), Is.EqualTo(3), "a weapon without gear shows none");
+        Assert.That(weapons.GearOption(string.Empty), Is.EqualTo(3));
+        Assert.That(weapons.Options[3].DrawsNothing, Is.True);
+        Assert.That(weapons.Options[0].Layers.Distinct().Count(), Is.EqualTo(1), "the sword at the hip is alike under every cape");
+        foreach (CharacterPartOption onTheBack in new[] { weapons.Options[1], weapons.Options[2] })
+        {
+            Assert.That(onTheBack.Layers[1], Is.Not.EqualTo(onTheBack.Layers[0]), $"{onTheBack.Name} sits further out over a cape");
+            Assert.That(onTheBack.Layers.Skip(1).Distinct().Count(), Is.EqualTo(1), $"{onTheBack.Name} is alike under every cape");
+        }
+    }
+
+    /// <summary>
+    /// The project's layer files compose, for the idle, the sword slash and the greatsword's cleave, exactly the sheet and
+    /// palette map the editor bakes, for the look's own parts, for a hood over long hair with a cape and layered sleeves,
+    /// for the greatsword over a long cape with gloves and the satchel, and for the longbow, each clip coloured with the
+    /// table its layers give it (<see cref="CharacterComposer.MaterialsOf(IReadOnlyList{CharacterLayerClip})"/>); and each
+    /// file holds what the recipe bakes for its layer, for the idle.
+    /// </summary>
+    [Test]
+    public void ThePartsFiles_ComposeWhatTheEditorBakes()
+    {
+        CharacterParts parts = AssetDatabase.LoadAssetAtPath<CharacterParts>(PartsPath);
+        CharacterLayer body = CharacterLayer.Read(parts.Body.bytes);
+        CharacterPartPicks[] outfits =
+        {
+            default,
+            Picks((CharacterSlot.Hair, "Long"), (CharacterSlot.Headwear, "Hood"), (CharacterSlot.Cape, "Cape"), (CharacterSlot.Top, "Layered")),
+            Picks((CharacterSlot.Weapon, "Greatsword"), (CharacterSlot.Cape, "Long"), (CharacterSlot.Hands, "Gloves"), (CharacterSlot.Bag, "Satchel")),
+            Picks((CharacterSlot.Weapon, "Longbow"))
+        };
+        CharacterComposer composer = new();
+        foreach (string clipName in new[] { "Idle", "SwordSlash", "GreatswordCleave" })
+        {
+            int c = recipe.Clips.ToList().FindIndex(clip => clip.Name == clipName);
+            CharacterClip clip = recipe.Clips[c];
+            foreach (CharacterPartPicks picks in outfits)
+            {
+                List<CharacterLayer> worn = new();
+                foreach (CharacterSlot slot in System.Enum.GetValues(typeof(CharacterSlot)))
+                {
+                    TextAsset file = parts.LayerOf(picks, slot);
+                    worn.Add(file != null ? CharacterLayer.Read(file.bytes) : null);
+                }
+
+                baker.Outfit = picks;
+                CharacterSheet sheet = baker.Bake(clip);
+                baker.Outfit = default;
+                Vector2Int size = clip.FrameSize;
+                Color32[] pixels = new Color32[size.x * size.y];
+                byte[] codes = new byte[pixels.Length];
+                int wrong = 0;
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    for (int frame = 0; frame < clip.Motion.FrameCount; frame++)
+                    {
+                        int index = direction * clip.Motion.FrameCount + frame;
+                        List<CharacterLayerFrame> layers = new() { body.Clips[c].Frames[index] };
+                        layers.AddRange(worn.Select(layer => layer?.Clips[c].Frames[index]));
+                        List<CharacterLayerClip> layerClips = new() { body.Clips[c] };
+                        layerClips.AddRange(worn.Select(layer => layer?.Clips[c]));
+                        composer.ComposeFrame(size.x, size.y, layers, CharacterComposer.MaterialsOf(layerClips), parts.InnerLineGap, pixels, codes);
+                        RectInt rect = CharacterSheet.FrameRect(direction, frame, size);
+                        for (int y = 0; y < size.y; y++)
+                        {
+                            for (int x = 0; x < size.x; x++)
+                            {
+                                int o = (rect.y + y) * sheet.Width + rect.x + x;
+                                wrong += pixels[y * size.x + x].Equals(sheet.Pixels[o]) && codes[y * size.x + x] == sheet.PaletteMap[o] ? 0 : 1;
+                            }
+                        }
+                    }
+                }
+
+                Assert.That(wrong, Is.Zero, $"{clipName}, outfit {picks.GetHashCode()}");
+            }
+        }
+
+        IReadOnlyList<CharacterLayerKey> keys = baker.LayerKeys();
+        CharacterLayerClip[] baked = baker.BakeLayers(idle, keys);
+        int idleIndex = recipe.Clips.ToList().IndexOf(idle);
+        for (int k = 0; k < keys.Count; k++)
+        {
+            CharacterLayerKey key = keys[k];
+            TextAsset file = key.IsBase ? parts.Body : parts.Get((CharacterSlot)key.Slot).Options[key.Option].Layers[key.Variant];
+            if (file == null)
+            {
+                Assert.That(baked[k].Frames.All(frame => frame.Box.width == 0), Is.True, $"key {key.Slot} {key.Option} draws nothing");
+                continue;
+            }
+
+            CharacterLayerClip read = CharacterLayer.Read(file.bytes).Clips[idleIndex];
+            for (int f = 0; f < read.Frames.Length; f++)
+            {
+                Assert.That(read.Frames[f].Box, Is.EqualTo(baked[k].Frames[f].Box), $"key {key.Slot} {key.Option} {key.Variant} frame {f}");
+                Assert.That(read.Frames[f].Material, Is.EqualTo(baked[k].Frames[f].Material));
+                Assert.That(read.Frames[f].Depth, Is.EqualTo(baked[k].Frames[f].Depth));
+                Assert.That(read.Frames[f].Step, Is.EqualTo(baked[k].Frames[f].Step));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Each weapon's gear (Docs/PlayerCharacter.md, Phase 7), as its layer draws it: in the idle, no weapon in hand, the
+    /// weapon stowed (the sword's hilt over its scabbard at the hip, the greatsword's blade and the longbow on the back)
+    /// with what holds it (the scabbard, the sling, the quiver), coloured with a table of its own that gives the weapon's
+    /// materials that weapon's ramps (the longbow's red grip, not the sword's); in the weapon's first attack only what
+    /// stays on, no weapon, with the clip's own table; in another weapon's attack nothing; and no gear draws nothing.
+    /// </summary>
+    [Test]
+    public void EachWeaponsGear_ShowsTheWeaponStowedOutsideItsClips_AndWhatStaysOnInThem()
+    {
+        CharacterClip slash = ClipNamed("SwordSlash");
+        CharacterClip cleave = ClipNamed("GreatswordCleave");
+        CharacterClip shot = ClipNamed("BowShot");
+        (string Gear, CharacterClip Own, CharacterClip Other, CharacterMaterial Stowed, CharacterPart Holder)[] gear =
+        {
+            ("Sword", slash, cleave, CharacterMaterial.Guard, CharacterPart.Scabbard),
+            ("Greatsword", cleave, slash, CharacterMaterial.Steel, CharacterPart.Sling),
+            ("Longbow", shot, slash, CharacterMaterial.Wood, CharacterPart.Quiver)
+        };
+        CharacterMaterial[] weaponMaterials = { CharacterMaterial.Steel, CharacterMaterial.Guard, CharacterMaterial.Grip, CharacterMaterial.Wood, CharacterMaterial.BowString };
+        foreach ((string name, CharacterClip own, CharacterClip other, CharacterMaterial stowed, CharacterPart holder) in gear)
+        {
+            CharacterLayerKey[] key = { new((int)CharacterSlot.Weapon, Option(CharacterSlot.Weapon, name), 0) };
+            CharacterLayerClip carried = baker.BakeLayers(idle, key)[0];
+            Assert.That(LayerPixels(carried, stowed, null), Is.Positive, $"{name} stowed");
+            Assert.That(LayerPixels(carried, null, holder), Is.Positive, $"{name}'s {holder}");
+            Assert.That(carried.Materials, Is.Not.Null, $"{name} colours its weapon");
+            Assert.That(carried.Materials[(int)CharacterMaterial.Grip].Ramp, Is.EqualTo(own.Weapon.Ramp(CharacterMaterial.Grip)), $"{name}'s grip");
+
+            CharacterLayerClip inHand = baker.BakeLayers(own, key)[0];
+            Assert.That(LayerPixels(inHand, null, holder), Is.Positive, $"{name}'s {holder} stays on");
+            Assert.That(weaponMaterials.Sum(material => LayerPixels(inHand, material, null)), Is.Zero, $"{name} is in hand, not stowed");
+            Assert.That(inHand.Materials, Is.Null, $"{name}'s own clip keeps its table");
+            Assert.That(baker.BakeLayers(other, key)[0].Frames.All(frame => frame.Box.width == 0), Is.True, $"{name} in another weapon's clip");
+        }
+
+        Assert.That(recipe.Weapons[0].Weapon, Is.EqualTo(slash.Weapon), "the look's own gear is the sword's, the starting weapon");
+        CharacterLayerKey[] none = { new((int)CharacterSlot.Weapon, Option(CharacterSlot.Weapon, "None"), 0) };
+        foreach (CharacterClip clip in new[] { idle, slash })
+        {
+            Assert.That(baker.BakeLayers(clip, none)[0].Frames.All(frame => frame.Box.width == 0), Is.True, $"no gear in {clip.Name}");
+        }
+    }
+
+    /// <summary>
+    /// A weapon slung on the back shows over a cape (Docs/PlayerCharacter.md, Phase 7): facing north, the greatsword's
+    /// blade and the longbow show about as much over a long cape as over the bare back, the cape showing around them.
+    /// </summary>
+    [Test]
+    public void AWeaponOnTheBack_ShowsOverACape()
+    {
+        foreach ((string name, CharacterMaterial material) in new[] { ("Greatsword", CharacterMaterial.Steel), ("Longbow", CharacterMaterial.Wood) })
+        {
+            baker.Outfit = Picks((CharacterSlot.Weapon, name));
+            int bare = baker.Render(idle, North, 0).Count(material);
+            baker.Outfit = Picks((CharacterSlot.Weapon, name), (CharacterSlot.Cape, "Long"));
+            CharacterCanvas caped = baker.Render(idle, North, 0);
+            baker.Outfit = default;
+            Assert.That(bare, Is.Positive, name);
+            Assert.That(caped.Count(material), Is.GreaterThanOrEqualTo(bare * 3 / 4), $"{name} over the cape");
+            Assert.That(caped.Count(CharacterMaterial.Cloak), Is.Positive, $"the cape around the {name}");
+        }
+    }
+
+    /// <summary>
+    /// The clip of the recipe named <paramref name="clipName"/>.
+    /// </summary>
+    private CharacterClip ClipNamed(string clipName)
+    {
+        return recipe.Clips.First(clip => clip.Name == clipName);
+    }
+
+    /// <summary>
+    /// The index of the recipe's option of <paramref name="slot"/> named <paramref name="option"/>.
+    /// </summary>
+    private int Option(CharacterSlot slot, string option)
+    {
+        return Enumerable.Range(0, recipe.PartOptions(slot)).First(o => recipe.PartName(slot, o) == option);
+    }
+
+    /// <summary>
+    /// How many pixels of <paramref name="layer"/>'s frames are, when given, <paramref name="material"/> and of
+    /// <paramref name="part"/>.
+    /// </summary>
+    private static int LayerPixels(CharacterLayerClip layer, CharacterMaterial? material, CharacterPart? part)
+    {
+        int count = 0;
+        foreach (CharacterLayerFrame frame in layer.Frames)
+        {
+            for (int i = 0; i < frame.Material.Length; i++)
+            {
+                if (frame.Material[i] != CharacterLayer.Empty && (material == null || frame.Material[i] == (byte)material) && (part == null || frame.Part[i] == (byte)part))
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// The idle drawn in one option of <paramref name="slot"/>, named <paramref name="option"/>, facing
+    /// <paramref name="direction"/>; the rest of the outfit the recipe's own.
+    /// </summary>
+    private CharacterCanvas Outfit(CharacterSlot slot, string option, int direction)
+    {
+        baker.Outfit = Picks((slot, option));
+        CharacterCanvas canvas = baker.Render(idle, direction, 0);
+        baker.Outfit = default;
+        return canvas;
+    }
+
+    /// <summary>
+    /// Picks of the recipe's options named in <paramref name="named"/>, the first of every other slot.
+    /// </summary>
+    private CharacterPartPicks Picks(params (CharacterSlot Slot, string Option)[] named)
+    {
+        CharacterPartPicks picks = default;
+        foreach ((CharacterSlot slot, string option) in named)
+        {
+            int index = Enumerable.Range(0, recipe.PartOptions(slot)).First(o => recipe.PartName(slot, o) == option);
+            picks = picks.With(slot, index);
+        }
+
+        return picks;
     }
 
     /// <summary>
@@ -686,8 +1054,8 @@ public class AdventurerRecipeTests
 
     /// <summary>
     /// The project's animation set names the dyes its sheets' palette maps carry: from the skin to the buckle, not the
-    /// blush, the gloves, the strap or the pouch the outfit does not draw; an adventurer drawn with them carries theirs
-    /// too.
+    /// blush, the gloves, the strap or the pouch its own outfit does not draw (the sword's scabbard is the belt's
+    /// leather and its fittings the buckle's metal); an adventurer drawn with them carries theirs too.
     /// </summary>
     [Test]
     public void TheAnimationSet_NamesTheDyesItsSheetsCarry()
@@ -704,8 +1072,9 @@ public class AdventurerRecipeTests
             Assert.That(set.Carries(dye), Is.EqualTo(carried.Contains(dye)), dye.ToString());
         }
 
-        CharacterSheet dressed = new CharacterBaker(Copy("{\"gloves\":true,\"strap\":true,\"blush\":{\"x\":24,\"y\":-20}}")).Bake(idle);
-        foreach (CharacterDye dye in new[] { CharacterDye.Gloves, CharacterDye.Strap, CharacterDye.Blush })
+        CharacterBaker dressedBaker = new(Copy("{\"blush\":{\"x\":24,\"y\":-20}}")) { Outfit = Picks((CharacterSlot.Hands, "Gloves"), (CharacterSlot.Bag, "Satchel")) };
+        CharacterSheet dressed = dressedBaker.Bake(idle);
+        foreach (CharacterDye dye in new[] { CharacterDye.Gloves, CharacterDye.Strap, CharacterDye.Pouch, CharacterDye.Blush })
         {
             Assert.That(dressed.Dyes & (1 << (int)dye), Is.Not.Zero, dye.ToString());
         }

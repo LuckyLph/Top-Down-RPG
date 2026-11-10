@@ -101,6 +101,19 @@ public sealed class CharacterIdleAnimations
     }
 
     /// <summary>
+    /// Goes on with <paramref name="to"/>'s clips where it played <paramref name="from"/>'s, a set of the same clips
+    /// drawn by other sprites (a composed outfit of the same look, Docs/PlayerCharacter.md, Phase 7), changing nothing
+    /// else.
+    /// </summary>
+    public void Rebind(CharacterAnimationSet from, CharacterAnimationSet to)
+    {
+        for (int i = 0; i < clips.Length; i++)
+        {
+            clips[i] = from.Matching(clips[i], to) ?? clips[i];
+        }
+    }
+
+    /// <summary>
     /// Cuts the idle animation playing, if any, and starts the wait over on the next <see cref="Advance"/>.
     /// </summary>
     public void Stop()

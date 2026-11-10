@@ -790,5 +790,17 @@ MonoBehaviour:
     dyes: 0f000000
   - name: Pouch
     list: Leather
-    own: Saddle
+    own: Tan
     dyes: 10000000
+  - name: Headwear
+    list: Cloth
+    own: Green
+    dyes: 11000000
+  - name: Cape
+    list: Cloth
+    own: Red
+    dyes: 12000000
+  - name: Lining
+    list: Cloth
+    own: Beige
+    dyes: 13000000

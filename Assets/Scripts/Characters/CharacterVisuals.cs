@@ -121,9 +121,11 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Draws the character with <paramref name="set"/> at <paramref name="settings"/> from now on: the animator is built
-    /// again on the next use, so an action showing stops and the gait starts over. Nothing changes when either is
-    /// missing or both are the ones drawn.
+    /// Draws the character with <paramref name="set"/> at <paramref name="settings"/> from now on. A set of the same
+    /// clips as the one drawn, at the same settings (another outfit of the same look, Docs/PlayerCharacter.md, Phase 7),
+    /// goes on where the animator is: the action, the gait, an idle animation and a hold carry on in the new sprites.
+    /// Any other set builds the animator again on the next use, so an action showing stops and the gait starts over.
+    /// Nothing changes when either is missing or both are the ones drawn.
     /// </summary>
     public void SetLook(CharacterAnimationSet set, CharacterLocomotionSettings settings)
     {
@@ -132,10 +134,14 @@ public class CharacterVisuals : MonoBehaviour
             return;
         }
 
+        bool goesOn = animator != null && settings == locomotion && animator.Rebind(animationSet, set);
         animationSet = set;
         locomotion = settings;
-        animator = null;
         shown = null;
+        if (!goesOn)
+        {
+            animator = null;
+        }
     }
 
     /// <summary>

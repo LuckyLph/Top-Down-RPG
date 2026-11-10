@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -76,7 +77,163 @@ public static class CharacterSheetWriter
         string setPath = SetPath(recipe);
         WriteSet(setPath, BuildSet(recipe, baker, sheets));
         paths.Add(setPath);
+        if (recipe.HasParts)
+        {
+            paths.AddRange(WriteParts(recipe, baker, AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(setPath)));
+        }
+
         return paths;
+    }
+
+    /// <summary>
+    /// Writes the parts of a recipe whose character wears them (Docs/PlayerCharacter.md, Phase 6): every layer of
+    /// <see cref="CharacterBaker.LayerKeys"/>, each a file of every clip's frames (<see cref="CharacterLayer"/>,
+    /// gzipped) in <c>&lt;sheets&gt;/Parts</c>, <c>&lt;name&gt;_Body.bytes</c> for the body and
+    /// <c>&lt;name&gt;_&lt;slot&gt;_&lt;option&gt;[_Under&lt;option&gt;].bytes</c> for each part's option (none for an
+    /// option drawing nothing, and one file for layers alike, as hairstyles whose every lock a hood covers; files no
+    /// longer written are deleted), and the <see cref="CharacterParts"/> naming them,
+    /// <c>&lt;name&gt;_Parts.asset</c>, over <paramref name="set"/>: a file is rewritten and the asset saved only when
+    /// they changed. Returns the paths written.
+    /// </summary>
+    public static IReadOnlyList<string> WriteParts(CharacterRecipe recipe, CharacterBaker baker, CharacterAnimationSet set)
+    {
+        IReadOnlyList<CharacterLayerKey> keys = baker.LayerKeys();
+        CharacterLayerClip[][] clips = new CharacterLayerClip[keys.Count][];
+        for (int k = 0; k < keys.Count; k++)
+        {
+            clips[k] = new CharacterLayerClip[recipe.Clips.Count];
+        }
+
+        for (int c = 0; c < recipe.Clips.Count; c++)
+        {
+            CharacterLayerClip[] layers = baker.BakeLayers(recipe.Clips[c], keys);
+            for (int k = 0; k < keys.Count; k++)
+            {
+                clips[k][c] = layers[k];
+            }
+        }
+
+        string folder = $"{FolderOf(recipe)}/Parts";
+        TerrainMaterialWriter.EnsureFolder(folder);
+        List<string> paths = new();
+        TextAsset[] files = new TextAsset[keys.Count];
+        int[] dyes = new int[keys.Count];
+        List<(byte[] Bytes, TextAsset File)> written = new();
+        CharacterLayerMaterial[] materials = clips[0][0].Materials;
+        for (int k = 0; k < keys.Count; k++)
+        {
+            string path = $"{folder}/{recipe.SheetName}_{LayerName(recipe, keys[k])}.bytes";
+            bool draws = false;
+            foreach (CharacterLayerClip clip in clips[k])
+            {
+                foreach (CharacterLayerFrame frame in clip.Frames)
+                {
+                    foreach (byte material in frame.Material)
+                    {
+                        if (material == CharacterLayer.Empty)
+                        {
+                            continue;
+                        }
+
+                        draws = true;
+                        CharacterDye dye = materials[material].Dye;
+                        dyes[k] |= dye != CharacterDye.None ? 1 << (int)dye : 0;
+                    }
+                }
+            }
+
+            if (!draws && !keys[k].IsBase)
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+                {
+                    AssetDatabase.DeleteAsset(path);
+                }
+
+                continue;
+            }
+
+            byte[] bytes = new CharacterLayer(clips[k]).Write();
+            int same = written.FindIndex(entry => entry.Bytes.SequenceEqual(bytes));
+            if (same >= 0)
+            {
+                files[k] = written[same].File;
+                if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+                {
+                    AssetDatabase.DeleteAsset(path);
+                }
+
+                continue;
+            }
+
+            if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(bytes))
+            {
+                File.WriteAllBytes(path, bytes);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            }
+
+            files[k] = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+            written.Add((bytes, files[k]));
+            paths.Add(path);
+        }
+
+        List<CharacterPartSlot> slots = new();
+        foreach (CharacterSlot slot in (CharacterSlot[])System.Enum.GetValues(typeof(CharacterSlot)))
+        {
+            int count = recipe.PartOptions(slot);
+            if (count == 0)
+            {
+                continue;
+            }
+
+            List<CharacterPartOption> options = new();
+            for (int option = 0; option < count; option++)
+            {
+                List<TextAsset> layers = new();
+                int optionDyes = 0;
+                for (int k = 0; k < keys.Count; k++)
+                {
+                    if (keys[k].Is(slot) && keys[k].Option == option)
+                    {
+                        layers.Add(files[k]);
+                        optionDyes |= dyes[k];
+                    }
+                }
+
+                options.Add(new CharacterPartOption(recipe.PartName(slot, option), optionDyes, layers.ToArray()));
+            }
+
+            slots.Add(new CharacterPartSlot(slot, recipe.PartVariesWith(slot), options));
+        }
+
+        string partsPath = $"{folder}/{recipe.SheetName}_Parts.asset";
+        SpriteSheetFiles.WriteAsset(partsPath, CharacterParts.Create(set, files[0], recipe.InnerLineGap, slots));
+        paths.Add(partsPath);
+        return paths;
+    }
+
+    /// <summary>
+    /// The name of a layer's file: <c>Body</c>, or the slot and its option's name in letters and digits, and for a slot
+    /// drawn under another's option, that option's after <c>Under</c>.
+    /// </summary>
+    public static string LayerName(CharacterRecipe recipe, CharacterLayerKey key)
+    {
+        if (key.IsBase)
+        {
+            return "Body";
+        }
+
+        CharacterSlot slot = (CharacterSlot)key.Slot;
+        string name = $"{slot}_{Letters(recipe.PartName(slot, key.Option))}";
+        int under = recipe.PartVariesWith(slot);
+        return under >= 0 ? $"{name}_Under{Letters(recipe.PartName((CharacterSlot)under, key.Variant))}" : name;
+    }
+
+    /// <summary>
+    /// <paramref name="text"/>'s letters and digits.
+    /// </summary>
+    private static string Letters(string text)
+    {
+        return new string((text ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
     }
 
     /// <summary>

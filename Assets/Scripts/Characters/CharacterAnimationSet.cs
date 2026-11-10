@@ -60,6 +60,74 @@ public sealed class CharacterAnimationSet : ScriptableObject
     }
 
     /// <summary>
+    /// Whether <paramref name="other"/> holds this set's clips drawn by other sprites, in the same order (a composed
+    /// outfit of the same look, Docs/PlayerCharacter.md, Phase 7), so an animator playing this set's clips can go on
+    /// with the other's.
+    /// </summary>
+    public bool SameClipsAs(CharacterAnimationSet other)
+    {
+        if (other == null || other.clips.Count != clips.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < clips.Count; i++)
+        {
+            if (clips[i] == null ? other.clips[i] != null : !clips[i].SameFramesAs(other.clips[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The clip of <paramref name="other"/>, a set of the same clips (<see cref="SameClipsAs"/>), standing where
+    /// <paramref name="clip"/> stands in this set; null for none or a clip this set does not hold.
+    /// </summary>
+    public CharacterAnimationClip Matching(CharacterAnimationClip clip, CharacterAnimationSet other)
+    {
+        if (clip == null || other == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < clips.Count && i < other.clips.Count; i++)
+        {
+            if (ReferenceEquals(clips[i], clip))
+            {
+                return other.clips[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The sprite of <paramref name="other"/>, a set of the same clips (<see cref="SameClipsAs"/>), standing where
+    /// <paramref name="sprite"/> stands in this set; null for a sprite this set does not draw.
+    /// </summary>
+    public Sprite SpriteMatching(Sprite sprite, CharacterAnimationSet other)
+    {
+        if (sprite == null || other == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < clips.Count && i < other.clips.Count; i++)
+        {
+            Sprite found = clips[i] != null ? clips[i].SpriteMatching(sprite, other.clips[i]) : null;
+            if (found != null)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// The first clip named <paramref name="clipName"/>, or null when there is none or the name is empty. Looked up
     /// when a weapon is equipped, never per frame.
     /// </summary>

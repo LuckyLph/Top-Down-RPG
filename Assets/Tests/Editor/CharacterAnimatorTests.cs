@@ -22,7 +22,9 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// dropping it; updates allocate nothing once warm; standing still plays an idle animation after the wait and another
 /// after a gap, never the one before, moving, an action or a hold cutting one and starting the wait over, two animators
 /// seeded alike picking alike and none playing without a random source (Docs/PlayerCharacter.md, Phase 3); the
-/// visuals put the sprite on their renderer, two seeded alike playing the same idle animations, the weapon plays its
+/// visuals put the sprite on their renderer, go on where they were in another outfit of the same look, an action and a
+/// hold carrying on, and start over in another look (Docs/PlayerCharacter.md, Phase 7), two seeded alike playing the
+/// same idle animations, the weapon plays its
 /// attack on them while the character stands and runs unarmed, and a copy's attack plays on through a switch to its
 /// weapon that arrives after it; a weapon's attacks start with its first, then never repeat, the next picked at random
 /// among the others (in order without a random source), starting over when it is equipped; and a copy plays the attack
@@ -1177,6 +1179,58 @@ public class CharacterAnimatorTests
         visuals.SetLocomotion(Vector2.zero, Vector2.left);
         visuals.Tick();
         Assert.That(renderer.sprite, Is.SameAs(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.West, 0)));
+    }
+
+    /// <summary>
+    /// Visuals given another outfit of the same look, a set of the same clips drawn by other sprites
+    /// (Docs/PlayerCharacter.md, Phase 7), go on where they were: an attack showing plays on in the new sprites, its
+    /// contact frame on time, and a hit-stop's held frame takes the new set's sprite; a set of other clips starts the
+    /// animator over, stopping the attack.
+    /// </summary>
+    [Test]
+    public void AnOutfitOfTheSameClips_KeepsTheActionAndTheHold_AnotherSetStartsOver()
+    {
+        SpriteRenderer renderer = CreateVisuals(out CharacterVisuals visuals);
+        List<CharacterAnimationClip> dressed = new();
+        foreach (CharacterAnimationClip clip in set.Clips)
+        {
+            dressed.Add(clip.WithSprites(Sprites("Outfit" + clip.Name, clip.FrameCount * Mathf.Max(1, clip.GaitFrames))));
+        }
+
+        CharacterAnimationSet outfit = Track(CharacterAnimationSet.Create(dressed));
+        CharacterAnimationClip slash = set.Find("Slash");
+        CharacterAnimationClip outfitSlash = outfit.Find("Slash");
+        Assert.That(set.SameClipsAs(outfit), Is.True);
+
+        visuals.PlayAction(slash, Vector2.right, new AttackTimeline(0.5f, 0.125f, 0.25f), false);
+        visuals.Tick();
+        clock.Advance(0.3f);
+        visuals.Tick();
+        int frame = visuals.Animator.Frame;
+        Assert.That(frame, Is.InRange(1, Contact - 1));
+
+        visuals.SetLook(outfit, settings);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.True, "the attack plays on");
+        Assert.That(visuals.Animator.Clip, Is.SameAs(outfitSlash));
+        Assert.That(visuals.Animator.Frame, Is.EqualTo(frame));
+        Assert.That(renderer.sprite, Is.SameAs(outfitSlash.SpriteAt(CharacterDirections.East, frame)));
+
+        clock.Advance(0.2f);
+        Assert.That(visuals.HoldContact(0.1f), Is.True);
+        visuals.Tick();
+        Assert.That(renderer.sprite, Is.SameAs(outfitSlash.SpriteAt(CharacterDirections.East, Contact)), "the contact frame on time");
+        visuals.SetLook(set, settings);
+        clock.Advance(0.05f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsHolding, Is.True);
+        Assert.That(renderer.sprite, Is.SameAs(slash.SpriteAt(CharacterDirections.East, Contact)), "the held frame in the new set's sprite");
+
+        CharacterAnimationSet other = Track(CharacterAnimationSet.Create(new[] { Clip("Idle", CharacterGait.Idle, 4, 0.25f, 0f) }));
+        visuals.SetLook(other, settings);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.False, "another look starts over");
+        Assert.That(renderer.sprite, Is.SameAs(other.Clips[0].SpriteAt(CharacterDirections.South, 0)));
     }
 
     /// <summary>

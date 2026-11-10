@@ -181,7 +181,7 @@ public class PlayerBinderTests
         visuals.SetLook(set, locomotion);
         PlayerLook look = controller.gameObject.AddComponent<PlayerLook>();
         look.Configure(looks, visuals);
-        look.Construct(settings);
+        look.Construct(settings, null);
         return visuals;
     }
 

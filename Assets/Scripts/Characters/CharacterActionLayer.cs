@@ -157,6 +157,17 @@ public sealed class CharacterActionLayer
     }
 
     /// <summary>
+    /// Goes on with <paramref name="to"/>'s clips where it played <paramref name="from"/>'s, a set of the same clips
+    /// drawn by other sprites (a composed outfit of the same look, Docs/PlayerCharacter.md, Phase 7), changing nothing
+    /// else.
+    /// </summary>
+    public void Rebind(CharacterAnimationSet from, CharacterAnimationSet to)
+    {
+        clip = from.Matching(clip, to) ?? clip;
+        movingClip = from.Matching(movingClip, to) ?? movingClip;
+    }
+
+    /// <summary>
     /// Ends the action at once.
     /// </summary>
     public void Stop()

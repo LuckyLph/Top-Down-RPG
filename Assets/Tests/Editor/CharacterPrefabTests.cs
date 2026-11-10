@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -16,7 +17,8 @@ using UnityEngine.Rendering;
 /// casts; its look comes from the project's catalog, whose first look is the adventurer it is drawn as, the rogue retired
 /// from it, and whose every look holds every clip it plays, standing, walking and running clips included; its colours
 /// come from the project's colours, which the options menu offers too, drawn on a palette beside its body, the
-/// adventurer's sheets carrying palette maps and the Bandit's none; the player and
+/// adventurer's sheets carrying palette maps and the Bandit's none; the adventurer wears the project's parts, the
+/// Bandit none; the player and
 /// the Weasel sort as a group at their feet, the Weasel's bar apart from it over every unit; the Weasels draw the
 /// Weasel's baked set from their feet with no Mecanim animator, their config's attack clip in it.
 /// </summary>
@@ -27,10 +29,12 @@ public class CharacterPrefabTests
     private const string SetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
     private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
     private const string ColoursPath = "Assets/Data/Characters/CharacterColours.asset";
+    private const string PartsPath = "Assets/Sprites/Characters/Adventurer/Parts/Adventurer_Parts.asset";
     private const string OptionsMenuPath = "Assets/Prefabs/UI/OptionsMenu.prefab";
     private const string LitMaterialPath = "Assets/Materials/SpritePixelLit.mat";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
+    private const string AdventurerRecipePath = "Assets/Settings/Characters/Recipe_Adventurer.asset";
     private const string ArrowPath = "Assets/Prefabs/Combat/Arrow.prefab";
     private const string WeaponsFolder = "Assets/Data/Weapons/";
     private const string WeaponArtFolder = "Assets/Settings/Characters/Weapons/";
@@ -53,6 +57,35 @@ public class CharacterPrefabTests
         }
 
         created.Clear();
+    }
+
+    /// <summary>
+    /// The player's parts (Docs/PlayerCharacter.md, Phases 6 and 7): the catalog's adventurer wears the project's
+    /// adventurer parts, over its own set, the prefab's; the Bandit, drawn in Aseprite, wears none, and so shows no
+    /// gear; the player's look follows the gear of the weapon its controller equips, whose starting weapon's gear is the
+    /// adventurer's own, and every weapon of the catalog names gear the adventurer's parts hold.
+    /// </summary>
+    [Test]
+    public void ThePlayersParts_AreTheAdventurers()
+    {
+        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
+        CharacterParts parts = AssetDatabase.LoadAssetAtPath<CharacterParts>(PartsPath);
+        Assert.That(parts, Is.Not.Null);
+        Assert.That(looks.Get(0).Parts, Is.EqualTo(parts));
+        Assert.That(parts.Look, Is.EqualTo(looks.Get(0).AnimationSet));
+        Assert.That(parts.Look, Is.EqualTo(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath).GetComponentInChildren<CharacterVisuals>(true).AnimationSet));
+        Assert.That(looks.Get(looks.IndexOf("Bandit")).Parts, Is.Null);
+
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        PlayerWeaponController controller = player.GetComponent<PlayerWeaponController>();
+        Assert.That(new SerializedObject(player.GetComponent<PlayerLook>()).FindProperty("weapon").objectReferenceValue, Is.EqualTo(controller));
+        CharacterPartSlot gear = parts.Get(CharacterSlot.Weapon);
+        Assert.That(gear.GearOption(controller.StartingWeapon.Gear), Is.Zero, "the starting weapon's gear is the look's own");
+        for (int i = 0; i < controller.Catalog.Count; i++)
+        {
+            PlayerWeapon weapon = controller.Catalog.Get(i);
+            Assert.That(gear.IndexOf(weapon.Gear), Is.EqualTo(i), weapon.name);
+        }
     }
 
     /// <summary>
@@ -268,7 +301,8 @@ public class CharacterPrefabTests
     /// motion keys (the sword's frame 4 after a windup of frames 0 to 3, the others' frame 5) and starts where the
     /// character stands: its frames (80, 96 and 80 px) pivot on the feet like the 64 px locomotion frames, and in every
     /// direction its first frame puts the top of the head within a pixel of the idle's and the boots within two, the
-    /// weapon's own pixels left out. The greatsword's attacks start lower, their first poses bending the knees: the
+    /// weapon's own pixels left out, and the sword carried at the hip with its scabbard, the look's own gear, whose empty
+    /// scabbard the sword's attacks keep (Docs/PlayerCharacter.md, Phase 7). The greatsword's attacks start lower, their first poses bending the knees: the
     /// cleave's head within two pixels, the sweep's within three.
     /// </summary>
     [Test]
@@ -279,6 +313,14 @@ public class CharacterPrefabTests
         Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
         string[] weapons = { "Sword", "Greatsword", "Longbow" };
         string[] arts = { "WeaponArt_Sword", "WeaponArt_Greatsword", "WeaponArt_Bow" };
+        AdventurerRecipe adventurer = AssetDatabase.LoadAssetAtPath<AdventurerRecipe>(AdventurerRecipePath);
+        HashSet<Color32> carried = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[0] + ".asset"));
+        foreach (CharacterMaterial leather in new[] { CharacterMaterial.Belt, CharacterMaterial.Fittings })
+        {
+            ColourRamp ramp = adventurer.Ramp(leather);
+            carried.UnionWith(new[] { ramp.Outline, ramp.Shadow, ramp.Middle, ramp.Light });
+        }
+
         float[] sizes = { 80f, 96f, 80f };
         int[] contacts = { 4, 5, 5 };
         int[][] headDrops = { new[] { 1, 1 }, new[] { 2, 3 }, new[] { 1, 1 } };
@@ -298,8 +340,9 @@ public class CharacterPrefabTests
                 {
                     Sprite attackFrame = attack.SpriteAt(direction, 0);
                     Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(sizes[w], sizes[w])), attack.Name);
-                    OpaqueRows(attackSheet, attackFrame, weaponColours, out int attackBottom, out int attackTop);
-                    OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), weaponColours, out int idleBottom, out int idleTop);
+                    HashSet<Color32> leftOut = new(weaponColours.Concat(carried));
+                    OpaqueRows(attackSheet, attackFrame, leftOut, out int attackBottom, out int attackTop);
+                    OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), leftOut, out int idleBottom, out int idleTop);
                     string name = $"{attack.Name} {CharacterDirections.Name(direction)}";
                     Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(headDrops[w][a]), $"{name}: the head's top.");
                     Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");

@@ -122,6 +122,59 @@ public sealed class CharacterAnimationClip
     }
 
     /// <summary>
+    /// A copy of the clip drawn by <paramref name="clipSprites"/>, in the same order as its own: a player's composed
+    /// outfit (Docs/PlayerCharacter.md, Phase 6) keeps the clip's timing, contact, gait frames and lights.
+    /// </summary>
+    public CharacterAnimationClip WithSprites(Sprite[] clipSprites)
+    {
+        return Create(name, gait, armed, clipSprites, frameSeconds, naturalSpeed, contactFrame, gaitFrames, lightColour, lights, lanternSprites, lanternLights, idleAnimation);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="other"/> is this clip drawn by other sprites (<see cref="WithSprites"/>, a composed
+    /// outfit's copy of it): the same name, frames, timing and gait frames, a sprite for each of this clip's.
+    /// </summary>
+    public bool SameFramesAs(CharacterAnimationClip other)
+    {
+        if (other == null || other.name != name || other.gaitFrames != gaitFrames || other.contactFrame != contactFrame || other.sprites.Length != sprites.Length || other.frameSeconds.Length != frameSeconds.Length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < frameSeconds.Length; i++)
+        {
+            if (other.frameSeconds[i] != frameSeconds[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// The sprite <paramref name="other"/> draws where this clip draws <paramref name="sprite"/>, for a clip of the
+    /// same frames (<see cref="SameFramesAs"/>); null when this clip does not draw it.
+    /// </summary>
+    public Sprite SpriteMatching(Sprite sprite, CharacterAnimationClip other)
+    {
+        if (sprite == null || other == null || other.sprites.Length != sprites.Length)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            if (ReferenceEquals(sprites[i], sprite))
+            {
+                return other.sprites[i];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// How long frame <paramref name="frame"/> shows at the clip's natural speed, in seconds.
     /// </summary>
     public float FrameSeconds(int frame)

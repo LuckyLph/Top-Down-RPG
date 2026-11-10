@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -12,43 +13,53 @@ public enum AdventurerSleeves
 }
 
 /// <summary>
-/// The adventurer's <see cref="CharacterRecipe"/>, the player's base body: boots, a tunic over a shirt, a bare head with
-/// its ears, its hair and its locks, the face laid out on it by angle, and its palette, drawn by an
-/// <see cref="AdventurerPainter"/>. Every material but the inside of the mouth takes a player's colours
+/// What an adventurer wears on its head: nothing, a hood whose opening shows the face, or a cap with a brim.
+/// </summary>
+public enum AdventurerHeadwear
+{
+    None,
+    Hood,
+    Cap
+}
+
+/// <summary>
+/// The adventurer's <see cref="CharacterRecipe"/>, the player's base body: a bare head with its ears and the face laid
+/// out on it by angle, its belt, its parts (Docs/PlayerCharacter.md, Phase 6: the hairstyles, headwear, tops, capes,
+/// legs and boots it can wear; Phase 7: its hands, bare or gloved, a bag, and the gear of each weapon it can equip; the
+/// first of each its own), and its palette, drawn by an
+/// <see cref="AdventurerPainter"/>, a layer at a time: the body, then each part over it. Every material but the inside of the mouth takes a player's colours
 /// (<see cref="DyeOf"/>, Docs/PlayerCharacter.md, Phase 5), its ramps here being the ones the sheets are baked in.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Adventurer Recipe", fileName = "Recipe_Adventurer")]
 public sealed class AdventurerRecipe : CharacterRecipe
 {
-    [Header("Outfit")]
-    [Tooltip("Scales the boots.")]
-    [SerializeField, Min(0.1f)] private float bootSize = 1.1f;
-    [Tooltip("Where the boots' tops sit, from the knee (0) to the ankle (1).")]
-    [SerializeField, Range(0f, 1f)] private float bootTop = 0.35f;
-    [Tooltip("How far the tunic's skirt hangs below the hips, in rig units; none at 0.")]
-    [SerializeField, Min(0f)] private float skirtLength = 1.4f;
-    [Tooltip("How the arms are dressed.")]
-    [SerializeField] private AdventurerSleeves sleeves = AdventurerSleeves.Long;
-    [Tooltip("Whether the hands wear gloves.")]
-    [SerializeField] private bool gloves;
-    [Tooltip("Whether a satchel's strap crosses the chest from the left shoulder to a pouch at the right hip.")]
-    [SerializeField] private bool strap;
+    [Header("Parts (Docs/PlayerCharacter.md, Phases 6 and 7), the first of each the look's own")]
+    [Tooltip("The hairstyles.")]
+    [SerializeField] private List<AdventurerHair> hairOptions = new() { new AdventurerHair() };
+    [Tooltip("What the head wears; it hides the locks whose roots it covers.")]
+    [SerializeField] private List<AdventurerHeadwearPart> headwearOptions = new() { new AdventurerHeadwearPart() };
+    [Tooltip("What the body wears.")]
+    [SerializeField] private List<AdventurerTop> topOptions = new() { new AdventurerTop() };
+    [Tooltip("The capes, or none.")]
+    [SerializeField] private List<AdventurerCape> capeOptions = new() { new AdventurerCape() };
+    [Tooltip("What the legs wear.")]
+    [SerializeField] private List<AdventurerLegs> legOptions = new() { new AdventurerLegs() };
+    [Tooltip("The boots.")]
+    [SerializeField] private List<AdventurerBoots> bootOptions = new() { new AdventurerBoots() };
+    [Tooltip("The hands, bare or gloved (Docs/PlayerCharacter.md, Phase 7).")]
+    [SerializeField] private List<AdventurerHands> handOptions = new() { new AdventurerHands() };
+    [Tooltip("The bags, or none (Docs/PlayerCharacter.md, Phase 7).")]
+    [SerializeField] private List<AdventurerBag> bagOptions = new() { new AdventurerBag() };
+    [Tooltip("The gear of each weapon the player can equip, the first the one it starts with (Docs/PlayerCharacter.md, Phase 7). Not a player's pick: the equipped weapon's shows.")]
+    [SerializeField] private List<AdventurerCarry> weaponOptions = new() { new AdventurerCarry() };
 
-    [Header("Head and hair")]
+    [Header("Head and face")]
     [Tooltip("The head's radius with its hair, in head radii.")]
     [SerializeField, Min(1f)] private float hairSize = 1.1f;
     [Tooltip("How far the head tips toward the camera, in degrees, so the face is not foreshortened by the view.")]
     [SerializeField, Range(0f, 45f)] private float faceTilt = 20f;
-    [Tooltip("The locks standing off the head, drawn over the face: the hairstyle.")]
-    [SerializeField] private HairLock[] locks = new HairLock[0];
     [Tooltip("The ears, in degrees from the face's middle (across and up), and their radius in head radii; none at 0.")]
     [SerializeField] private Vector3 ears = new(88f, -12f, 0f);
-
-    [Header("Face")]
-    [Tooltip("The face, in degrees from its middle: half its width, its middle's height and half its height. Hair covers the rest of the head.")]
-    [SerializeField] private Vector3 face = new(72f, -16f, 44f);
-    [Tooltip("The fringe's lowest edge in degrees, how far its points drop below it, the points' spacing in degrees, and how much it rises per degree from the middle.")]
-    [SerializeField] private Vector4 fringe = new(10f, 7f, 18f, 0.1f);
     [Tooltip("The eyes' place: degrees each side of the middle, and height in degrees.")]
     [SerializeField] private Vector2 eyes = new(17f, -8f);
     [Tooltip("How many pixels tall each eye is.")]
@@ -90,20 +101,28 @@ public sealed class AdventurerRecipe : CharacterRecipe
     [Tooltip("The satchel's strap.")]
     [SerializeField] private ColourRamp strapColour = Colours(26, 16, 10, 82, 52, 30, 112, 74, 44, 150, 104, 64);
     [Tooltip("The satchel's pouch.")]
-    [SerializeField] private ColourRamp pouch = Colours(26, 16, 10, 82, 52, 30, 112, 74, 44, 150, 104, 64);
+    [SerializeField] private ColourRamp pouch = Colours(40, 26, 14, 132, 90, 52, 170, 120, 72, 206, 160, 104);
+    [Tooltip("The hood or the cap.")]
+    [SerializeField] private ColourRamp headwearColour = Colours(18, 36, 22, 52, 98, 58, 74, 132, 76, 116, 170, 104);
+    [Tooltip("The inside of the hood, in its shadow.")]
+    [SerializeField] private ColourRamp hoodInside = Colours(24, 18, 16, 24, 18, 16, 24, 18, 16, 24, 18, 16);
+    [Tooltip("The cape.")]
+    [SerializeField] private ColourRamp cloak = Colours(46, 16, 18, 128, 38, 40, 170, 56, 52, 214, 96, 80);
+    [Tooltip("The cape's lining.")]
+    [SerializeField] private ColourRamp lining = Colours(36, 32, 30, 150, 140, 122, 196, 186, 164, 232, 224, 204);
 
-    public float BootSize => bootSize;
-    public float BootTop => bootTop;
-    public float SkirtLength => skirtLength;
-    public AdventurerSleeves Sleeves => sleeves;
-    public bool Gloves => gloves;
-    public bool Strap => strap;
+    public IReadOnlyList<AdventurerHair> Hairs => hairOptions;
+    public IReadOnlyList<AdventurerHeadwearPart> Headwear => headwearOptions;
+    public IReadOnlyList<AdventurerTop> Tops => topOptions;
+    public IReadOnlyList<AdventurerCape> Capes => capeOptions;
+    public IReadOnlyList<AdventurerLegs> Legs => legOptions;
+    public IReadOnlyList<AdventurerBoots> Boots => bootOptions;
+    public IReadOnlyList<AdventurerHands> Hands => handOptions;
+    public IReadOnlyList<AdventurerBag> Bags => bagOptions;
+    public IReadOnlyList<AdventurerCarry> Weapons => weaponOptions;
     public float HairSize => hairSize;
     public float FaceTilt => faceTilt;
-    public HairLock[] Locks => locks;
     public Vector3 Ears => ears;
-    public Vector3 Face => face;
-    public Vector4 Fringe => fringe;
     public Vector2 Eyes => eyes;
     public int EyeHeight => eyeHeight;
     public int EyeWidth => eyeWidth;
@@ -152,6 +171,14 @@ public sealed class AdventurerRecipe : CharacterRecipe
                 return strapColour;
             case CharacterMaterial.Pouch:
                 return pouch;
+            case CharacterMaterial.Headwear:
+                return headwearColour;
+            case CharacterMaterial.HoodInside:
+                return hoodInside;
+            case CharacterMaterial.Cloak:
+                return cloak;
+            case CharacterMaterial.Lining:
+                return lining;
             default:
                 return fittings;
         }
@@ -178,13 +205,75 @@ public sealed class AdventurerRecipe : CharacterRecipe
             CharacterMaterial.Gloves => CharacterDye.Gloves,
             CharacterMaterial.Strap => CharacterDye.Strap,
             CharacterMaterial.Pouch => CharacterDye.Pouch,
+            CharacterMaterial.Headwear => CharacterDye.Headwear,
+            CharacterMaterial.Cloak => CharacterDye.Cape,
+            CharacterMaterial.Lining => CharacterDye.CapeLining,
             _ => CharacterDye.None
         };
     }
 
     /// <inheritdoc />
+    public override int PartOptions(CharacterSlot slot)
+    {
+        return slot switch
+        {
+            CharacterSlot.Hair => hairOptions.Count,
+            CharacterSlot.Headwear => headwearOptions.Count,
+            CharacterSlot.Top => topOptions.Count,
+            CharacterSlot.Cape => capeOptions.Count,
+            CharacterSlot.Legs => legOptions.Count,
+            CharacterSlot.Boots => bootOptions.Count,
+            CharacterSlot.Hands => handOptions.Count,
+            CharacterSlot.Bag => bagOptions.Count,
+            CharacterSlot.Weapon => weaponOptions.Count,
+            _ => 0
+        };
+    }
+
+    /// <inheritdoc />
+    public override string PartName(CharacterSlot slot, int option)
+    {
+        return slot switch
+        {
+            CharacterSlot.Hair => hairOptions[option].Name,
+            CharacterSlot.Headwear => headwearOptions[option].Name,
+            CharacterSlot.Top => topOptions[option].Name,
+            CharacterSlot.Cape => capeOptions[option].Name,
+            CharacterSlot.Legs => legOptions[option].Name,
+            CharacterSlot.Boots => bootOptions[option].Name,
+            CharacterSlot.Hands => handOptions[option].Name,
+            CharacterSlot.Bag => bagOptions[option].Name,
+            CharacterSlot.Weapon => weaponOptions[option].Name,
+            _ => null
+        };
+    }
+
+    /// <inheritdoc />
+    public override int PartVariesWith(CharacterSlot slot)
+    {
+        return slot switch
+        {
+            CharacterSlot.Hair => (int)CharacterSlot.Headwear,
+            CharacterSlot.Weapon => (int)CharacterSlot.Cape,
+            _ => -1
+        };
+    }
+
+    /// <inheritdoc />
+    public override CharacterWeaponArt PartWeapon(CharacterSlot slot, int option)
+    {
+        return slot == CharacterSlot.Weapon && option >= 0 && option < weaponOptions.Count ? weaponOptions[option].Weapon : null;
+    }
+
+    /// <inheritdoc />
     public override CharacterPainter CreatePainter(CharacterWeaponArt weapon, CharacterCanvas canvas)
     {
-        return new AdventurerPainter(this, weapon, canvas);
+        return new AdventurerPainter(this, weapon, canvas, CharacterLayerKey.Base);
+    }
+
+    /// <inheritdoc />
+    public override CharacterPainter CreatePainter(CharacterWeaponArt weapon, CharacterCanvas canvas, CharacterLayerKey layer)
+    {
+        return new AdventurerPainter(this, weapon, canvas, layer);
     }
 }

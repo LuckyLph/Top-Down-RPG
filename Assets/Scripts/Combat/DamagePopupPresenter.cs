@@ -4,7 +4,7 @@ using VContainer.Unity;
 
 /// <summary>
 /// Turns <see cref="CombatEvents"/> into floating text on the <see cref="DamagePopupLayer"/>: damage numbers in the
-/// damage type's color (smaller for periodic ticks), "+N" heals, and the immune text for immune hits and blocked
+/// damage type's color (in a smaller text size for periodic ticks), "+N" heals, and the immune text for immune hits and blocked
 /// statuses. Also ages the popups each frame and re-projects them after the camera moves.
 /// </summary>
 public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTickable, IDisposable
@@ -68,8 +68,8 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
     }
 
     /// <summary>
-    /// Spawns the immune text for an immune hit, otherwise the amount in the damage type's color, scaled down for
-    /// periodic damage.
+    /// Spawns the immune text for an immune hit, otherwise the amount in the damage type's color, at the periodic popup
+    /// size for periodic damage.
     /// </summary>
     private void HandleDamageApplied(DamageReport report)
     {
@@ -84,8 +84,8 @@ public sealed class DamagePopupPresenter : IStartable, ITickable, IPostLateTicka
             return;
         }
 
-        float scale = (report.Flags & DamageFlags.Periodic) != 0 ? settings.PeriodicPopupScale : 1f;
-        popupLayer.Spawn(report.Amount.ToString(), settings.GetColor(report.Type), report.PopupWorldPosition, camera, scale);
+        UiTextSize? size = (report.Flags & DamageFlags.Periodic) != 0 ? settings.PeriodicPopupSize : null;
+        popupLayer.Spawn(report.Amount.ToString(), settings.GetColor(report.Type), report.PopupWorldPosition, camera, size);
     }
 
     /// <summary>

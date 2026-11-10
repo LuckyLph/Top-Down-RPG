@@ -305,6 +305,9 @@ public class CombatComponentTests
 
         Assert.That(popupRect.anchoredPosition.y, Is.GreaterThan(spawnY), "Popup should rise as it ages.");
         Assert.That(popup.GetComponent<CanvasGroup>().alpha, Is.LessThan(1f), "Popup should fade as it ages.");
+        Vector2 fromCorner = popupRect.anchoredPosition - ((RectTransform)layer.transform).rect.min;
+        Assert.That(fromCorner.x, Is.EqualTo(Mathf.Round(fromCorner.x)).Within(1e-3f), "Popups sit on whole UI px, so their pixel font stays crisp.");
+        Assert.That(fromCorner.y, Is.EqualTo(Mathf.Round(fromCorner.y)).Within(1e-3f), "Popups sit on whole UI px, so their pixel font stays crisp.");
     }
 
     /// <summary>

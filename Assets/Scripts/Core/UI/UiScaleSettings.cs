@@ -11,7 +11,7 @@ public sealed class UiScaleSettings : ScriptableObject
     [SerializeField, Tooltip("The smallest size in UI px every layout fits. The zoom is lowered until it fits the display.")]
     private Vector2Int minimumLayout = new(480, 270);
 
-    [SerializeField, Min(1), Tooltip("The readable zoom is the display height divided by this, rounded up: the smallest whole zoom at which the Caption text size has a body height of 18 px per 1080 display lines.")]
+    [SerializeField, Min(1), Tooltip("The readable zoom is the display height divided by this, rounded up. At 390 it is the Pixel Perfect Camera's zoom at 720p, 1080p, 1440p and 4K, and the Caption text size has a body height of at least 18 px per 1080 display lines at every zoom it gives.")]
     private int linesPerZoom = 390;
 
     [SerializeField, Range(0, 4), Tooltip("How many zoom steps above the readable one the UI size setting offers, where the display fits them.")]

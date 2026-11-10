@@ -25,7 +25,7 @@ public sealed class CombatSettings : ScriptableObject
     private StatusEffectCatalog statusCatalog;
 
     [Header("Popups")]
-    [SerializeField] private Color physicalColor = new(0.7f, 0.12f, 0.12f, 1f);
+    [SerializeField] private Color physicalColor = new(0.9f, 0.25f, 0.25f, 1f);
     [SerializeField] private Color fireColor = new(1f, 0.5f, 0.1f, 1f);
     [SerializeField] private Color frostColor = new(0.45f, 0.8f, 1f, 1f);
     [SerializeField] private Color lightningColor = new(1f, 0.9f, 0.3f, 1f);
@@ -34,8 +34,8 @@ public sealed class CombatSettings : ScriptableObject
     [SerializeField] private Color healColor = new(0.3f, 0.9f, 0.4f, 1f);
     [SerializeField] private Color immuneColor = new(0.75f, 0.75f, 0.75f, 1f);
     [SerializeField] private string immuneText = "Immune";
-    [SerializeField, Range(0.3f, 1f), Tooltip("Size of damage-over-time popups relative to direct hits.")]
-    private float periodicPopupScale = 0.75f;
+    [SerializeField, Tooltip("The text size of damage-over-time popups; direct hits use the popup's own size.")]
+    private UiTextSize periodicPopupSize = UiTextSize.Caption;
 
     public int ResistanceFloor => resistanceFloor;
     public int ResistanceCap => resistanceCap;
@@ -46,7 +46,7 @@ public sealed class CombatSettings : ScriptableObject
     public Color HealColor => healColor;
     public Color ImmuneColor => immuneColor;
     public string ImmuneText => immuneText;
-    public float PeriodicPopupScale => periodicPopupScale;
+    public UiTextSize PeriodicPopupSize => periodicPopupSize;
 
     /// <summary>
     /// Builds an unsaved, hidden runtime instance with default rules and <paramref name="catalog"/>, for tests that

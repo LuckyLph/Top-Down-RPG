@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2826485304525313075}
   - component: {fileID: 4502627772093981886}
+  - component: {fileID: 6867114964449770606}
   m_Layer: 0
   m_Name: Frame
   m_TagString: Untagged
@@ -82,7 +83,7 @@ SpriteRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 0f6571086a0f7ab44a5e0b12f940d0ad, type: 3}
-  m_Color: {r: 0.05, g: 0.04, b: 0.04, a: 0.85}
+  m_Color: {r: 0.078431375, g: 0.078431375, b: 0.078431375, a: 0.85}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
@@ -91,6 +92,20 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &6867114964449770606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 748145002087060209}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 19
 --- !u!1 &910789797443751089
 GameObject:
   m_ObjectHideFlags: 0
@@ -101,6 +116,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2601623645697475201}
   - component: {fileID: 7713746870450370812}
+  - component: {fileID: 1446321809701575627}
   m_Layer: 0
   m_Name: StatusIcon4
   m_TagString: Untagged
@@ -182,6 +198,20 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &1446321809701575627
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 910789797443751089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 20
 --- !u!1 &1077168190133756854
 GameObject:
   m_ObjectHideFlags: 0
@@ -192,6 +222,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7829873544648473340}
   - component: {fileID: 4151470968132591631}
+  - component: {fileID: 4719861191155465133}
   m_Layer: 0
   m_Name: StatusIcon1
   m_TagString: Untagged
@@ -273,6 +304,20 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &4719861191155465133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1077168190133756854}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 20
 --- !u!1 &1302669215322344442
 GameObject:
   m_ObjectHideFlags: 0
@@ -370,6 +415,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8851143677310157367}
   - component: {fileID: 5978234188084258244}
+  - component: {fileID: 3817645313033878180}
   m_Layer: 0
   m_Name: Fill
   m_TagString: Untagged
@@ -442,7 +488,7 @@ SpriteRenderer:
   m_SortingOrder: 1
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 0f6571086a0f7ab44a5e0b12f940d0ad, type: 3}
-  m_Color: {r: 1, g: 0.2, b: 0.18, a: 1}
+  m_Color: {r: 0.8509804, g: 0.12941177, b: 0.12941177, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 1
@@ -451,6 +497,20 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &3817645313033878180
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2711218412743544835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 18
 --- !u!1 &3466301763760670461
 GameObject:
   m_ObjectHideFlags: 0
@@ -571,6 +631,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5105742511485836943}
   - component: {fileID: 4366878263596238318}
+  - component: {fileID: 8930562216501918278}
   m_Layer: 0
   m_Name: StatusIcon2
   m_TagString: Untagged
@@ -652,6 +713,20 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &8930562216501918278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4037611303412391985}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 20
 --- !u!1 &4624439152026139972
 GameObject:
   m_ObjectHideFlags: 0
@@ -662,6 +737,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2539167321360037509}
   - component: {fileID: 7782706953194745188}
+  - component: {fileID: 5501594113518332103}
   m_Layer: 0
   m_Name: StatusIcon3
   m_TagString: Untagged
@@ -743,6 +819,20 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &5501594113518332103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4624439152026139972}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 20
 --- !u!1 &8304804741037770803
 GameObject:
   m_ObjectHideFlags: 0

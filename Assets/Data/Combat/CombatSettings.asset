@@ -22,7 +22,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 256
   statusCatalog: {fileID: 11400000, guid: 2b2fcf817767b444dbaa724ed46512b2, type: 2}
-  physicalColor: {r: 0.7, g: 0.12, b: 0.12, a: 1}
+  physicalColor: {r: 0.9019608, g: 0.2509804, b: 0.2509804, a: 1}
   fireColor: {r: 1, g: 0.5, b: 0.1, a: 1}
   frostColor: {r: 0.45, g: 0.8, b: 1, a: 1}
   lightningColor: {r: 1, g: 0.9, b: 0.3, a: 1}
@@ -31,4 +31,4 @@ MonoBehaviour:
   healColor: {r: 0.3, g: 0.9, b: 0.4, a: 1}
   immuneColor: {r: 0.75, g: 0.75, b: 0.75, a: 1}
   immuneText: Immune
-  periodicPopupScale: 0.75
+  periodicPopupSize: 0

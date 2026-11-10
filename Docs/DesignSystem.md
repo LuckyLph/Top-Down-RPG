@@ -93,10 +93,10 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
 | Balance | Derived columns in the generated tables (damage per second, hits and time to kill) instead of a simulator, until combat has random rolls or interacting procs. No test pins an asset's value: the committed tables record every value. A spec's numeric target is a range, checked against the derived columns by a case in `BalanceTargetsTests`, which the first target creates (settled in Phase 2). |
 | UI framework | uGUI with TextMesh Pro. |
 | UI scale | A UI px is drawn as a whole number of display pixels: the UI zoom. See Foundations for how it is chosen. |
-| Text | Five sizes. The smallest, `Caption`, is 7 UI px, a 19.5 px body at 1080p. Nothing is smaller, auto-sizing included. |
-| Font | A project font asset generated from `LiberationSans.ttf`, with enough atlas padding for a 1 UI px outline. The theme holds it. A pixel font is an open question. |
+| Text | Five sizes. The smallest, `Caption`, is Galmuri7 at 8 UI px, a 24 px body at 1080p. Nothing is smaller, and nothing auto-sizes. Changed in Phase 4 from LiberationSans at 7 UI px (19.5 px). |
+| Font | Galmuri, a pixel font (SIL OFL 1.1), in four sizes: a static SDF font asset of each in `Assets/Fonts`, with the atlas padding a 1 UI px outline needs and an outlined material preset. The theme holds a font per text size. Chosen in Phase 4 over LiberationSans, which TMP keeps as its default. |
 | Colour | UI code and prefabs name colour roles, never raw colours. Damage-type, status and waystone colours stay on their gameplay assets but follow the same contrast and never-colour-alone rules. |
-| Theme | **Asset:** a read-only `UiTheme` in Gameplay holds the colour roles, the text sizes and the font.<br>**Applying it:** themed components reference the asset and set their own instance once when they wake. Nothing reads the theme per frame, and no tool writes it into prefabs or scenes.<br>**Edit mode:** prefabs show their serialized values in the editor. |
+| Theme | **Asset:** a read-only `UiTheme` in Gameplay holds the colour roles, the text sizes and the font.<br>**Applying it:** themed components reference the asset and set their own instance once when they wake. Nothing reads the theme per frame, and no tool writes it into prefabs or scenes.<br>**Edit mode:** prefabs show their serialized values in the editor; Phase 4's conversion set them to the theme's once. |
 | UI art | Generated in the editor from a recipe, like every other sprite: 9-sliced frames, bars and outlines in greyscale, tinted by role. |
 | Accessibility baseline | The Game Accessibility Guidelines' basic items listed under Accessibility, plus XAG 101's text size and XAG 102's contrast. We link and paraphrase them rather than copy their text. |
 | Preferences | UI size (Phase 3); reduce flashing and reduce motion (Phase 6). They are local, saved in `settings.json`, and never replicated. |
@@ -139,12 +139,12 @@ These are the words every spec uses with one meaning. A new building block adds 
 
 | File | Rows | Columns |
 |---|---|---|
-| `DamageTypes.md` | Each damage type, plus the heal and immune rows | Popup colour (hex) and its contrast on black, the colour `Outline` starts from (against `Outline` itself from Phase 4); the resistance floor, cap, minimum damage and periodic popup scale from `CombatSettings` |
+| `DamageTypes.md` | Each damage type, plus the heal and immune rows | Popup colour (hex) and its contrast on the theme's `Outline`; the resistance floor, cap, minimum damage and periodic popup size from `CombatSettings` |
 | `Weapons.md` | `WeaponCatalog` | Index, damage and type, cooldown, windup, contact and recovery, cancel rules, attack range, delivery (area, or projectile speed, range and homing), abilities. Derived: attack period, damage per second, and hits and time to kill each mob prefab |
 | `Abilities.md` | Every `AbilityDefinition` | Used by (class slot or weapon), targeting and filter, range, cast time, cooldown, movement, bufferable, effect (damage and type, heal, statuses, area), cast clips. Derived: damage per cooldown second |
 | `StatusEffects.md` | `StatusEffectCatalog` | Index, kind, tags, abbreviation, colour, description, duration, stacking and cap, periodic amount and interval, modifiers, controls, immunities. Derived: the raw periodic total at one stack and at the cap |
 | `Units.md` | The player and mob prefabs | Health, combat profile (resistances and immunities), attack (damage, type, interval, timeline), move speeds. Derived: the time one mob takes to kill a player |
-| `UiTheme.md` | Each colour role and text size | Value; for sizes, the body height in px at 1080p; the contrast of every role pair that a themed text uses |
+| `UiTheme.md` | Each colour role and text size, then each pair of roles a themed text uses | A role's colour and opacity; a size's font, UI px and body height at 1080p; a pair's smallest size, contrast and threshold (`UiThemeUsage`) |
 
 The derived columns, at attack speed 1:
 
@@ -191,7 +191,7 @@ Unity Search's table view shows a kind's assets side by side with editable prope
 
 `UiScale` picks the UI zoom in three steps:
 
-1. **Smallest readable zoom.** It takes the smallest whole zoom at which `Caption` reaches a body height of 18 px per 1080 display lines. In LiberationSans that is the display height divided by 390, rounded up.
+1. **Readable zoom.** The display height divided by 390, rounded up. That is the Pixel Perfect Camera's zoom at 720p, 1080p, 1440p and 4K, and at every zoom it gives `Caption` has a body height of 18 px per 1080 display lines or more: Galmuri7's 8 UI px body needs only the display height divided by 480. Until Phase 4 the 390 was LiberationSans' own minimum.
 2. **Fit.** It lowers the zoom until the layout's 480 x 270 UI px still fit the display.
 3. **Size step.** It adds the player's UI size step, where the result still fits.
 
@@ -211,43 +211,49 @@ Unity Search's table view shows a kind's assets side by side with editable prope
 
 At 720p, 1080p, 1440p and 4K this equals the Pixel Perfect Camera's zoom, so a UI px is an art pixel. Elsewhere the UI is one step larger than the world's pixels, which keeps text readable where the camera rounds down. Layouts anchor to the canvas's edges and must fit 480 x 270 UI px.
 
-**Type.** These are TMP font sizes in UI px. The body heights are for LiberationSans (0.93 of the size) at 1080p.
+**Type.** The UI's font is Galmuri, a pixel font, drawn at one UI px per font pixel: each size is a Galmuri size at its em in UI px. The body height (the top of a d to the bottom of a p) is from the fonts' glyphs, at 1080p (zoom 3). [UiTheme.md](Generated/UiTheme.md) has the current values.
 
-| Size | UI px | Body at 1080p | Used for |
-|---|---|---|---|
-| `Caption` | 7 | 19.5 px | Key labels, cooldown seconds, stack counts, periodic popups |
-| `Body` | 9 | 25 px | Menu rows, buttons, notices, ability names |
-| `Heading` | 11 | 31 px | Section headers, damage popups, the main menu's buttons |
-| `Title` | 14 | 39 px | Screen titles |
-| `Display` | 20 | 56 px | The game's name on the main menu |
+| Size | Font | UI px | Body at 1080p | Used for |
+|---|---|---|---|---|
+| `Caption` | Galmuri7 | 8 | 24 px | The HUD's key labels, ability names, status letters and stacks, periodic popups |
+| `Body` | Galmuri7 | 8 | 24 px | Menu rows, buttons, notices, the HP and cooldown seconds |
+| `Heading` | Galmuri9 | 10 | 30 px | Section headers, damage popups, the main menu's buttons and status line |
+| `Title` | Galmuri11 | 12 | 39 px | Screen titles |
+| `Display` | Galmuri14 | 15 | 51 px | The game's name on the main menu |
+
+`Caption` and `Body` are the same today, since Galmuri has nothing smaller than Galmuri7; they stay two sizes, so the HUD's labels and the menus' rows can part later with one change to the theme.
 
 Further rules:
 
-- **Auto-size** is allowed only with its minimum at `Caption` or above.
-- **Damage popups** use `Heading`, so periodic ticks at 0.75 of it (8.25) stay above `Caption`.
-- **Text style:** sentence case, no italics or all-caps below `Title`, left-aligned rows (the Game Accessibility Guidelines' "simple, clear text formatting").
+- **No auto-size:** a pixel font is crisp only at its own size.
+- **Whole UI px:** `ThemedText` moves each glyph onto the whole UI px of its canvas whenever its text is built, and popups move in whole UI px; text is crisp wherever its rect lands.
+- **Damage popups** use `Heading`, and periodic ticks `Caption` (`CombatSettings.PeriodicPopupSize`), a smaller font rather than a scale, which would leave the pixel grid.
+- **Text style:** sentence case, no bold (the fonts have none, and TMP's faux bold blurs the pixels), no italics or all-caps below `Title`, left-aligned rows (the Game Accessibility Guidelines' "simple, clear text formatting").
 
-**Colour roles.** Each role starts from the colour most used for it today. Where a role merges several of today's colours, or a colour fails its contrast pair, Phase 4 settles the value on previews.
+**Colour roles.** Settled on Phase 4's previews. Each role started from the colour most used for it; where a role merged several colours, or a colour failed its contrast pair, the previews chose. [UiTheme.md](Generated/UiTheme.md) has the values and the contrast of every pair in use.
 
-| Role | Starts from | Replaces |
+| Role | Value | Replaced |
 |---|---|---|
-| `Text` | White | Light text on dark panels |
-| `TextOnControl` | (0.1, 0.1, 0.12) | The dark button labels and the HUD's dark labels |
-| `TextMuted`, `TextDisabled` | The menus' greys | Secondary and disabled text |
-| `Placeholder` | Retuned to 4.5:1 | The join field's placeholder (about 2.9:1 today) |
-| `Accent` | (1, 0.85, 0.4) | Section headers, the notice, key labels, the selected control |
-| `Surface`, `SurfaceEmpty` | The filled slot frame (0.12, 0.12, 0.16, 0.85); the empty one at 0.35 | HUD frames |
-| `SurfaceRaised` | The more used of the two menu box colours | Menu boxes |
+| `Text` | White | Light text on dark panels, and the rows' off-white |
+| `TextOnControl` | (0.1, 0.1, 0.12) | The dark button labels |
+| `TextMuted`, `TextDisabled` | Light and mid greys, unused until Phase 5's components | Secondary and disabled text |
+| `Placeholder` | `#595959`, 4.9:1 on the field | The join field's placeholder (about 2.9:1, and italic) |
+| `Accent` | (1, 0.85, 0.4) | Section headers, the notices and the main menu's status line, the HUD's key labels (a paler yellow), the selected control |
+| `Surface`, `SurfaceEmpty` | The filled slot frame (0.12, 0.12, 0.16) at 0.85; at 0.75 when empty, where it was 0.35, so a key label reads on bright ground | HUD frames, and the health panel's grey |
+| `SurfaceRaised` | (0.08, 0.09, 0.12) | Menu boxes, full-screen panels, and the dialogs' lighter box |
 | `Scrim`, `ScrimModal` | Black at 0.6; black at 0.85 | The in-game menu's dimmer; the confirmation and listening panels |
-| `Shade` | Black at 0.65 | Cooldown and elapsed fills, the weapon icon's mask |
-| `ControlNormal`, `ControlHighlighted`, `ControlPressed`, `ControlDisabled` | Today's button colour block | Button states (`Selected` uses `Accent`) |
-| `Danger` | The hover ring (1, 0.3, 0.25) | The attack-move marker and the failure flash |
-| `Positive` | The move marker | |
-| `Health`, `HealthTrack` | The HUD's fill and background | The world bar's fill and frame |
+| `Shade` | Black at 0.65 | Cooldown and elapsed fills (0.55), the weapon icon's mask (0.42), the scroll list's track |
+| `ControlNormal`, `ControlHighlighted`, `ControlPressed` | Today's button colour block | Button states (`Selected` uses `Accent`) |
+| `ControlDisabled` | An opaque grey, `#6E6E73`, where it was a translucent tint, so a label keeps 3.4:1 | A disabled button |
+| `Danger` | `#FF4D40` | The hover ring, the attack-move marker and the failure flash (at 0.6 opacity), three reds |
+| `Positive` | The move marker's green | |
+| `Health`, `HealthTrack` | The HUD's fill and track | The world bar's brighter fill and its frame |
+| `Icon` | White | Icons and art shown in their own colours (new) |
 | `IconMissing` | White at 0.25 | The missing weapon icon |
-| `Outline` | Black | The outline of text drawn over the world |
+| `Border` | White | The weapon slot's ring (new); Phase 5's frames |
+| `Outline` | Black | The outline of text drawn over the world, and of the HUD's status letters and stacks |
 
-The Physical popup red (3.1:1 against the outline) is retuned on the same previews. It stays on `CombatSettings` with the other damage-type colours.
+The Physical popup red, 3.11:1 against the outline, became `#E64040` (5.17:1). It stays on `CombatSettings` with the other damage-type colours.
 
 **Art.** `UiSkinRecipe` is an editor recipe in the manner of the prop and terrain recipes.
 - It writes greyscale 9-sliced sprites into `Assets/Sprites/UI/Skin`, which the pixel art postprocessor imports at 32 PPU: a panel with a 1 UI px border and cut corners, a raised panel, a slot frame, a bar frame and fill, and marker shapes.
@@ -278,11 +284,11 @@ UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with
 
 The themed components:
 
-- **`ThemedText`:** a TMP text's colour role, background role and size. It sets the font, size, colour and outline on its own instance when it wakes.
+- **`ThemedText`:** a TMP text's colour role, background role and size. It sets the font, size, colour and outline (the size's outlined material preset when the background is `Outline`) on its own instance when it wakes, and snaps its glyphs to whole UI px each time its text is built. Views that change a text's size call `SetSize` and `ResetSize`.
 - **`ThemedGraphic`:** an Image's or a SpriteRenderer's role.
 - **`ThemedSelectable`:** a Selectable's colour block, set from the control roles.
 
-Each references the `UiTheme` asset directly, so pooled prefabs that are never injected (the move marker) work too. Views that pick colours at runtime (the failure flash, the marker kinds, the missing weapon tint) also reference the theme, and read their roles' colours once when they wake.
+Each references the `UiTheme` asset directly, so pooled prefabs that are never injected (the move marker) work too. Views that pick colours at runtime (the failure flash, the marker kinds, the missing weapon tint) also reference the theme, and read their roles' colours once when they wake. A control's target graphic stays white, its colour block holding the roles.
 
 ### Patterns
 
@@ -315,12 +321,12 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
 
 | Rule | Threshold | Enforced by |
 |---|---|---|
-| Text size | A body height (ascender to descender) of at least 18 px per 1080 display lines, by default (XAG 101's PC minimum): `Caption` at the chosen zoom | `UiScale`'s zoom rule; `UiThemeTests` (from the font's metrics); `UiContentTests` (sizes and auto-size minimums) |
-| Contrast | **Text:** 4.5:1 under `Title`, 3:1 for `Title` and above (XAG 102's large text is a 36 px body at 1080p).<br>**Shapes that carry meaning:** 4.5:1 when small, 3:1 when large.<br>**Others:** 3:1 for disabled text; 4.5:1 for placeholders.<br>Text over the world is measured against its outline. | `UiThemeTests`: every pair of text role and background role that a `ThemedText` uses, and the damage-type, heal, immune and waystone colours against `Outline` |
+| Text size | A body height (ascender to descender) of at least 18 px per 1080 display lines, by default (XAG 101's PC minimum): `Caption` at the chosen zoom | `UiScale`'s zoom rule; `UiThemeTests` (from the theme font's glyphs); `UiContentTests` (every text themed, none auto-sizing) |
+| Contrast | **Text:** 4.5:1 under `Title`, 3:1 for `Title` and above (XAG 102's large text is a 36 px body at 1080p).<br>**Shapes that carry meaning:** 4.5:1 when small, 3:1 when large.<br>**Others:** 3:1 for disabled text; 4.5:1 for placeholders.<br>Text over the world is measured against its outline. | `UiThemeTests` through `UiThemeUsage`: every pair of text role and background role that a `ThemedText` uses (a translucent background over white and over black, the lower ratio; a control in its normal, highlighted, selected and disabled states), and the damage-type, heal, immune and waystone colours against `Outline` |
 | Never colour alone | Essential information also has a shape, icon, label or size (Game Accessibility Guidelines, basic) | Patterns above; `ContentTests`: every status has a unique abbreviation and a description |
 | Flashing | Nothing flashes more than three times a second over more than a quarter of a 10° field, about 2.8% of a 1080p display (WCAG 2.3.1; Game Accessibility Guidelines, basic) | **Hit flash:** one unit flashes, about 0.5% of the display.<br>**Light flicker:** steps 8 times a second by at most 15% of a light's strength, likely under WCAG's 10% luminance change; measured on the Phase 6 previews.<br>**Reduce flashing:** also stills it. |
-| Controls | At least 12 UI px in each direction and 2 UI px apart. Our number; the guidelines ask "large and well spaced" without one. | `UiContentTests` on every Selectable in the menu prefabs |
-| Reachable UI | Menus work with keyboard and gamepad alone | `UiContentTests`: no menu Selectable has navigation off |
+| Controls | At least 12 UI px in each direction and 2 UI px apart. Our number; the guidelines ask "large and well spaced" without one. | `UiContentTests` on every Selectable in the UI prefabs and menu scenes, the scroll list's scrollbar excepted (it shows the list's place; the list scrolls with the selection and the wheel) |
+| Reachable UI | Menus work with keyboard and gamepad alone | `UiContentTests`: no Selectable but that scrollbar has navigation off |
 | Remapping | Every gameplay control can be rebound | KeyBindings.md, done |
 | Settings remembered | Every preference is saved | `settings.json`, done |
 | Larger UI | Up to two larger steps (Large, Larger) where the display fits them. This is not XAG's text scaling to 200%, which is Later. | `UiScale` |
@@ -351,21 +357,24 @@ There are new rows in a Display section of the options screen. Each is saved at 
 ### Gameplay (`Assets/Scripts/UI`)
 
 - `UiTheme`: a ScriptableObject (`Assets/Data/UI/UiTheme.asset`).
-  - It holds a colour per `UiColour` role, UI px per `UiTextSize` (both enums append-only), and the font asset.
+  - It holds a colour per `UiColour` role and, per `UiTextSize`, a font asset, its size in whole UI px and its outlined material (both enums append-only).
   - It has getters only and a `Create(...)` factory for tests.
   - It lives in Gameplay because Core does not reference TextMesh Pro.
 - `ThemedText`, `ThemedGraphic`, `ThemedSelectable`: described under Components. They change only their own instance and have no `Update`.
 - `AbilitySlotView`, `MoveMarker` and `PlayerHudView` swap their colour fields for roles and a theme reference.
+- `FloatingDamageText` takes a text size per popup, through its `ThemedText`, and places itself on whole UI px.
 
 ### Editor (`Assets/Editor/Design`, `Assets/Editor/UI`)
 
 - `DesignTables`: `Build()` returns each file's name and Markdown, built from the assets with `DamageMath`; `Write()` writes them to `Docs/Generated`. Menu item: `Tools/TopDownRPG/Design/Write Design Tables`.
 - `DesignSearches`: the tuning views, a menu item per kind under `Tools/TopDownRPG/Design/Tune/` (`ViewState(kind)`, `Table(context, kind)`).
+- `UiFonts`: `Tools/TopDownRPG/UI/Write Fonts` writes the font assets and their outlined presets (Phase 4).
+- `UiThemeUsage`: the themed texts of the prefabs and menu scenes, and the contrast of each pair of roles they use, for `DesignTables` and `UiThemeTests` (Phase 4).
 - `UiSkinRecipe` and its writer: Generate writes the skin sprites.
 
 ### Font
 
-A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf` with the padding a 1 UI px outline at `Caption` needs. `LiberationSans SDF` stays TMP's default and is no longer used by the UI.
+Galmuri by Lee Minseo, under the SIL Open Font License 1.1, which allows it in a game, modified and shipped, with its licence (`Assets/Fonts/Galmuri - OFL.txt`); it reserves no font name, so the subsets keep it. `Assets/Fonts` holds Latin subsets of Galmuri 2.40.4's 7, 9, 11 and 14 sizes (printable ASCII, Latin-1 for key names on other layouts, dashes, curly quotes, the bullet, the ellipsis, and a zero-width space added for TMP's empty input field), made with fontTools, and `UiFonts` writes from each a static SDF font asset: 6 atlas pixels per font pixel, 12 pixels of padding (a 1 UI px outline needs 6 and the edge a little more), every character of the subset, and an outlined preset. `LiberationSans SDF` stays TMP's default and is no longer used by the UI.
 
 ### Settings
 
@@ -381,6 +390,8 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
 ## Removals and migrations
 
 - **View colour fields.** The colour fields of `AbilitySlotView`, `MoveMarker` and `PlayerHudView` are removed, and their values move to the theme's roles. The serialized data is dropped on purpose.
+- **`CombatSettings.periodicPopupScale`** became `periodicPopupSize`, a text size (Phase 4). The old value is dropped.
+- **The weapon slot's transparent image**, which drew nothing, was removed in Phase 4.
 - **Canvases** move to `UiPixelScale`: `PlayerHudCanvas` (1920 x 1080), `GameMenuCanvas` and `MainMenuCanvas` (640 x 360), and `DamagePopupCanvas` (constant pixel size).
   - In Phase 3 the HUD was converted to UI px, with its slots grown so `Caption` text fits (Phase 3 notes).
   - It is redesigned once, from the components, in Phase 5.
@@ -471,13 +482,29 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 4: the theme
 
-- [ ] The font settled with the user on previews (Open questions).
-- [ ] The project font asset in `Assets/Fonts`, with the atlas padding a 1 UI px outline at `Caption` needs and the static atlas's character set (Architecture.md's Known gaps: TMP's fallback font).
-- [ ] `UiTheme` (`Assets/Data/UI/UiTheme.asset`) with the `UiColour` roles, the `UiTextSize` scale and the font. The merged roles, the Physical popup red and the placeholder settled on previews.
-- [ ] `ThemedText`, `ThemedGraphic` and `ThemedSelectable` on every UI text, image, sprite and control: the move marker, the hover ring, the world bar and the world status icons included. `AbilitySlotView`, `MoveMarker` and `PlayerHudView` keep roles instead of colours.
-- [ ] Damage popups, the waystone popup and other text over the world outlined in `Outline`.
-- [ ] `UiTheme.md` added to `DesignTables`, and `DamageTypes.md`'s contrast measured against `Outline`.
-- [ ] Tests: `UiThemeTests`, `UiContentTests`, `DesignTablesTests` with `UiTheme.md`, and the views' tests on a theme from `Create`.
+- [x] The font settled with the user on previews (Open questions).
+- [x] The project font assets in `Assets/Fonts`, with the atlas padding a 1 UI px outline at `Caption` needs and the static atlas's character set (Architecture.md's Known gaps: TMP's fallback font).
+- [x] `UiTheme` (`Assets/Data/UI/UiTheme.asset`) with the `UiColour` roles, the `UiTextSize` scale and the fonts. The merged roles, the Physical popup red and the placeholder settled on previews.
+- [x] `ThemedText`, `ThemedGraphic` and `ThemedSelectable` on every UI text, image, sprite and control: the move marker, the hover ring, the world bar and the world status icons included. `AbilitySlotView`, `MoveMarker` and `PlayerHudView` keep roles instead of colours.
+- [x] Damage popups, the waystone popup and other text over the world outlined in `Outline`.
+- [x] `UiTheme.md` added to `DesignTables`, and `DamageTypes.md`'s contrast measured against `Outline`.
+- [x] Tests: `UiThemeTests`, `UiContentTests`, `DesignTablesTests` with `UiTheme.md`, and the views' tests on a theme from `Create`.
+
+#### Phase 4 notes
+
+- **Settled with the user on 2026-11-10**, on previews over the Overworld's Clearing at 1080p and 720p:
+  - the font: Galmuri, a pixel font, over LiberationSans;
+  - the theme as previewed: the merged roles, `Icon` and `Border`, the placeholder, `SurfaceEmpty` at 0.75, an opaque `ControlDisabled`, the HUD grown to fit the pixel font, the status letters outlined, the main menu's status line in `Accent` and its buttons in sentence case;
+  - the Physical red: `#E64040`, of `#E64040`, `#F04A4A` and `#FF5C5C`.
+- **The previews.** Written to the gitignored `Recordings/DesignSystem/Phase4` (`font/`, `theme/`, `final/`) by a temporary tool, since removed, as in Phase 3: the HUD, menu and options prefabs and a copy of the main menu's canvas switched to the camera's space and rendered through a render request into a texture, over a render of the Clearing at the display's zoom. Five candidate pixel fonts were set side by side first (`font_candidates_x3.png`); Galmuri was the clearest in mixed case and the only one with a family of sizes near the type scale.
+- **The font.** Galmuri7, 9, 11 and 14 at 8, 10, 12 and 15 UI px. Its smallest size is a step larger than LiberationSans' `Caption` (a cap height of 7 UI px, where it was 4.8), so `Caption` and `Body` are both Galmuri7 and every size grew a little; "Blank Bolt" no longer fit the HUD's 24 UI px ability slots. The fonts are SDF rather than bitmap so the outline can come from a material. Centred text in a rect of odd width lands on half a UI px and blurred on the first preview, which `ThemedText`'s snapping fixes.
+- **The outline.** TMP's outline is centred on the glyph's edge, so it ate into the pixel font's one-pixel strokes. Dilating the face by the outline's width keeps it whole and puts the outline outside. Measured on renders at 8 display pixels a UI px, the outline reaches 2 x width x padding atlas pixels outside the glyph: a width of 0.25 at 12 pixels of padding and 6 atlas pixels per UI px is 1 UI px. Its corners are rounded, as an SDF outline's are.
+- **The HUD.** Ability slots grew from 24 to 32 UI px (the bar 210 wide), the name's two lines 10 UI px apart under the key; status icons from 14 to 20, 4 above the slots. The status letters and stacks became white, outlined: dark text failed on Root's and Vulnerable's colours (3.1 and 3.7:1) and on the part of an icon its elapsed fill darkens. The weapon slot's transparent image went. The cooldown seconds still sit over an icon-less ability's name, as before; Phase 5 redesigns the slots.
+- **Bugs found on the way.** The main menu's status line was dark text on the dark background (about 1.05:1), so it could not be seen; it is `Accent` now. Its buttons read New Game, Host Game and Join Game, against the sentence case rule.
+- **The conversion.** A temporary editor script added the themed components to the UI prefabs, the Weasel's world bar and icons, the move marker, the main menu's canvas and the hover ring, and set the saved fonts, sizes and colours to the theme's, so the editor shows what play shows. Nested prefab instances were converted in their own prefabs. The scenes' prefab instances keep only their root overrides, and `git diff` showed no save churn.
+- **Contrast.** `UiThemeUsage` reads the pairs from the themed texts themselves rather than a list in the theme. Translucent backgrounds count over white and over black; the HUD's key labels are measured on `SurfaceEmpty`, the worse of the two frames they sit on. A placeholder is not measured on a disabled control: only Continue is ever disabled. Every pair passes; the lowest are the placeholder on `ControlNormal` (4.91:1), Text on `Health` (5.01:1) and a disabled label (3.41:1 against 3:1).
+- **Left for Phase 5.** The skin and the components, the marker shapes, tooltips; `TextMuted` and `TextDisabled` have values but no text uses them yet; `Border` only colours the weapon ring.
+- **Tests.** `UiThemeTests` (15), `UiContentTests` (6), `DesignTablesTests` (the theme's table from `Create` content, the popups against a white `Outline`), and the views' tests on a theme from `TestThemes`: the slot's frames and flash, the attack-move marker, the weapon icon's tints, the popups' sizes, fonts and outlines, and popups on whole UI px. `UiScaleTests`' Caption check moved to `UiThemeTests`, on the theme's font.
 
 ### Phase 5: skin and components
 
@@ -533,19 +560,22 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - unique display names;
   - unique status abbreviations and present descriptions;
   - opaque colours.
-- **EditMode, `UiScaleTests`.** `ZoomFor` at every display in the Scale table, windowed sizes included, for each size step, and which steps fit. The zoom equals the Main scene's Pixel Perfect Camera's at 720p, 1080p, 1440p and 4K. `Caption`'s body height, from the font asset's glyph metrics, is at least 18 px per 1080 display lines at the zoom `UiScale` picks, which ties the 390 to the font.
+- **EditMode, `UiScaleTests`.** `ZoomFor` at every display in the Scale table, windowed sizes included, for each size step, and which steps fit. The zoom equals the Main scene's Pixel Perfect Camera's at 720p, 1080p, 1440p and 4K.
 - **EditMode, `ScrollIntoViewTests`.** A selected row scrolls into view by the least.
 - **EditMode, `UiThemeTests`**, on a theme from `Create`, then on the project's theme:
-  - the contrast ratio formula against known pairs;
+  - the theme's getters, and a missing role or size;
+  - the contrast of a translucent background, and the thresholds by size;
+  - the themed components: font, size, colour and outline set, the size changed and reset, glyphs snapped to whole UI px, a graphic's colour, a control's colour block;
+  - every role and size held once; each font static, holding the UI's characters, on the pixel grid; each outlined preset 1 UI px outside a whole face;
   - every text-and-background role pair a `ThemedText` uses, against its threshold by size;
   - the gameplay colours against `Outline`;
-  - `Caption`'s body height in the theme's font, once the font is settled, as `UiScaleTests` checks it for LiberationSans.
-- **EditMode, `UiContentTests`**, on the project's UI prefabs and menu scenes (only read):
-  - every text has a `ThemedText`;
-  - sizes and auto-size minimums are at `Caption` or above;
+  - `Caption`'s body height in the theme's font at every display of the Scale table.
+- **EditMode, `UiContentTests`**, on the project's UI prefabs, the mobs' world UI and the menu scenes (only read):
+  - every text has a `ThemedText` on the project's theme, does not auto-size and is not bold;
   - no italic or all-caps text below `Title`;
+  - every image has a `ThemedGraphic`, or is a themed control's target, and so has every world UI sprite;
   - every UI canvas has a `UiPixelScale`;
-  - every Selectable has a `ThemedSelectable`, is at least 12 UI px each way, and has navigation on.
+  - every Selectable has a `ThemedSelectable` and, the scroll list's scrollbar excepted, is at least 12 UI px each way with navigation on.
 - **EditMode, settings.** A file without the new fields reads their defaults; changing one writes the file.
 - **PlayMode.** In Testlands, with the in-process host and client:
   - changing the preferences sends nothing (the UI size from Phase 3, checked by what the client shows; the others from Phase 6);
@@ -555,9 +585,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ## Open questions
 
-Each is settled with the user at the start of the phase named. The principles were settled in Phase 1, the balance targets in Phase 2 and the control size in Phase 3 (12 UI px kept).
-
-- **Font** (Phase 4). Keep LiberationSans (smooth text over pixel art), or move to a pixel font under OFL, which would make body heights exact and its outline drawn in? Decide on the previews.
+Each is settled with the user at the start of the phase named. The principles were settled in Phase 1, the balance targets in Phase 2, the control size in Phase 3 (12 UI px kept) and the font in Phase 4 (Galmuri, a pixel font).
 - **Damage types on popups** (Phase 5). Should popups show the hit's type, or its `Resisted` and `Weakness` flags (shown nowhere today), with a cue other than colour?
 
 ## Tools considered

@@ -94,7 +94,7 @@ public class PlayerWeaponSystemTests
     }
 
     /// <summary>
-    /// Equipping a weapon with an icon sets the weapon name and shows the icon sprite fully opaque on the HUD.
+    /// Equipping a weapon with an icon sets the weapon name and shows the icon sprite in the theme's Icon role.
     /// </summary>
     [Test]
     public void Equip_UpdatesEquippedWeaponIcon()
@@ -111,11 +111,11 @@ public class PlayerWeaponSystemTests
 
         Assert.That(weaponController.CurrentWeaponName, Is.EqualTo("Sword"));
         Assert.That(iconImage.sprite, Is.SameAs(iconSprite));
-        Assert.That(iconImage.color.a, Is.EqualTo(1f).Within(0.001f));
+        Assert.That(iconImage.color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.Icon)));
     }
 
     /// <summary>
-    /// Equipping a weapon without an icon clears the HUD icon sprite and dims it to the fallback alpha.
+    /// Equipping a weapon without an icon clears the HUD icon sprite and dims it to the theme's IconMissing role.
     /// </summary>
     [Test]
     public void Equip_WithoutIcon_UsesHudFallbackTintAndClearsSprite()
@@ -130,7 +130,7 @@ public class PlayerWeaponSystemTests
         weaponController.Equip(CreateTestWeapon("Training Sword", icon: null));
 
         Assert.That(iconImage.sprite, Is.Null);
-        Assert.That(iconImage.color.a, Is.EqualTo(0.25f).Within(0.001f));
+        Assert.That(iconImage.color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.IconMissing)));
     }
 
     /// <summary>
@@ -988,7 +988,7 @@ public class PlayerWeaponSystemTests
         weaponIcon.preserveAspect = true;
 
         PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
-        view.ConfigureReferences(healthFill, healthText, weaponIcon);
+        view.ConfigureReferences(healthFill, healthText, weaponIcon, TestThemes.Shared);
 
         LocalPlayerTracker localPlayer = new();
         localPlayer.Assign(new LocalPlayer(weaponController.GetComponent<PlayerController>()));

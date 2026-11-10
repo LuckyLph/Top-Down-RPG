@@ -2,24 +2,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// Tests for the UI scale (Docs/DesignSystem.md, Phase 3): the UI zoom and the size steps at every display of the Scale
-/// table, the project's settings matching the Pixel Perfect Camera, Caption text readable at the zoom chosen, the zoom
-/// following the local UI size step, and <see cref="UiPixelScale"/> keeping a canvas on it.
+/// table, the project's settings matching the Pixel Perfect Camera, the zoom following the local UI size step, and
+/// <see cref="UiPixelScale"/> keeping a canvas on it. Caption text's readability at every display is in
+/// <c>UiThemeTests</c>, from the theme's font.
 /// </summary>
 public class UiScaleTests
 {
     private const string SettingsPath = "Assets/Data/UI/UiScale.asset";
-    private const string FontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private const string MainScenePath = "Assets/Scenes/Main.unity";
-    private const int Caption = 7;
 
-    private static readonly int[][] Displays =
+    internal static readonly int[][] Displays =
     {
         new[] { 1280, 720, 2, 0 },
         new[] { 1366, 768, 2, 0 },
@@ -101,29 +99,6 @@ public class UiScaleTests
         {
             int cameraZoom = Mathf.Max(1, Mathf.Min(display.x / referenceWidth, display.y / referenceHeight));
             Assert.That(UiScale.ZoomFor(display.x, display.y, 0, settings), Is.EqualTo(cameraZoom), display.ToString());
-        }
-    }
-
-    /// <summary>
-    /// Caption text, from the UI font's own glyphs (the top of a d to the bottom of a p), has a body height of at least
-    /// 18 px per 1080 display lines at the zoom every display of the Scale table gets (XAG 101), which is what the 390
-    /// lines a step stand for.
-    /// </summary>
-    [Test]
-    public void CaptionText_IsReadableAtEveryDisplay()
-    {
-        UiScaleSettings settings = AssetDatabase.LoadAssetAtPath<UiScaleSettings>(SettingsPath);
-        TMP_FontAsset font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
-        Assert.That(font.characterLookupTable.TryGetValue('d', out TMP_Character d), Is.True);
-        Assert.That(font.characterLookupTable.TryGetValue('p', out TMP_Character p), Is.True);
-        float top = d.glyph.metrics.horizontalBearingY;
-        float bottom = p.glyph.metrics.horizontalBearingY - p.glyph.metrics.height;
-        float body = (top - bottom) / font.faceInfo.pointSize;
-        Assert.That(body, Is.EqualTo(0.93f).Within(0.02f), "The body height DesignSystem.md's Type table counts on.");
-        foreach (int[] display in Displays)
-        {
-            int zoom = UiScale.ZoomFor(display[0], display[1], 0, settings);
-            Assert.That(Caption * body * zoom, Is.GreaterThanOrEqualTo(18f * display[1] / 1080f), $"{display[0]} x {display[1]}");
         }
     }
 

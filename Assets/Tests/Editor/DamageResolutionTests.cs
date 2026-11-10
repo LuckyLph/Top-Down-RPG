@@ -450,7 +450,7 @@ public class DamageResolutionTests
 
     /// <summary>
     /// The presenter colours damage popups by type, shows the immune text and "+amount" heals in their colours,
-    /// and scales periodic hits by the periodic popup scale.
+    /// and shows periodic hits at the periodic popup size, the others at the popup's own.
     /// </summary>
     [Test]
     public void DamagePopupPresenter_ColoursByTypeShowsImmuneAndHeals_AndShrinksPeriodicHits()
@@ -472,10 +472,14 @@ public class DamageResolutionTests
 
         TextMeshProUGUI[] texts = layer.GetComponentsInChildren<TextMeshProUGUI>();
         Assert.That(texts.Length, Is.EqualTo(4));
+        UiTheme theme = TestThemes.Shared;
         foreach (TextMeshProUGUI text in texts)
         {
-            float expectedScale = text.text == "3" ? settings.PeriodicPopupScale : 1f;
-            Assert.That(text.transform.localScale.x, Is.EqualTo(expectedScale), $"Popup '{text.text}' scale.");
+            UiTextSize expected = text.text == "3" ? settings.PeriodicPopupSize : UiTextSize.Heading;
+            Assert.That(text.fontSize, Is.EqualTo(theme.Style(expected).Pixels), $"Popup '{text.text}' size.");
+            Assert.That(text.font, Is.SameAs(theme.Style(expected).Font), $"Popup '{text.text}' font.");
+            Assert.That(text.fontSharedMaterial, Is.SameAs(theme.Style(expected).Outlined), $"Popup '{text.text}' outline.");
+            Assert.That(text.transform.localScale.x, Is.EqualTo(1f), $"Popup '{text.text}' scale.");
         }
 
         AssertPopup(texts, "20", settings.GetColor(DamageType.Fire));
@@ -590,6 +594,7 @@ public class DamageResolutionTests
         canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         GameObject popupObject = Track(new GameObject("Popup", typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI)));
         popupObject.SetActive(false);
+        popupObject.AddComponent<ThemedText>().Configure(TestThemes.Shared, UiColour.Text, UiColour.Outline, UiTextSize.Heading);
         FloatingDamageText popupPrefab = popupObject.AddComponent<FloatingDamageText>();
         DamagePopupLayer layer = canvasObject.AddComponent<DamagePopupLayer>();
         layer.Configure(popupPrefab);

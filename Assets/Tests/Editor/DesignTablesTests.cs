@@ -152,6 +152,43 @@ public class DesignTablesTests
     }
 
     /// <summary>
+    /// The theme's table lists each role and each size with its body height at 1080p, and each pair of roles a themed
+    /// text uses with its contrast and threshold; the popup colours are measured against the theme's Outline.
+    /// </summary>
+    [Test]
+    public void Build_WritesTheThemeTable_AndMeasuresPopupsOnTheOutline()
+    {
+        Dictionary<UiColour, Color> roles = TestThemes.Roles();
+        roles[UiColour.Outline] = Color.white;
+        UiTheme theme = Track(UiTheme.Create(roles, TestThemes.Shared.TextSizes));
+        ThemedText text = Track(new GameObject("Label", typeof(RectTransform), typeof(TMPro.TextMeshProUGUI))).AddComponent<ThemedText>();
+        text.Configure(theme, UiColour.Text, UiColour.SurfaceRaised, UiTextSize.Body);
+        CombatSettings combat = Track(CombatSettings.Create(Track(StatusEffectCatalog.Create())));
+        DesignContent content = new(
+            combat,
+            Track(WeaponCatalog.Create()),
+            new AbilityDefinition[0],
+            new PlayerClass[0],
+            new DesignUnit[0],
+            theme,
+            new[] { new UiThemeUsage.TextUse(text, "test") });
+
+        Dictionary<string, string> tables = new();
+        foreach (DesignTable table in DesignTables.Build(content))
+        {
+            tables.Add(table.FileName, table.Markdown);
+        }
+
+        string contrast = (System.Math.Floor(DesignMath.ContrastRatio(roles[UiColour.Text], roles[UiColour.SurfaceRaised]) * 100.0) / 100.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        string physical = (System.Math.Floor(DesignMath.ContrastRatio(combat.GetColor(DamageType.Physical), Color.white) * 100.0) / 100.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.That(tables["UiTheme.md"], Does.Contain("| Outline | `#FFFFFF` | 100% |"));
+        Assert.That(tables["UiTheme.md"], Does.Contain("| Shade | `#000000` | 65% |"));
+        Assert.That(tables["UiTheme.md"], Does.Contain("| Body | Galmuri7 SDF | 8 | 24 px |"));
+        Assert.That(tables["UiTheme.md"], Does.Contain($"| Text | SurfaceRaised | Body | {contrast}:1 | 4.50:1 |"));
+        Assert.That(tables["DamageTypes.md"], Does.Contain($"| Physical | `#{ColorUtility.ToHtmlStringRGB(combat.GetColor(DamageType.Physical))}` | {physical}:1 |"));
+    }
+
+    /// <summary>
     /// Keeps <paramref name="instance"/> for <see cref="TearDown"/> and returns it.
     /// </summary>
     private T Track<T>(T instance) where T : Object

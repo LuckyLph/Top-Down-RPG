@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5944253394606090742}
   - component: {fileID: 7543450664779677971}
   - component: {fileID: 390334025179717560}
+  - component: {fileID: 6659218978671341076}
   m_Layer: 0
   m_Name: MoveMarker
   m_TagString: Untagged
@@ -83,7 +84,7 @@ SpriteRenderer:
   m_SortingOrder: 10
   m_MaskInteraction: 0
   m_Sprite: {fileID: 21300000, guid: 76bd2335edc47ea4faf10923c7c22497, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.4509804, g: 1, b: 0.54901963, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -108,5 +109,18 @@ MonoBehaviour:
   lifetime: 0.45
   startScale: 1.3
   endScale: 0.5
-  color: {r: 0.45, g: 1, b: 0.55, a: 0.9}
-  attackMoveColor: {r: 1, g: 0.35, b: 0.3, a: 0.9}
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+--- !u!114 &6659218978671341076
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7326438053599208922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c29ea10a796bc2c4581fc86316da7bdd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  role: 17

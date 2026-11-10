@@ -117,6 +117,7 @@ GameObject:
   - component: {fileID: 8445190641742648853}
   - component: {fileID: 9132205378289321158}
   - component: {fileID: 792599671684275837}
+  - component: {fileID: 560121282513718084}
   m_Layer: 5
   m_Name: ResetButton
   m_TagString: Untagged
@@ -203,11 +204,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.85, g: 0.85, b: 0.8, a: 1}
+    m_NormalColor: {r: 0.8509804, g: 0.8509804, b: 0.8, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
-    m_PressedColor: {r: 0.7, g: 0.7, b: 0.65, a: 1}
-    m_SelectedColor: {r: 1, g: 0.85, b: 0.4, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_PressedColor: {r: 0.69803923, g: 0.69803923, b: 0.6509804, a: 1}
+    m_SelectedColor: {r: 1, g: 0.8509804, b: 0.4, a: 1}
+    m_DisabledColor: {r: 0.43137255, g: 0.43137255, b: 0.4509804, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -258,6 +259,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a70a9791a1937284da6e00843fb73b48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ScrollIntoView
+--- !u!114 &560121282513718084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4299678123759151890}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 122e369ef0e9d5b48800e28cafbfce00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedSelectable
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
 --- !u!1 &4758617348098585668
 GameObject:
   m_ObjectHideFlags: 0
@@ -270,6 +284,7 @@ GameObject:
   - component: {fileID: 8123901039806411251}
   - component: {fileID: 5723075409727288067}
   - component: {fileID: 5518219892612582985}
+  - component: {fileID: 9102143903724688498}
   m_Layer: 5
   m_Name: Label
   m_TagString: Untagged
@@ -326,15 +341,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: Action
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}
+  m_sharedMaterial: {fileID: 6705182774498471307, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.92, g: 0.92, b: 0.9, a: 1}
+  m_fontColor: {r: 1, g: 1, b: 1, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -351,8 +366,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 9
-  m_fontSizeBase: 9
+  m_fontSize: 8
+  m_fontSizeBase: 8
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -416,6 +431,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &9102143903724688498
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4758617348098585668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6667a33cdfa97d046969292284e5bfc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedText
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  colour: 0
+  background: 8
+  size: 1
 --- !u!1 &5151083975899166994
 GameObject:
   m_ObjectHideFlags: 0
@@ -430,6 +461,7 @@ GameObject:
   - component: {fileID: 1301672211817382738}
   - component: {fileID: 4512208770290212548}
   - component: {fileID: 1706468614074761055}
+  - component: {fileID: 4589617364085488742}
   m_Layer: 5
   m_Name: BindingButton
   m_TagString: Untagged
@@ -516,11 +548,11 @@ MonoBehaviour:
     m_SelectOnRight: {fileID: 0}
   m_Transition: 1
   m_Colors:
-    m_NormalColor: {r: 0.85, g: 0.85, b: 0.8, a: 1}
+    m_NormalColor: {r: 0.8509804, g: 0.8509804, b: 0.8, a: 1}
     m_HighlightedColor: {r: 1, g: 1, b: 1, a: 1}
-    m_PressedColor: {r: 0.7, g: 0.7, b: 0.65, a: 1}
-    m_SelectedColor: {r: 1, g: 0.85, b: 0.4, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_PressedColor: {r: 0.69803923, g: 0.69803923, b: 0.6509804, a: 1}
+    m_SelectedColor: {r: 1, g: 0.8509804, b: 0.4, a: 1}
+    m_DisabledColor: {r: 0.43137255, g: 0.43137255, b: 0.4509804, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -571,6 +603,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a70a9791a1937284da6e00843fb73b48, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ScrollIntoView
+--- !u!114 &4589617364085488742
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5151083975899166994}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 122e369ef0e9d5b48800e28cafbfce00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedSelectable
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
 --- !u!1 &6355387937985282607
 GameObject:
   m_ObjectHideFlags: 0
@@ -582,6 +627,7 @@ GameObject:
   - component: {fileID: 1085699765112712183}
   - component: {fileID: 7946038356203905813}
   - component: {fileID: 9209731811193752916}
+  - component: {fileID: 8439718893379023243}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -638,15 +684,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: Key
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}
+  m_sharedMaterial: {fileID: 6705182774498471307, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.1, g: 0.1, b: 0.12, a: 1}
+  m_fontColor: {r: 0.101960786, g: 0.101960786, b: 0.12156863, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -663,10 +709,10 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 9
+  m_fontSize: 8
   m_fontSizeBase: 13
   m_fontWeight: 400
-  m_enableAutoSizing: 1
+  m_enableAutoSizing: 0
   m_fontSizeMin: 7
   m_fontSizeMax: 9
   m_fontStyle: 0
@@ -708,6 +754,22 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8439718893379023243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6355387937985282607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6667a33cdfa97d046969292284e5bfc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedText
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  colour: 1
+  background: 12
+  size: 1
 --- !u!1 &6576742002369940418
 GameObject:
   m_ObjectHideFlags: 0
@@ -719,6 +781,7 @@ GameObject:
   - component: {fileID: 1218180965938741516}
   - component: {fileID: 1413998413202041210}
   - component: {fileID: 387129154522323436}
+  - component: {fileID: 3599757802213296442}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -775,15 +838,15 @@ MonoBehaviour:
       m_Calls: []
   m_text: Reset
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}
+  m_sharedMaterial: {fileID: 6705182774498471307, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontColor: {r: 0.1, g: 0.1, b: 0.12, a: 1}
+  m_fontColor: {r: 0.101960786, g: 0.101960786, b: 0.12156863, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -800,8 +863,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 9
-  m_fontSizeBase: 9
+  m_fontSize: 8
+  m_fontSizeBase: 8
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -845,3 +908,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3599757802213296442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6576742002369940418}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6667a33cdfa97d046969292284e5bfc7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedText
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  colour: 1
+  background: 12
+  size: 1

@@ -2,9 +2,9 @@
 
 Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's assets. Do not edit it by hand: change the assets and run the menu item again. The derived columns are defined in [DesignSystem.md](../DesignSystem.md#generated-tables), at attack speed 1 and against a unit's base defence, without statuses.
 
-| Type | Popup colour | Contrast on black |
+| Type | Popup colour | Contrast on Outline |
 |---|---|---|
-| Physical | `#B21F1F` | 3.11:1 |
+| Physical | `#E64040` | 5.17:1 |
 | Fire | `#FF801A` | 8.32:1 |
 | Frost | `#73CCFF` | 11.80:1 |
 | Lightning | `#FFE64C` | 16.62:1 |
@@ -20,4 +20,4 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | Resistance floor | -100% |
 | Resistance cap | 80% |
 | Minimum damage | 1 |
-| Periodic popup scale | 0.75 |
+| Periodic popup size | Caption |

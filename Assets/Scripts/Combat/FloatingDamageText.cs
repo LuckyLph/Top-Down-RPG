@@ -2,15 +2,17 @@ using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// One pooled combat popup on the <see cref="DamagePopupLayer"/> canvas: text anchored to a world position that
-/// rises by <c>riseOffset</c> and fades out over its lifetime.
+/// One pooled combat popup on the <see cref="DamagePopupLayer"/> canvas: outlined text anchored to a world position
+/// that rises by <c>riseOffset</c> and fades out over its lifetime, placed on whole UI px so its pixel font stays crisp.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CanvasGroup))]
 [RequireComponent(typeof(TextMeshProUGUI))]
+[RequireComponent(typeof(ThemedText))]
 public class FloatingDamageText : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI text;
+    [SerializeField] private ThemedText themedText;
     [SerializeField] private RectTransform rectTransform;
     [SerializeField] private CanvasGroup canvasGroup;
     [SerializeField, Min(0.01f)] private float lifetime = 1f;
@@ -34,9 +36,9 @@ public class FloatingDamageText : MonoBehaviour
     /// <summary>
     /// Restarts the popup with <paramref name="message"/> in <paramref name="color"/> at
     /// <paramref name="startWorldPosition"/>, projected through <paramref name="camera"/> into
-    /// <paramref name="parentCanvas"/>, scaled by <paramref name="scale"/>.
+    /// <paramref name="parentCanvas"/>, at text size <paramref name="size"/>, or the popup's own size when null.
     /// </summary>
-    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, float scale = 1f)
+    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, UiTextSize? size = null)
     {
         ResolveReferences();
 
@@ -45,10 +47,18 @@ public class FloatingDamageText : MonoBehaviour
         canvasRect = parentCanvas;
         elapsed = 0f;
 
+        if (size.HasValue)
+        {
+            themedText.SetSize(size.Value);
+        }
+        else
+        {
+            themedText.ResetSize();
+        }
+
         text.text = message;
         text.color = color;
         canvasGroup.alpha = 1f;
-        rectTransform.localScale = Vector3.one * scale;
         Refresh();
     }
 
@@ -62,8 +72,9 @@ public class FloatingDamageText : MonoBehaviour
     }
 
     /// <summary>
-    /// Places the popup at its current risen world position projected onto the canvas and fades it by age; hides it
-    /// when that point is behind the camera. Does nothing before <see cref="Show"/>.
+    /// Places the popup at its current risen world position projected onto the canvas, on the nearest whole UI px from
+    /// the canvas's corner, and fades it by age; hides it when that point is behind the camera. Does nothing before
+    /// <see cref="Show"/>.
     /// </summary>
     internal void Refresh()
     {
@@ -83,18 +94,24 @@ public class FloatingDamageText : MonoBehaviour
         }
 
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, null, out Vector2 localPoint);
-        rectTransform.anchoredPosition = localPoint;
+        Vector2 corner = canvasRect.rect.min;
+        rectTransform.anchoredPosition = new Vector2(Mathf.Round(localPoint.x - corner.x) + corner.x, Mathf.Round(localPoint.y - corner.y) + corner.y);
         canvasGroup.alpha = 1f - t;
     }
 
     /// <summary>
-    /// Looks up the sibling text, rect transform and canvas group when not assigned.
+    /// Looks up the sibling text, themed text, rect transform and canvas group when not assigned.
     /// </summary>
     private void ResolveReferences()
     {
         if (text == null)
         {
             text = GetComponent<TextMeshProUGUI>();
+        }
+
+        if (themedText == null)
+        {
+            themedText = GetComponent<ThemedText>();
         }
 
         if (rectTransform == null)

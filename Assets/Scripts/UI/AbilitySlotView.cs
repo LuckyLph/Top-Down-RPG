@@ -4,7 +4,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// One passive slot of the ability bar: icon (or the ability's name when it has none, or an empty state),
-/// radial cooldown fill with whole seconds remaining, key label and a failure flash.
+/// radial cooldown fill with whole seconds remaining, key label and a failure flash. Its frame and flash take their
+/// colours from the <see cref="UiTheme"/>'s Surface, SurfaceEmpty and Danger roles, read once when it wakes.
 /// </summary>
 [DisallowMultipleComponent]
 public class AbilitySlotView : MonoBehaviour
@@ -20,9 +21,13 @@ public class AbilitySlotView : MonoBehaviour
     [SerializeField] private TextMeshProUGUI cooldownText;
     [SerializeField] private TextMeshProUGUI keyText;
     [SerializeField] private Image flash;
-    [SerializeField] private Color filledFrameColor = new(0.12f, 0.12f, 0.16f, 0.85f);
-    [SerializeField] private Color emptyFrameColor = new(0.12f, 0.12f, 0.16f, 0.35f);
-    [SerializeField] private Color flashColor = new(0.9f, 0.15f, 0.15f, 0.6f);
+    [SerializeField] private UiTheme theme;
+    [SerializeField, Range(0f, 1f), Tooltip("The failure flash's opacity at its strongest, over the slot.")]
+    private float flashOpacity = 0.6f;
+
+    private Color filledFrameColor;
+    private Color emptyFrameColor;
+    private Color flashColor;
 
     internal Image Icon => icon;
     internal TextMeshProUGUI NameText => nameText;
@@ -33,14 +38,17 @@ public class AbilitySlotView : MonoBehaviour
     internal bool IsEmpty { get; private set; } = true;
 
     /// <summary>
-    /// Logs an error when any required image or text reference is missing. The key label is optional.
+    /// Reads the frame and flash colours from the theme. Logs an error when the theme or any required image or text
+    /// reference is missing. The key label is optional.
     /// </summary>
     private void Awake()
     {
-        if (frame == null || icon == null || nameText == null || cooldownFill == null || cooldownText == null || flash == null)
+        if (theme == null || frame == null || icon == null || nameText == null || cooldownFill == null || cooldownText == null || flash == null)
         {
-            Debug.LogError($"{name} is missing ability slot references.", this);
+            Debug.LogError($"{name} is missing its theme or ability slot references.", this);
         }
+
+        ReadTheme();
     }
 
     /// <summary>
@@ -99,15 +107,17 @@ public class AbilitySlotView : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows the failure flash at <paramref name="alpha"/> (clamped to 0..1) of its configured opacity.
+    /// Shows the failure flash at <paramref name="alpha"/> (clamped to 0..1) of its configured opacity, hiding it at 0.
     /// </summary>
     public void SetFlash(float alpha)
     {
         if (flash != null)
         {
+            float shown = Mathf.Clamp01(alpha);
             Color color = flashColor;
-            color.a *= Mathf.Clamp01(alpha);
+            color.a = flashOpacity * shown;
             flash.color = color;
+            flash.enabled = shown > 0f;
         }
     }
 
@@ -130,6 +140,30 @@ public class AbilitySlotView : MonoBehaviour
         cooldownText = seconds;
         keyText = key;
         flash = flashImage;
+    }
+
+    /// <summary>
+    /// Sets the theme in code and reads its colours, for tests that build the slot without a prefab.
+    /// </summary>
+    internal void ConfigureTheme(UiTheme uiTheme)
+    {
+        theme = uiTheme;
+        ReadTheme();
+    }
+
+    /// <summary>
+    /// Reads the filled and empty frame colours and the flash colour from the theme, when there is one.
+    /// </summary>
+    private void ReadTheme()
+    {
+        if (theme == null)
+        {
+            return;
+        }
+
+        filledFrameColor = theme.Colour(UiColour.Surface);
+        emptyFrameColor = theme.Colour(UiColour.SurfaceEmpty);
+        flashColor = theme.Colour(UiColour.Danger);
     }
 
     /// <summary>

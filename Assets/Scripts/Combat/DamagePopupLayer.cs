@@ -39,10 +39,10 @@ public class DamagePopupLayer : MonoBehaviour
 
     /// <summary>
     /// Shows <paramref name="message"/> in <paramref name="color"/> at <paramref name="worldPosition"/> as seen by
-    /// <paramref name="camera"/>, scaled by <paramref name="scale"/>, using a pooled popup. Logs an error and returns
-    /// null when no popup prefab is assigned.
+    /// <paramref name="camera"/>, at text size <paramref name="size"/> or the popup's own when null, using a pooled
+    /// popup. Logs an error and returns null when no popup prefab is assigned.
     /// </summary>
-    public FloatingDamageText Spawn(string message, Color color, Vector3 worldPosition, Camera camera, float scale = 1f)
+    public FloatingDamageText Spawn(string message, Color color, Vector3 worldPosition, Camera camera, UiTextSize? size = null)
     {
         EnsurePool();
         if (popupPrefab == null)
@@ -52,7 +52,7 @@ public class DamagePopupLayer : MonoBehaviour
         }
 
         FloatingDamageText popup = pool.Get();
-        popup.Show(message, color, worldPosition, camera, canvasRect, scale);
+        popup.Show(message, color, worldPosition, camera, canvasRect, size);
         active.Add(popup);
         return popup;
     }

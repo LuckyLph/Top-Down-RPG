@@ -19,6 +19,7 @@ public static class DesignTables
 
     private static readonly string[] ClassSlotKeys = { "Q", "W", "E", "R" };
     private static readonly string[] WeaponSlotKeys = { "1", "2" };
+    private const int BodyZoom = 3;
 
     private const string Note =
         "Written by `" + MenuPath + "` from the project's assets. Do not edit it by hand: change the assets and run the "
@@ -34,7 +35,8 @@ public static class DesignTables
     }
 
     /// <summary>
-    /// The tables built from <paramref name="content"/>: damage types, weapons, abilities, statuses and units.
+    /// The tables built from <paramref name="content"/>: damage types, weapons, abilities, statuses, units and the UI
+    /// theme.
     /// </summary>
     public static IReadOnlyList<DesignTable> Build(DesignContent content)
     {
@@ -45,6 +47,7 @@ public static class DesignTables
             Abilities(content),
             StatusEffects(content),
             Units(content),
+            Theme(content),
         };
     }
 
@@ -72,21 +75,23 @@ public static class DesignTables
     }
 
     /// <summary>
-    /// Each damage type's popup colour and its contrast on black, the heal and immune popups, and the resolution rules.
+    /// Each damage type's popup colour and its contrast on the theme's Outline (black without a theme), the heal and
+    /// immune popups, and the resolution rules.
     /// </summary>
     private static DesignTable DamageTypes(DesignContent content)
     {
         CombatSettings combat = content.Combat;
+        Color outline = content.Theme != null ? content.Theme.Colour(UiColour.Outline) : Color.black;
         StringBuilder text = Begin("Damage types");
-        Row(text, "Type", "Popup colour", "Contrast on black");
+        Row(text, "Type", "Popup colour", "Contrast on Outline");
         Rule(text, 3);
         foreach (DamageType type in (DamageType[])Enum.GetValues(typeof(DamageType)))
         {
-            Row(text, type.ToString(), Hex(combat.GetColor(type)), Contrast(combat.GetColor(type), Color.black));
+            Row(text, type.ToString(), Hex(combat.GetColor(type)), Contrast(combat.GetColor(type), outline));
         }
 
-        Row(text, "Heal", Hex(combat.HealColor), Contrast(combat.HealColor, Color.black));
-        Row(text, $"Immune (\"{combat.ImmuneText}\")", Hex(combat.ImmuneColor), Contrast(combat.ImmuneColor, Color.black));
+        Row(text, "Heal", Hex(combat.HealColor), Contrast(combat.HealColor, outline));
+        Row(text, $"Immune (\"{combat.ImmuneText}\")", Hex(combat.ImmuneColor), Contrast(combat.ImmuneColor, outline));
 
         text.Append("\n## Resolution\n\n");
         Row(text, "Rule", "Value");
@@ -94,8 +99,51 @@ public static class DesignTables
         Row(text, "Resistance floor", $"{combat.ResistanceFloor}%");
         Row(text, "Resistance cap", $"{combat.ResistanceCap}%");
         Row(text, "Minimum damage", Number(combat.MinimumDamage));
-        Row(text, "Periodic popup scale", Number(combat.PeriodicPopupScale));
+        Row(text, "Periodic popup size", combat.PeriodicPopupSize.ToString());
         return new DesignTable("DamageTypes.md", text.ToString());
+    }
+
+    /// <summary>
+    /// The UI theme: each colour role, each text size with its font and body height at 1080p (zoom 3), and the contrast
+    /// of every pair of text and background roles a themed text uses against its threshold.
+    /// </summary>
+    private static DesignTable Theme(DesignContent content)
+    {
+        UiTheme theme = content.Theme;
+        StringBuilder text = Begin("UI theme");
+        if (theme == null)
+        {
+            return new DesignTable("UiTheme.md", text.ToString());
+        }
+
+        text.Append("## Colour roles\n\n");
+        Row(text, "Role", "Colour", "Opacity");
+        Rule(text, 3);
+        foreach (UiColour role in (UiColour[])Enum.GetValues(typeof(UiColour)))
+        {
+            Color colour = theme.Colour(role);
+            Row(text, role.ToString(), Hex(colour), Percent(colour.a));
+        }
+
+        text.Append("\n## Text sizes\n\n");
+        Row(text, "Size", "Font", "UI px", "Body at 1080p");
+        Rule(text, 4);
+        foreach (UiTextSize size in (UiTextSize[])Enum.GetValues(typeof(UiTextSize)))
+        {
+            UiTheme.TextStyle style = theme.Style(size);
+            string font = style.Font != null ? style.Font.name : "none";
+            Row(text, size.ToString(), font, Number(style.Pixels), $"{Number(UiThemeUsage.BodyHeight(style) * BodyZoom)} px");
+        }
+
+        text.Append("\n## Text on backgrounds\n\nEach pair of text role and background role a themed text uses, at the smallest size it is used at. A translucent background counts over white and over black, the lower ratio; a control in each state it is read in.\n\n");
+        Row(text, "Text", "Background", "Smallest size", "Contrast", "Needs");
+        Rule(text, 5);
+        foreach (UiThemeUsage.PairContrast pair in UiThemeUsage.Measure(theme, content.TextUses))
+        {
+            Row(text, pair.Text.ToString(), pair.Background, pair.Size.ToString(), Ratio(pair.Ratio), Ratio(pair.Threshold));
+        }
+
+        return new DesignTable("UiTheme.md", text.ToString());
     }
 
     /// <summary>
@@ -767,7 +815,23 @@ public static class DesignTables
     /// </summary>
     private static string Contrast(Color a, Color b)
     {
-        double ratio = Math.Floor(DesignMath.ContrastRatio(a, b) * 100.0) / 100.0;
-        return $"{ratio.ToString("0.00", CultureInfo.InvariantCulture)}:1";
+        return Ratio(DesignMath.ContrastRatio(a, b));
+    }
+
+    /// <summary>
+    /// A contrast ratio cut (not rounded) to two decimals.
+    /// </summary>
+    private static string Ratio(double ratio)
+    {
+        double cut = Math.Floor(ratio * 100.0) / 100.0;
+        return $"{cut.ToString("0.00", CultureInfo.InvariantCulture)}:1";
+    }
+
+    /// <summary>
+    /// An opacity as a whole percentage.
+    /// </summary>
+    private static string Percent(float value)
+    {
+        return $"{Mathf.RoundToInt(value * 100f).ToString(CultureInfo.InvariantCulture)}%";
     }
 }

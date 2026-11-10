@@ -5,8 +5,8 @@ using UnityEngine;
 
 /// <summary>
 /// What the design tables are built from (Docs/DesignSystem.md, Generated tables): the combat settings with their
-/// status catalog, the weapon catalog, the abilities, the classes and the units. <see cref="FromProject"/> reads the
-/// project's; tests build their own from <c>Create</c>.
+/// status catalog, the weapon catalog, the abilities, the classes, the units, and the UI theme with the themed texts
+/// that use it. <see cref="FromProject"/> reads the project's; tests build their own from <c>Create</c>.
 /// </summary>
 public sealed class DesignContent
 {
@@ -18,16 +18,21 @@ public sealed class DesignContent
 
     /// <summary>
     /// Creates the content from its parts; the abilities are sorted by name, the units players first, then by name.
+    /// Without a <paramref name="theme"/>, popup contrast is measured on black and the theme's table is left empty.
     /// </summary>
     public DesignContent(
         CombatSettings combat,
         WeaponCatalog weapons,
         IEnumerable<AbilityDefinition> abilities,
         IEnumerable<PlayerClass> classes,
-        IEnumerable<DesignUnit> units)
+        IEnumerable<DesignUnit> units,
+        UiTheme theme = null,
+        IEnumerable<UiThemeUsage.TextUse> textUses = null)
     {
         Combat = combat;
         Weapons = weapons;
+        Theme = theme;
+        TextUses = textUses != null ? new List<UiThemeUsage.TextUse>(textUses) : new List<UiThemeUsage.TextUse>();
 
         List<AbilityDefinition> sortedAbilities = new(abilities);
         sortedAbilities.Sort((a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
@@ -48,19 +53,22 @@ public sealed class DesignContent
     public IReadOnlyList<AbilityDefinition> Abilities { get; }
     public IReadOnlyList<PlayerClass> Classes { get; }
     public IReadOnlyList<DesignUnit> Units { get; }
+    public UiTheme Theme { get; }
+    public IReadOnlyList<UiThemeUsage.TextUse> TextUses { get; }
 
     /// <summary>
     /// The project's content: the combat settings and weapon catalog at their paths, every ability and class under
-    /// <see cref="DataFolder"/>, and every unit prefab in <see cref="UnitFolders"/>. Throws when the settings or the
-    /// catalog is missing.
+    /// <see cref="DataFolder"/>, every unit prefab in <see cref="UnitFolders"/>, the UI theme and every themed text
+    /// (<see cref="UiThemeUsage.Collect"/>). Throws when the settings, the catalog or the theme is missing.
     /// </summary>
     public static DesignContent FromProject()
     {
         CombatSettings combat = AssetDatabase.LoadAssetAtPath<CombatSettings>(CombatSettingsPath);
         WeaponCatalog weapons = AssetDatabase.LoadAssetAtPath<WeaponCatalog>(WeaponCatalogPath);
-        if (combat == null || weapons == null)
+        UiTheme theme = AssetDatabase.LoadAssetAtPath<UiTheme>(UiThemeUsage.ThemePath);
+        if (combat == null || weapons == null || theme == null)
         {
-            throw new InvalidOperationException($"The design tables need {CombatSettingsPath} and {WeaponCatalogPath}.");
+            throw new InvalidOperationException($"The design tables need {CombatSettingsPath}, {WeaponCatalogPath} and {UiThemeUsage.ThemePath}.");
         }
 
         List<DesignUnit> units = new();
@@ -73,7 +81,7 @@ public sealed class DesignContent
             }
         }
 
-        return new DesignContent(combat, weapons, Load<AbilityDefinition>(), Load<PlayerClass>(), units);
+        return new DesignContent(combat, weapons, Load<AbilityDefinition>(), Load<PlayerClass>(), units, theme, UiThemeUsage.Collect());
     }
 
     /// <summary>

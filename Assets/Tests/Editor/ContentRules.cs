@@ -177,7 +177,7 @@ internal static class ContentRules
 
     /// <summary>
     /// The combat settings: the resistance floor from -100 to 0 and the cap from 0 to 99, a minimum damage that is not
-    /// negative, the periodic popup scale from 0.3 to 1, a status catalog, an immune text and opaque popup colours.
+    /// negative, a periodic popup size that is a text size, a status catalog, an immune text and opaque popup colours.
     /// </summary>
     public static List<string> Combat(CombatSettings settings)
     {
@@ -187,7 +187,7 @@ internal static class ContentRules
         Within(problems, data, owner, "resistanceFloor", -100, 0);
         Within(problems, data, owner, "resistanceCap", 0, 99);
         AtLeast(problems, data, owner, "minimumDamage", 0);
-        Within(problems, data, owner, "periodicPopupScale", 0.3, 1);
+        Within(problems, data, owner, "periodicPopupSize", (int)UiTextSize.Caption, (int)UiTextSize.Display);
         Set(problems, data, owner, "statusCatalog");
         NotEmpty(problems, data, owner, "immuneText");
         foreach (string colour in new[] { "physicalColor", "fireColor", "frostColor", "lightningColor", "poisonColor", "trueColor", "healColor", "immuneColor" })
@@ -382,11 +382,11 @@ internal static class ContentRules
     }
 
     /// <summary>
-    /// A numeric property's value, integer or float.
+    /// A numeric property's value: integer, enum or float.
     /// </summary>
     private static double Number(SerializedProperty property)
     {
-        return property.propertyType == SerializedPropertyType.Integer ? property.intValue : property.floatValue;
+        return property.propertyType == SerializedPropertyType.Integer || property.propertyType == SerializedPropertyType.Enum ? property.intValue : property.floatValue;
     }
 
     /// <summary>

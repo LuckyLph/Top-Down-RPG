@@ -25,6 +25,7 @@ public class GameMenuControllerTests
     private FakeSessionStatus session;
     private MenuStack menus;
     private OptionsMenuController options;
+    private UiScaleSettings scaleSettings;
     private GameMenuController controller;
 
     /// <summary>
@@ -47,7 +48,9 @@ public class GameMenuControllerTests
         menuInput = new FakeMenuInput();
         session = new FakeSessionStatus();
         menus = new MenuStack(menuInput);
-        options = new OptionsMenuController(optionsView, bindings, menus, new UISelection(null), new UserSettings(new MemorySaveStore()));
+        UserSettings settings = new(new MemorySaveStore());
+        scaleSettings = UiScaleSettings.Create();
+        options = new OptionsMenuController(optionsView, bindings, menus, new UISelection(null), settings, new UiScale(scaleSettings, settings));
         options.Start();
         controller = new GameMenuController(menuView, options, menus, inputGate, timeFreeze, gameFlow, session, new UISelection(null));
         controller.Start();
@@ -66,6 +69,7 @@ public class GameMenuControllerTests
         timeFreeze.Dispose();
         Object.DestroyImmediate(canvas);
         Object.DestroyImmediate(actions);
+        Object.DestroyImmediate(scaleSettings);
         Time.timeScale = 1f;
     }
 

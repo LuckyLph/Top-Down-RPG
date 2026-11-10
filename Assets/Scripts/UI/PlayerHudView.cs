@@ -3,8 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Passive player HUD: a health fill with an "HP" readout and the equipped weapon's icon, dimmed when there is no
-/// weapon. <see cref="PlayerHudPresenter"/> decides what to show.
+/// Passive player HUD: a health fill with an "HP" readout and the equipped weapon's icon, in the
+/// <see cref="UiTheme"/>'s Icon role, or IconMissing when there is no weapon. <see cref="PlayerHudPresenter"/> decides
+/// what to show.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerHudView : MonoBehaviour
@@ -15,8 +16,27 @@ public class PlayerHudView : MonoBehaviour
     [SerializeField] private Image healthFill;
     [SerializeField] private TextMeshProUGUI healthText;
     [SerializeField] private Image weaponIcon;
-    [SerializeField] private Color activeWeaponIconTint = Color.white;
-    [SerializeField] private Color missingWeaponIconTint = new(1f, 1f, 1f, 0.25f);
+    [SerializeField] private UiTheme theme;
+
+    private Color activeWeaponIconTint = Color.white;
+    private Color missingWeaponIconTint = Color.clear;
+
+    internal Image HealthFill => healthFill;
+    internal TextMeshProUGUI HealthText => healthText;
+    internal Image WeaponIcon => weaponIcon;
+
+    /// <summary>
+    /// Reads the weapon icon's tints from the theme; logs an error without a theme.
+    /// </summary>
+    private void Awake()
+    {
+        if (theme == null)
+        {
+            Debug.LogError($"{name} has no UI theme.", this);
+        }
+
+        ReadTheme();
+    }
 
     /// <summary>
     /// Fills the bar to <paramref name="current"/> over <paramref name="max"/> and shows the current HP. Values are
@@ -70,12 +90,27 @@ public class PlayerHudView : MonoBehaviour
     }
 
     /// <summary>
-    /// Assigns the health fill, health text and weapon icon in code, for tests that build the HUD without a prefab.
+    /// Assigns the health fill, health text, weapon icon and theme in code, for tests that build the HUD without a
+    /// prefab.
     /// </summary>
-    internal void ConfigureReferences(Image fill, TextMeshProUGUI text, Image icon)
+    internal void ConfigureReferences(Image fill, TextMeshProUGUI text, Image icon, UiTheme uiTheme)
     {
         healthFill = fill;
         healthText = text;
         weaponIcon = icon;
+        theme = uiTheme;
+        ReadTheme();
+    }
+
+    /// <summary>
+    /// Reads the active and missing weapon icon tints from the theme's Icon and IconMissing roles, when there is one.
+    /// </summary>
+    private void ReadTheme()
+    {
+        if (theme != null)
+        {
+            activeWeaponIconTint = theme.Colour(UiColour.Icon);
+            missingWeaponIconTint = theme.Colour(UiColour.IconMissing);
+        }
     }
 }

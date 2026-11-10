@@ -5,7 +5,8 @@ using UnityEngine;
 /// How hits read on every machine (Docs/Animation.md, Phase 6): the struck unit's flash, hit-stop and nudge, the impact
 /// effect where the hit lands, and the local player's camera kick. Read by <see cref="HitFeedbackPresenter"/>; visual
 /// only, nothing in gameplay reads it. Immune hits flash in <see cref="CombatSettings.ImmuneColor"/> and damage over time
-/// washes toward its type's <see cref="CombatSettings.GetColor"/>.
+/// washes toward its type's <see cref="CombatSettings.GetColor"/>. A player who reduces flashing sees every flash at
+/// <see cref="ReducedFlashShare"/> of its strength (Docs/DesignSystem.md, Phase 6).
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Effects/Hit Feedback Settings", fileName = "HitFeedbackSettings")]
 public sealed class HitFeedbackSettings : ScriptableObject
@@ -21,6 +22,8 @@ public sealed class HitFeedbackSettings : ScriptableObject
     private float periodicFlashAmount = 0.4f;
     [SerializeField, Min(0f), Tooltip("How long a damage-over-time tick's wash lasts, in seconds.")]
     private float periodicFlashSeconds = 0.08f;
+    [SerializeField, Range(0f, 1f), Tooltip("How much of its strength each flash keeps, a hit's, an immune hit's and a tick's wash, when the player reduces flashing.")]
+    private float reducedFlashShare = 1f / 3f;
 
     [Header("Hit-stop")]
     [SerializeField, Min(0f), Tooltip("How long a struck unit's animation holds on a direct hit, in seconds.")]
@@ -51,6 +54,7 @@ public sealed class HitFeedbackSettings : ScriptableObject
     public float ImmuneFlashSeconds => immuneFlashSeconds;
     public float PeriodicFlashAmount => periodicFlashAmount;
     public float PeriodicFlashSeconds => periodicFlashSeconds;
+    public float ReducedFlashShare => reducedFlashShare;
     public float HoldSeconds => holdSeconds;
     public bool HoldAttacker => holdAttacker;
     public IReadOnlyList<int> NudgePixels => nudgePixels;

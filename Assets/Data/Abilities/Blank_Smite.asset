@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::AbilityDefinition
   displayName: Blank Smite
   icon: {fileID: 0}
+  description: A slow strike at one enemy that deals Physical damage and stuns it.
+    You can keep moving while you wind it up.
   cooldown: 10
   castTime: 1
   targeting: 3

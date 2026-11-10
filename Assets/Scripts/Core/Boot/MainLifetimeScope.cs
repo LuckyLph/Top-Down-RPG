@@ -22,10 +22,13 @@ public class MainLifetimeScope : LifetimeScope
     [SerializeField] private Camera mainCamera;
     [SerializeField] private NetworkManager networkManagerPrefab;
     [SerializeField] private NetworkSettings networkSettings;
+    [SerializeField, Tooltip("How the UI zoom is chosen (Docs/DesignSystem.md, Foundations: Scale).")]
+    private UiScaleSettings uiScaleSettings;
 
     /// <summary>
     /// Registers the app-wide services and entry points, logging an error and skipping the network services when
-    /// the NetworkManager prefab or <see cref="NetworkSettings"/> is missing.
+    /// the NetworkManager prefab or <see cref="NetworkSettings"/> is missing, and falling back to the default UI scale
+    /// settings without <see cref="UiScaleSettings"/>.
     /// </summary>
     protected override void Configure(IContainerBuilder builder)
     {
@@ -68,6 +71,14 @@ public class MainLifetimeScope : LifetimeScope
         builder.RegisterInstance<ISaveStore>(new FileSaveStore(DataPath(UserSettings.FileName)))
             .Keyed(UserSettings.FileName);
         builder.Register<UserSettings>(Lifetime.Singleton);
+
+        if (uiScaleSettings == null)
+        {
+            Debug.LogError($"{name} has no UiScaleSettings assigned; the UI uses the default scale settings.", this);
+        }
+
+        builder.RegisterInstance(uiScaleSettings != null ? uiScaleSettings : UiScaleSettings.Create());
+        builder.RegisterEntryPoint<UiScale>().AsSelf();
 
         builder.RegisterEntryPoint<InputBindings>()
             .WithParameter<InputActionAsset>(resolver => resolver.Resolve<RuntimeInputActions>().Actions)

@@ -6,8 +6,9 @@ using VContainer;
 /// <summary>
 /// The local machine's preferences, read once when created and written on every change: the key binding overrides, the
 /// name of the look the local player is drawn with (Docs/AsepriteCharacters.md, Phase 2), the swatch picked for each of
-/// its colour choices (Docs/PlayerCharacter.md, Phase 5), the option picked for each of its part slots (Phase 6), and
-/// this install's player id
+/// its colour choices (Docs/PlayerCharacter.md, Phase 5), the option picked for each of its part slots (Phase 6), the
+/// UI size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), and this
+/// install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -23,6 +24,9 @@ public sealed class UserSettings
     private string characterLook = string.Empty;
     private readonly List<UserColourPick> characterColours = new();
     private readonly List<UserPartPick> characterParts = new();
+    private int uiSizeStep;
+    private bool reduceFlashing;
+    private bool reduceMotion;
     private bool isReadOnly;
 
     /// <summary>
@@ -48,6 +52,21 @@ public sealed class UserSettings
     /// Raised when <see cref="SetCharacterPart"/> changes a part slot's pick.
     /// </summary>
     public event Action CharacterPartsChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetUiSizeStep"/> changes the UI size step.
+    /// </summary>
+    public event Action UiSizeStepChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetReduceFlashing"/> changes whether flashing is reduced.
+    /// </summary>
+    public event Action ReduceFlashingChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetReduceMotion"/> changes whether motion is reduced.
+    /// </summary>
+    public event Action ReduceMotionChanged;
 
     /// <summary>The key binding overrides as written by the Input System, or an empty string for the defaults.</summary>
     public string InputBindingOverrides => inputBindingOverrides;
@@ -92,6 +111,73 @@ public sealed class UserSettings
 
     /// <summary>Whether the file on disk came from a newer build, so changes are not written to it.</summary>
     public bool IsReadOnly => isReadOnly;
+
+    /// <summary>The UI size step above Normal (0) the player asked for; <see cref="UiScale"/> applies what fits.</summary>
+    public int UiSizeStep => uiSizeStep;
+
+    /// <summary>
+    /// Keeps <paramref name="step"/> (at least 0) as the UI size step, writes the file unless it came from a newer
+    /// build, and raises <see cref="UiSizeStepChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetUiSizeStep(int step)
+    {
+        int clamped = Mathf.Max(0, step);
+        if (clamped == uiSizeStep)
+        {
+            return false;
+        }
+
+        uiSizeStep = clamped;
+        bool written = Write();
+        UiSizeStepChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Whether the player reduces flashing: hits flash at a part of their strength and lights stop flickering on this
+    /// machine (Docs/DesignSystem.md, Phase 6). Off by default.
+    /// </summary>
+    public bool ReduceFlashing => reduceFlashing;
+
+    /// <summary>
+    /// Keeps whether the player reduces flashing, writes the file unless it came from a newer build, and raises
+    /// <see cref="ReduceFlashingChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetReduceFlashing(bool reduce)
+    {
+        if (reduce == reduceFlashing)
+        {
+            return false;
+        }
+
+        reduceFlashing = reduce;
+        bool written = Write();
+        ReduceFlashingChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Whether the player reduces motion: the camera does not kick on hits and popups fade in place on this machine
+    /// (Docs/DesignSystem.md, Phase 6). Off by default.
+    /// </summary>
+    public bool ReduceMotion => reduceMotion;
+
+    /// <summary>
+    /// Keeps whether the player reduces motion, writes the file unless it came from a newer build, and raises
+    /// <see cref="ReduceMotionChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetReduceMotion(bool reduce)
+    {
+        if (reduce == reduceMotion)
+        {
+            return false;
+        }
+
+        reduceMotion = reduce;
+        bool written = Write();
+        ReduceMotionChanged?.Invoke();
+        return written;
+    }
 
     /// <summary>
     /// Keeps <paramref name="overrides"/> and writes the file, unless it came from a newer build. Returns whether it was written.
@@ -190,7 +276,7 @@ public sealed class UserSettings
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion).ToJson());
     }
 
     /// <summary>
@@ -226,6 +312,9 @@ public sealed class UserSettings
         inputBindingOverrides = data.InputBindingOverrides;
         playerId = data.PlayerId;
         characterLook = data.CharacterLook;
+        uiSizeStep = data.UiSizeStep;
+        reduceFlashing = data.ReduceFlashing;
+        reduceMotion = data.ReduceMotion;
         foreach (UserColourPick pick in data.CharacterColours)
         {
             if (pick.Choice.Length > 0 && pick.Swatch.Length > 0 && CharacterColour(pick.Choice).Length == 0)

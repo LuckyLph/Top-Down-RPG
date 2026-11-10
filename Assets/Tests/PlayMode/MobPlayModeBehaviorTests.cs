@@ -401,9 +401,9 @@ public class MobPlayModeBehaviorTests
         PlayerWeaponController weaponController = player.GetComponent<PlayerWeaponController>();
         Health playerHealth = player.GetComponent<Health>();
         Health mobHealth = mob.GetComponent<Health>();
-        TextMeshProUGUI healthText = FindTextByName(hud.transform, "HealthText");
-        Image healthFill = FindImageByName(hud.transform, "HealthFill");
-        Image weaponIcon = FindImageByName(hud.transform, "WeaponIcon");
+        TextMeshProUGUI healthText = hud.HealthText;
+        Image healthFill = hud.HealthFill;
+        Image weaponIcon = hud.WeaponIcon;
 
         Assert.That(playerController, Is.Not.Null);
         Assert.That(weaponController, Is.Not.Null);
@@ -473,42 +473,6 @@ public class MobPlayModeBehaviorTests
         }
 
         return kept;
-    }
-
-    /// <summary>
-    /// The first <see cref="Image"/> under <paramref name="root"/>, inactive ones included, on an object named
-    /// <paramref name="objectName"/>, or null.
-    /// </summary>
-    private static Image FindImageByName(Transform root, string objectName)
-    {
-        Image[] images = root.GetComponentsInChildren<Image>(true);
-        for (int i = 0; i < images.Length; i++)
-        {
-            if (images[i] != null && images[i].name == objectName)
-            {
-                return images[i];
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// The first <see cref="TextMeshProUGUI"/> under <paramref name="root"/>, inactive ones included, on an object
-    /// named <paramref name="objectName"/>, or null.
-    /// </summary>
-    private static TextMeshProUGUI FindTextByName(Transform root, string objectName)
-    {
-        TextMeshProUGUI[] texts = root.GetComponentsInChildren<TextMeshProUGUI>(true);
-        for (int i = 0; i < texts.Length; i++)
-        {
-            if (texts[i] != null && texts[i].name == objectName)
-            {
-                return texts[i];
-            }
-        }
-
-        return null;
     }
 
     /// <summary>

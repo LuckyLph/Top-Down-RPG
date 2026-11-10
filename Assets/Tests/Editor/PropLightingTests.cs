@@ -24,6 +24,7 @@ public class PropLightingTests
     private readonly List<Object> created = new();
     private ManualClock time;
     private DayClock day;
+    private UserSettings preferences;
 
     /// <summary>
     /// A day of 100 s and a night of 25 s starting at sunrise, the night lights off at sunrise and noon and full from
@@ -43,6 +44,7 @@ public class PropLightingTests
             new DayLightKey(0.96f, Color.grey, Color.black, 1f)
         }, flicker: 8f, glowFlicker: 0.33f));
         day = new DayClock(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
+        preferences = new UserSettings(new MemorySaveStore());
     }
 
     /// <summary>
@@ -73,7 +75,7 @@ public class PropLightingTests
         PropLight steady = CreateLight(new Vector2(3f, 4f), 1.2f, 0f);
         PropLight flickering = CreateLight(new Vector2(8.25f, 1.5f), 1f, 0.2f);
         PropLight[] lights = { steady, flickering };
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         lighting.Add(lights, null, null, null);
         lighting.Start();
         Assert.That(steady.LightSource.enabled, Is.False, "Off at sunrise.");
@@ -116,7 +118,7 @@ public class PropLightingTests
     public void PropLights_BurnAtTheNightLightsShare()
     {
         PropLight light = CreateLight(Vector2.zero, 1.2f, 0f);
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         lighting.Add(new[] { light }, null, null, null);
         time.Advance(75f);
         lighting.Start();
@@ -139,7 +141,7 @@ public class PropLightingTests
         Worlds worlds = new();
         worlds.Add(new LoadedWorld(indoorWorld, default, null, worldLighting));
         PropLight light = CreateLight(Vector2.zero, 0.9f, 0f);
-        PropLighting lighting = new(day, time, worlds);
+        PropLighting lighting = new(day, time, worlds, preferences);
         lighting.Start();
         lighting.Add(new[] { light }, null, null, indoorWorld);
         Assert.That(light.LightSource.enabled, Is.True, "Indoors the lights burn by day.");
@@ -153,7 +155,7 @@ public class PropLightingTests
     [Test]
     public void AChunksLights_BurnAsItIsAdded_AndAreLeftAloneOnceRemoved()
     {
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         time.Advance(105f);
         lighting.Start();
         PropLight light = CreateLight(Vector2.zero, 1f, 0f);
@@ -177,7 +179,7 @@ public class PropLightingTests
     [Test]
     public void TheFlickersStep_GoesToTheShaders()
     {
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         time.Advance(10f);
         lighting.Start();
         Assert.That(Shader.GetGlobalVector(GlowFlickerId), Is.EqualTo(new Vector4(80f, 0.33f, 0f, 0f)));
@@ -210,12 +212,57 @@ public class PropLightingTests
         }
 
         Assert.That(starts.Count, Is.GreaterThan(3), "Flames side by side start on frames of their own.");
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         time.Advance(10f);
         lighting.Start();
         Assert.That(day.Light.NightLights, Is.EqualTo(0f), "It is day.");
         Assert.That(Shader.GetGlobalVector(GlowFlickerId).y, Is.GreaterThan(0f), "The flames move by day.");
         lighting.Dispose();
+    }
+
+    /// <summary>
+    /// This machine's Reduce flashing (Docs/DesignSystem.md, Phase 6) stills the flicker as the panel's flicker override
+    /// does, from the next update: a flickering light burns steady at its strength, the shaders show no pixel
+    /// flickering and the flames hold their first frame (the step at 0). The preference never writes the override,
+    /// which stays the panel's: the flicker stands still while either asks and moves again once neither does.
+    /// </summary>
+    [Test]
+    public void ReduceFlashing_StillsTheFlicker_AndLeavesTheOverrideToThePanel()
+    {
+        PropLight light = CreateLight(new Vector2(2f, 3f), 1.2f, 0.2f);
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
+        lighting.Add(new[] { light }, null, null, null);
+        time.Advance(102f);
+        lighting.Start();
+        Assert.That(lighting.Flickers, Is.True);
+        Assert.That(Shader.GetGlobalVector(GlowFlickerId).x, Is.GreaterThan(0f));
+
+        preferences.SetReduceFlashing(true);
+        for (int i = 0; i < 4; i++)
+        {
+            time.Advance(0.125f);
+            lighting.Tick();
+            Assert.That(light.LightSource.intensity, Is.EqualTo(1.2f).Within(1e-5f), "Still, it burns steady at its strength.");
+        }
+
+        Assert.That(lighting.Flickers, Is.False);
+        Assert.That(lighting.FlickerOverride, Is.EqualTo(LightingOverride.Follow), "The preference never writes the panel's override.");
+        Assert.That(Shader.GetGlobalVector(GlowFlickerId).x, Is.EqualTo(0f), "The flames hold their first frame.");
+        Assert.That(Shader.GetGlobalVector(GlowFlickerId).y, Is.EqualTo(0f), "No pixel flickers.");
+
+        lighting.FlickerOverride = LightingOverride.Off;
+        preferences.SetReduceFlashing(false);
+        time.Advance(0.125f);
+        lighting.Tick();
+        Assert.That(lighting.Flickers, Is.False, "The panel still asks.");
+        Assert.That(light.LightSource.intensity, Is.EqualTo(1.2f).Within(1e-5f));
+
+        lighting.FlickerOverride = LightingOverride.Follow;
+        lighting.Tick();
+        int step = Mathf.FloorToInt(time.Time * 8f);
+        Assert.That(lighting.Flickers, Is.True);
+        Assert.That(Shader.GetGlobalVector(GlowFlickerId), Is.EqualTo(new Vector4(step, 0.33f, 0f, 0f)));
+        Assert.That(light.LightSource.intensity, Is.EqualTo(PropLighting.StrengthAt(1.2f, 0.2f, 1f, step, PropLighting.SeedOf(light.transform.position))).Within(1e-5f));
     }
 
     /// <summary>
@@ -228,7 +275,7 @@ public class PropLightingTests
     {
         PropLight light = CreateLight(new Vector2(2f, 3f), 1.2f, 0.2f);
         TerrainBlendRenderer ground = CreateGlowingGround(1.3f);
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         lighting.Add(new[] { light }, null, ground, null);
         time.Advance(10f);
         lighting.Start();
@@ -297,7 +344,7 @@ public class PropLightingTests
         ShadowCaster2D far = CreateCaster(new Vector2(9f, 0f));
         ShadowCaster2D byPlain = CreateCaster(new Vector2(12.5f, 1f));
         ShadowCaster2D neighbour = CreateCaster(new Vector2(-3f, -1f));
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         lighting.Add(new[] { casting, plain }, new[] { near, far, byPlain }, null, null);
         lighting.Start();
         Assert.That(lighting.AwakeCasters, Is.Zero, "Every caster sleeps by day.");
@@ -335,7 +382,7 @@ public class PropLightingTests
         ShadowCaster2D besideSecond = CreateCaster(new Vector2(1f, 2.5f));
         PropLight[] firstChunk = { first };
         PropLight[] secondChunk = { second };
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         time.Advance(102f);
         lighting.Start();
         lighting.Add(firstChunk, new[] { between }, null, null);
@@ -365,7 +412,7 @@ public class PropLightingTests
         PropLight plain = CreateLight(new Vector2(20f, 0f), 1f, 0f, 4f);
         plain.LightSource.shadowsEnabled = false;
         ShadowCaster2D near = CreateCaster(new Vector2(1.5f, 0f));
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         lighting.Add(new[] { casting, plain }, new[] { near }, null, null);
         time.Advance(102f);
         lighting.Start();
@@ -399,7 +446,7 @@ public class PropLightingTests
             casters[i] = CreateCaster(new Vector2(i + 0.5f, 1f));
         }
 
-        PropLighting lighting = new(day, time, new Worlds());
+        PropLighting lighting = new(day, time, new Worlds(), preferences);
         lighting.Add(lights, casters, null, null);
         time.Advance(102f);
         lighting.Start();

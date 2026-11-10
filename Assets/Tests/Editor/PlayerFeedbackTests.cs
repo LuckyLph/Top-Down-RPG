@@ -138,8 +138,11 @@ public class PlayerFeedbackTests
         localPlayer.Assign(new LocalPlayer(abilities.GetComponent<PlayerController>()));
         clock.Advance(10f);
 
+        Assert.That(slots[3].Flash.enabled, Is.False, "No flash shows before a failure.");
         abilities.TryCast(3, default);
-        Assert.That(slots[3].Flash.color.a, Is.GreaterThan(0.5f), "An empty slot flashes when pressed.");
+        Assert.That(slots[3].Flash.enabled, Is.True);
+        Assert.That(slots[3].Flash.color.a, Is.EqualTo(0.6f).Within(0.001f), "An empty slot flashes when pressed, at the flash's opacity.");
+        Assert.That((Vector3)(Vector4)slots[3].Flash.color, Is.EqualTo((Vector3)(Vector4)TestThemes.Shared.Colour(UiColour.Danger)), "The flash is in Danger.");
 
         clock.Advance(AbilityBarPresenter.FlashSeconds / 2f);
         barPresenter.Tick();
@@ -149,7 +152,10 @@ public class PlayerFeedbackTests
         clock.Advance(AbilityBarPresenter.FlashSeconds);
         barPresenter.Tick();
         Assert.That(slots[3].Flash.color.a, Is.Zero);
+        Assert.That(slots[3].Flash.enabled, Is.False, "A finished flash hides.");
         Assert.That(slots[0].Flash.color.a, Is.Zero);
+        Assert.That(slots[3].GetComponent<Image>().color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.SurfaceEmpty)), "An empty slot's frame is SurfaceEmpty.");
+        Assert.That(slots[0].GetComponent<Image>().color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.Surface)), "A filled slot's frame is Surface.");
     }
 
     /// <summary>
@@ -257,7 +263,7 @@ public class PlayerFeedbackTests
     }
 
     /// <summary>
-    /// An attack move drops a marker in the attack move colour at the cursor, even over an enemy.
+    /// An attack move drops a marker in the theme's Danger role at the cursor, even over an enemy.
     /// </summary>
     [Test]
     public void Feedback_DropsAnAttackMoveMarker_EvenOverAnEnemy()
@@ -272,8 +278,7 @@ public class PlayerFeedbackTests
         Assert.That(layer.ActiveMarkerCount, Is.EqualTo(1));
         MoveMarker marker = layer.GetComponentInChildren<MoveMarker>();
         Assert.That((Vector2)marker.transform.position, Is.EqualTo(new Vector2(10f, 20f)));
-        Color color = marker.GetComponent<SpriteRenderer>().color;
-        Assert.That(color.r, Is.GreaterThan(color.g), "Attack move markers are red, move markers green.");
+        Assert.That(marker.GetComponent<SpriteRenderer>().color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.Danger)), "Attack move markers are in Danger, move markers in Positive.");
     }
 
     /// <summary>
@@ -355,6 +360,7 @@ public class PlayerFeedbackTests
                 Child<TextMeshProUGUI>(slotObject, "CooldownText"),
                 Child<TextMeshProUGUI>(slotObject, "Key"),
                 Child<Image>(slotObject, "Flash"));
+            slots[i].ConfigureTheme(TestThemes.Shared);
         }
 
         bar = barObject.AddComponent<AbilityBarView>();
@@ -394,21 +400,19 @@ public class PlayerFeedbackTests
     }
 
     /// <summary>
-    /// Builds a pointer feedback layer with a move marker template and hover ring, a local player that is alive or
-    /// dead per <paramref name="alive"/>, and a presenter whose fake pointer starts at the screen center, which the
-    /// test camera maps to (10, 20).
+    /// Builds a pointer feedback layer with move and attack move marker templates and a hover ring, a local player
+    /// that is alive or dead per <paramref name="alive"/>, and a presenter whose fake pointer starts at the screen
+    /// center, which the test camera maps to (10, 20).
     /// </summary>
     private (PointerFeedbackPresenter, PointerFeedbackLayer, FakePlayerInput) CreateFeedback(bool alive)
     {
-        GameObject markerTemplate = Track(new GameObject("MarkerTemplate"));
-        markerTemplate.SetActive(false);
-        markerTemplate.AddComponent<SpriteRenderer>();
-        MoveMarker markerPrefab = markerTemplate.AddComponent<MoveMarker>();
+        MoveMarker markerPrefab = CreateMarkerTemplate("MoveMarkerTemplate", UiColour.Positive);
+        MoveMarker attackMarkerPrefab = CreateMarkerTemplate("AttackMarkerTemplate", UiColour.Danger);
         GameObject layerObject = Track(new GameObject("PointerFeedback"));
         SpriteRenderer ring = new GameObject("HoverRing").AddComponent<SpriteRenderer>();
         ring.transform.SetParent(layerObject.transform);
         PointerFeedbackLayer layer = layerObject.AddComponent<PointerFeedbackLayer>();
-        layer.Configure(markerPrefab, ring, AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/UI/AttackCursor.png"));
+        layer.Configure(markerPrefab, attackMarkerPrefab, ring, AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/UI/AttackCursor.png"));
 
         GameObject player = Track(new GameObject("Player"));
         player.AddComponent<PlayerController>();
@@ -423,6 +427,19 @@ public class PlayerFeedbackTests
         PointerTargetPicker picker = new(settings, new PlayerRegistry());
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f) };
         return (new PointerFeedbackPresenter(input, CreateCamera(new Vector2(10f, 20f)), picker, localPlayer, layer), layer, input);
+    }
+
+    /// <summary>
+    /// Creates an inactive marker template named <paramref name="name"/> in <paramref name="role"/> of the test theme.
+    /// </summary>
+    private MoveMarker CreateMarkerTemplate(string name, UiColour role)
+    {
+        GameObject template = Track(new GameObject(name));
+        template.SetActive(false);
+        template.AddComponent<SpriteRenderer>();
+        MoveMarker marker = template.AddComponent<MoveMarker>();
+        marker.ConfigureTheme(TestThemes.Shared, role);
+        return marker;
     }
 
     /// <summary>

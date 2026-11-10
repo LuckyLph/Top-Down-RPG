@@ -144,6 +144,80 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The UI size step (Docs/DesignSystem.md, Phase 3) is Normal by default and in a file from before it, kept in the
+    /// file once set, raises its change once per change, and is never below Normal.
+    /// </summary>
+    [Test]
+    public void TheUiSizeStep_IsKeptInTheFile()
+    {
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        int changes = 0;
+        settings.UiSizeStepChanged += () => changes++;
+        Assert.That(settings.UiSizeStep, Is.Zero);
+
+        Assert.That(settings.SetUiSizeStep(2), Is.True);
+        Assert.That(settings.SetUiSizeStep(2), Is.False);
+        Assert.That(changes, Is.EqualTo(1));
+        Assert.That(new UserSettings(store).UiSizeStep, Is.EqualTo(2));
+
+        Assert.That(settings.SetUiSizeStep(-3), Is.True);
+        Assert.That(settings.UiSizeStep, Is.Zero);
+        Assert.That(new UserSettings(store).UiSizeStep, Is.Zero);
+
+        Assert.That(UserSettingsData.TryParse("{\"version\":1,\"characterLook\":\"Bandit\"}", out UserSettingsData old), Is.True);
+        Assert.That(old.UiSizeStep, Is.Zero);
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"characterLook\":\"Bandit\"}" }).UiSizeStep, Is.Zero);
+    }
+
+    /// <summary>
+    /// Reduce flashing and reduce motion (Docs/DesignSystem.md, Phase 6) are off by default and in a file from before
+    /// them; changing either writes the file at once, raises its own change once per change and leaves the other alone.
+    /// </summary>
+    [Test]
+    public void TheReducePreferences_AreOffByDefault_AndChangingOneWritesTheFile()
+    {
+        const string before = "{\"version\":1,\"characterLook\":\"Bandit\",\"uiSizeStep\":1}";
+        Assert.That(UserSettingsData.TryParse(before, out UserSettingsData old), Is.True);
+        Assert.That(old.ReduceFlashing, Is.False);
+        Assert.That(old.ReduceMotion, Is.False);
+        UserSettings fromBefore = new(new MemorySaveStore { Contents = before });
+        Assert.That(fromBefore.ReduceFlashing, Is.False);
+        Assert.That(fromBefore.ReduceMotion, Is.False);
+        Assert.That(fromBefore.UiSizeStep, Is.EqualTo(1));
+
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        int flashingChanges = 0;
+        int motionChanges = 0;
+        settings.ReduceFlashingChanged += () => flashingChanges++;
+        settings.ReduceMotionChanged += () => motionChanges++;
+        Assert.That(settings.ReduceFlashing, Is.False);
+        Assert.That(settings.ReduceMotion, Is.False);
+
+        Assert.That(settings.SetReduceFlashing(true), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+        Assert.That(settings.SetReduceFlashing(true), Is.False);
+        Assert.That(store.WriteCount, Is.EqualTo(1), "An unchanged value writes nothing.");
+        Assert.That(flashingChanges, Is.EqualTo(1));
+        Assert.That(motionChanges, Is.Zero);
+        UserSettings reread = new(store);
+        Assert.That(reread.ReduceFlashing, Is.True);
+        Assert.That(reread.ReduceMotion, Is.False);
+
+        Assert.That(settings.SetReduceMotion(true), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(2));
+        Assert.That(motionChanges, Is.EqualTo(1));
+        Assert.That(flashingChanges, Is.EqualTo(1));
+        Assert.That(new UserSettings(store).ReduceMotion, Is.True);
+
+        Assert.That(settings.SetReduceFlashing(false), Is.True);
+        Assert.That(new UserSettings(store).ReduceFlashing, Is.False);
+        Assert.That(new UserSettings(store).ReduceMotion, Is.True);
+        Assert.That(flashingChanges, Is.EqualTo(2));
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

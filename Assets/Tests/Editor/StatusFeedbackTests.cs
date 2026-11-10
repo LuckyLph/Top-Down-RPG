@@ -284,8 +284,9 @@ public class StatusFeedbackTests
     }
 
     /// <summary>
-    /// The HUD prefab has an eight-slot status bar whose icons are fully wired and never block clicks, the
-    /// player and weasel carry status visuals, the weasel has four hidden overlay status icons with its health
+    /// The HUD prefab has an eight-slot status bar whose icons are fully wired and block clicks with their frame
+    /// alone (so a click on a shown icon never reaches the world, Docs/DesignSystem.md's Phase 5), the player and
+    /// weasel carry status visuals, the weasel has four hidden overlay status icons with its health
     /// bar, and every catalog status has a unique colour and a visual exactly when it should.
     /// </summary>
     [Test]
@@ -306,7 +307,7 @@ public class StatusFeedbackTests
             Assert.That(icon.StacksLabel, Is.Not.Null);
             foreach (Graphic graphic in icon.GetComponentsInChildren<Graphic>(true))
             {
-                Assert.That(graphic.raycastTarget, Is.False, $"{graphic.name} must not block clicks.");
+                Assert.That(graphic.raycastTarget, Is.EqualTo(graphic == icon.Frame), graphic == icon.Frame ? "The frame blocks clicks." : $"{graphic.name} must not block clicks.");
             }
         }
 

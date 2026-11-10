@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using VContainer.Unity;
 
@@ -12,12 +13,15 @@ using VContainer.Unity;
 /// shows the equipped weapon's gear), its button showing the option the
 /// local settings pick and moving to the next, its reset going back to the first, then a row per colour choice whose
 /// dyes a look's sheets or parts carry (Phase 5), its button showing the swatch the local settings pick and moving to the
-/// next one of its list, its reset going back to the choice's own; then a row per rebindable action of
+/// next one of its list, its reset going back to the choice's own; then a Display section with the UI size row
+/// (Docs/DesignSystem.md, Phase 3), its button showing the size the display shows and moving to the next one that fits,
+/// its reset going back to Normal, and the Reduce flashing and Reduce motion toggle rows (Phase 6), each button reading
+/// On or Off and turning it the other way, each reset turning it off; then a row per rebindable action of
 /// <see cref="InputBindings"/> under its section, rebinding a row when its binding is selected (listening starts on the
 /// next tick, so the click itself is never captured), naming the action that moved on a swap, resetting one row or all
 /// of them after a confirmation; and it closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back
 /// closes the confirmation, or else the screen, and does nothing while a rebind is pending or listening (the rebind
-/// itself takes Escape as cancel).
+/// itself takes Escape as cancel). Opening it selects the first row.
 /// </summary>
 public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, IMenuLayer
 {
@@ -26,12 +30,20 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     public const string ResetAllNotice = "All controls are back to their defaults.";
     public const string CharacterSection = "Character";
     public const string LookLabel = "Look";
+    public const string DisplaySection = "Display";
+    public const string UiSizeLabel = "UI size";
+    public static readonly string[] UiSizeNames = { "Normal", "Large", "Larger" };
+    public const string ReduceFlashingLabel = "Reduce flashing";
+    public const string ReduceMotionLabel = "Reduce motion";
+    public const string OnName = "On";
+    public const string OffName = "Off";
 
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
     private readonly MenuStack menus;
     private readonly UISelection selection;
     private readonly UserSettings settings;
+    private readonly UiScale uiScale;
     private readonly List<KeyBindingRowView> rows = new();
     private readonly List<KeyBindingRowView> colourRows = new();
     private readonly List<int> colourChoices = new();
@@ -39,27 +51,35 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private readonly List<CharacterPartSlot> partSlots = new();
     private CharacterParts parts;
     private KeyBindingRowView lookRow;
+    private KeyBindingRowView uiSizeRow;
+    private KeyBindingRowView reduceFlashingRow;
+    private KeyBindingRowView reduceMotionRow;
     private Action onClosed;
     private int pendingRebind = -1;
     private int listeningRow = -1;
 
     /// <summary>
-    /// Creates a closed options controller that edits <paramref name="bindings"/> and the look kept in
-    /// <paramref name="settings"/> through <paramref name="view"/>.
+    /// Creates a closed options controller that edits <paramref name="bindings"/>, and the look, colours, parts and UI
+    /// size step kept in <paramref name="settings"/>, through <paramref name="view"/>; the UI size row offers the steps
+    /// <paramref name="scale"/> says fit.
     /// </summary>
-    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection, UserSettings settings)
+    public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection, UserSettings settings, UiScale scale)
     {
         this.view = view;
         this.bindings = bindings;
         this.menus = menus;
         this.selection = selection;
         this.settings = settings;
+        uiScale = scale;
     }
 
     public bool IsOpen => view.IsShown;
     public bool IsListening => listeningRow >= 0;
     internal int RowCount => rows.Count;
     internal KeyBindingRowView LookRow => lookRow;
+    internal KeyBindingRowView UiSizeRow => uiSizeRow;
+    internal KeyBindingRowView ReduceFlashingRow => reduceFlashingRow;
+    internal KeyBindingRowView ReduceMotionRow => reduceMotionRow;
     internal int ColourRowCount => colourRows.Count;
     internal int PartRowCount => partRows.Count;
 
@@ -88,10 +108,12 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Hides the screen, builds the Character section, then a section header for each new section and a labelled row per
-    /// rebindable action, wires the buttons, and keeps the rows' labels in sync with
-    /// <see cref="InputBindings.BindingsChanged"/>, <see cref="UserSettings.CharacterLookChanged"/> and
-    /// <see cref="UserSettings.CharacterColoursChanged"/>.
+    /// Hides the screen, builds the Character section and the Display section, then a section header for each new
+    /// section and a labelled row per rebindable action, wires the buttons, and keeps the rows' labels in sync with
+    /// <see cref="InputBindings.BindingsChanged"/>, <see cref="UserSettings.CharacterLookChanged"/>,
+    /// <see cref="UserSettings.CharacterColoursChanged"/>, <see cref="UserSettings.UiSizeStepChanged"/>,
+    /// <see cref="UiScale.Changed"/>, <see cref="UserSettings.ReduceFlashingChanged"/> and
+    /// <see cref="UserSettings.ReduceMotionChanged"/>.
     /// </summary>
     public void Start()
     {
@@ -99,6 +121,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         view.HideListening();
         view.SetConfirmShown(false);
         BuildCharacterSection();
+        BuildDisplaySection();
 
         string section = null;
         for (int i = 0; i < bindings.Count; i++)
@@ -148,6 +171,22 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
             settings.CharacterPartsChanged -= RefreshParts;
         }
 
+        if (uiSizeRow != null)
+        {
+            settings.UiSizeStepChanged -= RefreshUiSize;
+            uiScale.Changed -= RefreshUiSize;
+        }
+
+        if (reduceFlashingRow != null)
+        {
+            settings.ReduceFlashingChanged -= RefreshReduceFlashing;
+        }
+
+        if (reduceMotionRow != null)
+        {
+            settings.ReduceMotionChanged -= RefreshReduceMotion;
+        }
+
         menus.Remove(this);
         if (IsListening)
         {
@@ -156,7 +195,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Shows the screen with the first binding selected. <paramref name="closed"/> runs once it closes.
+    /// Shows the screen with its first row selected. <paramref name="closed"/> runs once it closes.
     /// </summary>
     public void Open(Action closed)
     {
@@ -168,7 +207,42 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         RefreshRows();
         view.SetShown(true);
         menus.Push(this);
-        selection.Select(rows.Count > 0 ? rows[0].BindingButton : view.BackButton);
+        KeyBindingRowView first = FirstRow();
+        selection.Select(first != null ? first.BindingButton : view.BackButton);
+    }
+
+    /// <summary>
+    /// The first row of the screen: the Look row, a part row, a colour row, the UI size row, the Reduce flashing row or
+    /// a binding row, in that order; null without rows.
+    /// </summary>
+    private KeyBindingRowView FirstRow()
+    {
+        if (lookRow != null)
+        {
+            return lookRow;
+        }
+
+        if (partRows.Count > 0)
+        {
+            return partRows[0];
+        }
+
+        if (colourRows.Count > 0)
+        {
+            return colourRows[0];
+        }
+
+        if (uiSizeRow != null)
+        {
+            return uiSizeRow;
+        }
+
+        if (reduceFlashingRow != null)
+        {
+            return reduceFlashingRow;
+        }
+
+        return rows.Count > 0 ? rows[0] : null;
     }
 
     /// <summary>
@@ -413,7 +487,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
 
         foreach (int choice in colourChoices)
         {
-            KeyBindingRowView row = view.AddRow();
+            KeyBindingRowView row = view.AddSwatchRow();
             row.SetLabel(colours.Get(choice).Name);
             row.BindingButton.onClick.AddListener(() => NextColour(choice));
             row.ResetButton.onClick.AddListener(() => ResetColour(choice));
@@ -425,6 +499,123 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
             settings.CharacterColoursChanged += RefreshColours;
             RefreshColours();
         }
+    }
+
+    /// <summary>
+    /// Builds the Display section: its UI size row, when there is a UI zoom to follow, then the Reduce flashing and
+    /// Reduce motion toggle rows.
+    /// </summary>
+    private void BuildDisplaySection()
+    {
+        if (settings == null)
+        {
+            return;
+        }
+
+        view.AddSectionHeader(DisplaySection);
+        if (uiScale != null)
+        {
+            uiSizeRow = view.AddRow();
+            uiSizeRow.SetLabel(UiSizeLabel);
+            uiSizeRow.BindingButton.onClick.AddListener(NextUiSize);
+            uiSizeRow.ResetButton.onClick.AddListener(ResetUiSize);
+            settings.UiSizeStepChanged += RefreshUiSize;
+            uiScale.Changed += RefreshUiSize;
+            RefreshUiSize();
+        }
+
+        reduceFlashingRow = AddToggleRow(ReduceFlashingLabel, () => SetToggle(settings.SetReduceFlashing, !settings.ReduceFlashing), () => SetToggle(settings.SetReduceFlashing, false));
+        reduceMotionRow = AddToggleRow(ReduceMotionLabel, () => SetToggle(settings.SetReduceMotion, !settings.ReduceMotion), () => SetToggle(settings.SetReduceMotion, false));
+        settings.ReduceFlashingChanged += RefreshReduceFlashing;
+        settings.ReduceMotionChanged += RefreshReduceMotion;
+        RefreshReduceFlashing();
+        RefreshReduceMotion();
+    }
+
+    /// <summary>
+    /// Adds a toggle row labelled <paramref name="label"/> whose button runs <paramref name="toggle"/> and whose reset
+    /// runs <paramref name="reset"/>.
+    /// </summary>
+    private KeyBindingRowView AddToggleRow(string label, UnityAction toggle, UnityAction reset)
+    {
+        KeyBindingRowView row = view.AddToggleRow();
+        row.SetLabel(label);
+        row.BindingButton.onClick.AddListener(toggle);
+        row.ResetButton.onClick.AddListener(reset);
+        return row;
+    }
+
+    /// <summary>
+    /// Keeps <paramref name="on"/> through <paramref name="set"/>, a toggle row's setter. Ignored while listening or
+    /// confirming.
+    /// </summary>
+    private void SetToggle(Func<bool, bool> set, bool on)
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            set(on);
+        }
+    }
+
+    /// <summary>
+    /// Shows whether flashing is reduced on the Reduce flashing row.
+    /// </summary>
+    private void RefreshReduceFlashing()
+    {
+        ShowToggle(reduceFlashingRow, settings.ReduceFlashing);
+    }
+
+    /// <summary>
+    /// Shows whether motion is reduced on the Reduce motion row.
+    /// </summary>
+    private void RefreshReduceMotion()
+    {
+        ShowToggle(reduceMotionRow, settings.ReduceMotion);
+    }
+
+    /// <summary>
+    /// Shows <paramref name="on"/> on <paramref name="row"/>: its button reads On or Off and its box is marked while on.
+    /// </summary>
+    private static void ShowToggle(KeyBindingRowView row, bool on)
+    {
+        row.SetBinding(on ? OnName : OffName);
+        row.SetToggle(on);
+    }
+
+    /// <summary>
+    /// The UI size step the display shows: the one the local settings ask for, lowered to the steps that fit.
+    /// </summary>
+    private int UiSizeStep => Mathf.Clamp(settings.UiSizeStep, 0, Mathf.Min(uiScale.StepsThatFit, UiSizeNames.Length - 1));
+
+    /// <summary>
+    /// UI size button: keeps the next size that fits, after the largest Normal. Ignored while listening or confirming.
+    /// </summary>
+    private void NextUiSize()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            int sizes = Mathf.Min(uiScale.StepsThatFit, UiSizeNames.Length - 1) + 1;
+            settings.SetUiSizeStep((UiSizeStep + 1) % sizes);
+        }
+    }
+
+    /// <summary>
+    /// UI size reset button: back to Normal. Ignored while listening or confirming.
+    /// </summary>
+    private void ResetUiSize()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetUiSizeStep(0);
+        }
+    }
+
+    /// <summary>
+    /// Shows the UI size the display shows on the UI size row's button.
+    /// </summary>
+    private void RefreshUiSize()
+    {
+        uiSizeRow.SetBinding(UiSizeNames[UiSizeStep]);
     }
 
     /// <summary>
@@ -522,7 +713,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         for (int i = 0; i < colourRows.Count; i++)
         {
             int choice = colourChoices[i];
-            colourRows[i].SetBinding(colours.Swatches(choice)[ColourIndex(choice)].Name);
+            CharacterSwatch swatch = colours.Swatches(choice)[ColourIndex(choice)];
+            colourRows[i].SetBinding(swatch.Name);
+            colourRows[i].SetSwatch(swatch.Ramps.Count > 0 ? swatch.Ramps[0].Middle : Color.clear);
         }
     }
 

@@ -1,13 +1,16 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// One passive status icon on the HUD: a frame in the status colour, its icon (or its abbreviation when it has
-/// none), a radial fill that darkens as the status runs out, and a stack count above 1.
+/// none), a radial fill that darkens as the status runs out, and a stack count above 1. Its frame is a raycast target,
+/// so a click on a shown icon never reaches the world. As an <see cref="ITooltipSource"/> it gives its status's name
+/// and description.
 /// </summary>
 [DisallowMultipleComponent]
-public class StatusIconView : MonoBehaviour
+public class StatusIconView : MonoBehaviour, ITooltipSource
 {
     private const int MaxShownStacks = 99;
 
@@ -26,6 +29,8 @@ public class StatusIconView : MonoBehaviour
     internal Image ElapsedFill => elapsedFill;
     internal TextMeshProUGUI StacksLabel => stacksText;
     internal StatusEffectDefinition Shown { get; private set; }
+
+    public event Action TooltipChanged;
 
     /// <summary>
     /// Logs an error when any image or text reference is missing.
@@ -70,6 +75,7 @@ public class StatusIconView : MonoBehaviour
         }
 
         gameObject.SetActive(true);
+        TooltipChanged?.Invoke();
     }
 
     /// <summary>
@@ -90,6 +96,16 @@ public class StatusIconView : MonoBehaviour
     {
         Shown = null;
         gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// The shown status's name and description; false while the icon shows none.
+    /// </summary>
+    public bool TryGetTooltip(out string title, out string description)
+    {
+        title = Shown != null ? Shown.DisplayName : null;
+        description = Shown != null ? Shown.Description : null;
+        return Shown != null;
     }
 
     /// <summary>

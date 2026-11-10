@@ -450,7 +450,7 @@ public class DamageResolutionTests
 
     /// <summary>
     /// The presenter colours damage popups by type, shows the immune text and "+amount" heals in their colours,
-    /// and scales periodic hits by the periodic popup scale.
+    /// and shows periodic hits at the periodic popup size, the others at the popup's own.
     /// </summary>
     [Test]
     public void DamagePopupPresenter_ColoursByTypeShowsImmuneAndHeals_AndShrinksPeriodicHits()
@@ -472,10 +472,14 @@ public class DamageResolutionTests
 
         TextMeshProUGUI[] texts = layer.GetComponentsInChildren<TextMeshProUGUI>();
         Assert.That(texts.Length, Is.EqualTo(4));
+        UiTheme theme = TestThemes.Shared;
         foreach (TextMeshProUGUI text in texts)
         {
-            float expectedScale = text.text == "3" ? settings.PeriodicPopupScale : 1f;
-            Assert.That(text.transform.localScale.x, Is.EqualTo(expectedScale), $"Popup '{text.text}' scale.");
+            UiTextSize expected = text.text == "3" ? settings.PeriodicPopupSize : UiTextSize.Heading;
+            Assert.That(text.fontSize, Is.EqualTo(theme.Style(expected).Pixels), $"Popup '{text.text}' size.");
+            Assert.That(text.font, Is.SameAs(theme.Style(expected).Font), $"Popup '{text.text}' font.");
+            Assert.That(text.fontSharedMaterial, Is.SameAs(theme.Style(expected).Outlined), $"Popup '{text.text}' outline.");
+            Assert.That(text.transform.localScale.x, Is.EqualTo(1f), $"Popup '{text.text}' scale.");
         }
 
         AssertPopup(texts, "20", settings.GetColor(DamageType.Fire));
@@ -500,30 +504,26 @@ public class DamageResolutionTests
     }
 
     /// <summary>
-    /// The player and weasel prefabs have 100 health and their factions, and the sword and default mob config deal
-    /// their rescaled physical damage.
+    /// The player and weasel prefabs fight for their factions, and the sword and default mob config deal physical
+    /// damage. Their numbers are in Docs/Generated, which <c>DesignTablesTests</c> keeps current, rather than pinned
+    /// here (Docs/DesignSystem.md, Phase 2).
     /// </summary>
     [Test]
-    public void Content_UsesTheRescaledNumbersAndFactionProfiles()
+    public void Content_UnitsFightForTheirFactions_WithPhysicalHits()
     {
         GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Mobs/Weasel.prefab");
         PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>("Assets/Data/Weapons/Sword.asset");
         MobConfig mob = AssetDatabase.LoadAssetAtPath<MobConfig>("Assets/Settings/AI/Mob_Default.asset");
 
-        Assert.That(player.GetComponent<Health>().MaxHealth, Is.EqualTo(100));
-        Assert.That(weasel.GetComponent<Health>().MaxHealth, Is.EqualTo(100));
         Assert.That(player.GetComponent<DamageReceiver>().Faction, Is.EqualTo(Faction.Players));
         Assert.That(weasel.GetComponent<DamageReceiver>().Faction, Is.EqualTo(Faction.Mobs));
-        Assert.That(sword.Damage, Is.EqualTo(20));
         Assert.That(sword.DamageType, Is.EqualTo(DamageType.Physical));
-        Assert.That(mob.AttackDamage, Is.EqualTo(10));
         Assert.That(mob.AttackDamageType, Is.EqualTo(DamageType.Physical));
     }
 
     /// <summary>
-    /// The combat settings asset has the expected resistance cap, floor and minimum damage, and the Gameplay scene
-    /// references it.
+    /// The Gameplay scene references the project's combat settings; <c>ContentTests</c> checks their values.
     /// </summary>
     [Test]
     public void Content_GameplaySceneHasCombatSettings()
@@ -533,9 +533,6 @@ public class DamageResolutionTests
         string guid = AssetDatabase.AssetPathToGUID("Assets/Data/Combat/CombatSettings.asset");
 
         Assert.That(settings, Is.Not.Null);
-        Assert.That(settings.ResistanceCap, Is.EqualTo(80));
-        Assert.That(settings.ResistanceFloor, Is.EqualTo(-100));
-        Assert.That(settings.MinimumDamage, Is.EqualTo(1));
         Assert.That(scene, Does.Contain("combatSettings: {fileID: 11400000, guid: " + guid));
     }
 
@@ -597,6 +594,7 @@ public class DamageResolutionTests
         canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
         GameObject popupObject = Track(new GameObject("Popup", typeof(RectTransform), typeof(CanvasGroup), typeof(TextMeshProUGUI)));
         popupObject.SetActive(false);
+        popupObject.AddComponent<ThemedText>().Configure(TestThemes.Shared, UiColour.Text, UiColour.Outline, UiTextSize.Heading);
         FloatingDamageText popupPrefab = popupObject.AddComponent<FloatingDamageText>();
         DamagePopupLayer layer = canvasObject.AddComponent<DamagePopupLayer>();
         layer.Configure(popupPrefab);

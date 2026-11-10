@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::AbilityDefinition
   displayName: Blank Roll
   icon: {fileID: 0}
+  description: Roll out of the way. For now the cast plays without moving you.
   cooldown: 5
   castTime: 0.15
   targeting: 1

@@ -38,6 +38,7 @@ public class HitFeedbackTests
     private HitFeedbackSettings settings;
     private LocalPlayerTracker localPlayer;
     private FakeCameraKick cameraKick;
+    private UserSettings preferences;
     private HitFeedbackPresenter presenter;
 
     /// <summary>
@@ -59,7 +60,8 @@ public class HitFeedbackTests
         settings = Track(HitFeedbackSettings.Create(impactPrefab));
         localPlayer = new LocalPlayerTracker();
         cameraKick = new FakeCameraKick();
-        presenter = new HitFeedbackPresenter(events, settings, TestCombat.Settings, localPlayer, cameraKick, effects);
+        preferences = new UserSettings(new MemorySaveStore());
+        presenter = new HitFeedbackPresenter(events, settings, TestCombat.Settings, localPlayer, cameraKick, effects, preferences);
         presenter.Start();
     }
 
@@ -265,6 +267,73 @@ public class HitFeedbackTests
         damage.ApplyDamage(otherMob, 1, DamageType.Physical, other.gameObject);
         damage.ApplyDamage(other, 1, DamageType.Physical, otherMob.gameObject);
         Assert.That(cameraKick.Count, Is.EqualTo(2), "Other players' hits do not kick this camera.");
+    }
+
+    /// <summary>
+    /// With this machine's Reduce flashing on (Docs/DesignSystem.md, Phase 6), a direct hit's flash, an immune hit's and
+    /// a tick's wash show at the settings' reduced share of their strength, in their own colours, and the rest of a hit
+    /// (the hold, the nudge, the impact and the camera kick) shows as before; turned off, a flash is whole again.
+    /// </summary>
+    [Test]
+    public void ReduceFlashing_ShowsEveryFlashAtTheReducedShare()
+    {
+        DamageReceiver attacker = CreatePlayer("Local", Vector2.zero);
+        localPlayer.Assign(new LocalPlayer(attacker.GetComponent<PlayerController>()));
+        DamageReceiver target = CreateUnit("Target", new Vector2(0.9f, 0f), Faction.Mobs);
+        target.SetProfile(Track(CombatProfile.Create(Faction.Mobs, DamageTypeMask.Frost)));
+        HitFeedback struck = target.GetComponent<HitFeedback>();
+        float share = settings.ReducedFlashShare;
+        Assert.That(share, Is.GreaterThan(0f).And.LessThan(1f));
+        preferences.SetReduceFlashing(true);
+
+        damage.ApplyDamage(target, 1, DamageType.Fire, attacker.gameObject);
+        Assert.That(struck.FlashColor, Is.EqualTo(settings.HitFlashColor));
+        Assert.That(struck.FlashAmount, Is.EqualTo(share).Within(1e-6f), "A direct hit.");
+        Assert.That(struck.IsHolding, Is.True);
+        Assert.That(struck.NudgeCount, Is.EqualTo(1));
+        Assert.That(played.Count, Is.EqualTo(1));
+        Assert.That(cameraKick.Count, Is.EqualTo(1), "The camera kick belongs to Reduce motion.");
+
+        damage.ApplyDamage(target, 5, DamageType.Frost, attacker.gameObject);
+        Assert.That(struck.FlashColor, Is.EqualTo(TestCombat.Settings.ImmuneColor));
+        Assert.That(struck.FlashAmount, Is.EqualTo(share).Within(1e-6f), "An immune hit.");
+
+        damage.ApplyPeriodicDamage(target, 1, DamageType.Fire, attacker.gameObject, 1f);
+        Assert.That(struck.FlashColor, Is.EqualTo(TestCombat.Settings.GetColor(DamageType.Fire)));
+        Assert.That(struck.FlashAmount, Is.EqualTo(settings.PeriodicFlashAmount * share).Within(1e-6f), "A tick's wash.");
+
+        preferences.SetReduceFlashing(false);
+        damage.ApplyDamage(target, 1, DamageType.Fire, attacker.gameObject);
+        Assert.That(struck.FlashAmount, Is.EqualTo(1f), "Whole again once turned off.");
+        damage.ApplyPeriodicDamage(target, 1, DamageType.Fire, attacker.gameObject, 1f);
+        Assert.That(struck.FlashAmount, Is.EqualTo(settings.PeriodicFlashAmount));
+    }
+
+    /// <summary>
+    /// With this machine's Reduce motion on (Docs/DesignSystem.md, Phase 6), the camera does not kick for a hit the
+    /// local player lands or takes, while the struck unit still flashes whole, holds, is nudged and shows its impact;
+    /// turned off, the camera kicks again.
+    /// </summary>
+    [Test]
+    public void ReduceMotion_StopsTheCameraKick_AndKeepsTheRestOfAHit()
+    {
+        DamageReceiver local = CreatePlayer("Local", Vector2.zero);
+        DamageReceiver mob = CreateUnit("Mob", new Vector2(0.9f, 0f), Faction.Mobs);
+        localPlayer.Assign(new LocalPlayer(local.GetComponent<PlayerController>()));
+        HitFeedback struck = mob.GetComponent<HitFeedback>();
+        preferences.SetReduceMotion(true);
+
+        damage.ApplyDamage(mob, 1, DamageType.Physical, local.gameObject);
+        damage.ApplyDamage(local, 1, DamageType.Physical, mob.gameObject);
+        Assert.That(cameraKick.Count, Is.Zero, "Neither a hit landed nor one taken kicks the camera.");
+        Assert.That(struck.FlashAmount, Is.EqualTo(1f), "Reduce motion leaves the flash whole.");
+        Assert.That(struck.IsHolding, Is.True);
+        Assert.That(struck.NudgeCount, Is.EqualTo(1));
+        Assert.That(played.Count, Is.EqualTo(2));
+
+        preferences.SetReduceMotion(false);
+        damage.ApplyDamage(mob, 1, DamageType.Physical, local.gameObject);
+        Assert.That(cameraKick.Count, Is.EqualTo(1));
     }
 
     /// <summary>
@@ -596,7 +665,7 @@ public class HitFeedbackTests
         ManualClock time = new();
         CombatEvents duelEvents = new();
         HitService hits = TestCombat.CreateHitService(FixedGameAuthority.Authoritative, duelEvents);
-        HitFeedbackPresenter shown = new(duelEvents, settings, TestCombat.Settings, new LocalPlayerTracker(), new FakeCameraKick(), effects);
+        HitFeedbackPresenter shown = new(duelEvents, settings, TestCombat.Settings, new LocalPlayerTracker(), new FakeCameraKick(), effects, preferences);
         if (feedback)
         {
             shown.Start();

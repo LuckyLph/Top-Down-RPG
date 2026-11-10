@@ -45,6 +45,8 @@ Unity 6 (URP 17.4, 2D) top-down RPG. Input System, VContainer for DI, DualGrid t
 
 `Docs/LightingGaps.md` is the plan for closing the known gaps the lighting left, and the ocean's waves along coasts that run north to south: waves measured along the coast, lamps' shadows on units and props, sun shadows across a caster, light shadows at the smallest zoom, the lava glow map and the first caster's wake off the load, the night previewed in the editor, the editor's shader oddities, and a camera on the art grid. Follow it when working on those, and tick off its phase checklist as steps land.
 
+`Docs/PlayerCharacter.md` is the plan for reworking the player's character: a base character the player makes their own in place of the hooded rogue, its body plan, face, hair and outfit, stylized gaits, idle animations, then its attacks and casts, and its customization (colours, swappable parts, gear that shows). Follow it when working on the player's look, its body plan or recipe, its gaits, idle animations or attacks, or customization, and tick off its phase checklist as steps land.
+
 Use only art generated in this project (recipes and editor tools) or drawn in Aseprite for it, by hand or by Claude through the Aseprite MCP server (`Docs/AsepriteCharacters.md`'s Drawing with Claude), and imported through an Aseprite recipe (character, effect or projectile; `Docs/AsepriteCharacters.md`); import no third-party art.
 
 Respect the assembly dependency direction: Core must not reference Gameplay; runtime code must not reference Editor or DevTools. Put new code in the assembly that matches its role rather than adding asmdef references to make something compile.
@@ -87,7 +89,7 @@ Respect the assembly dependency direction: Core must not reference Gameplay; run
 
 ### 2D specifics
 - Use `Rigidbody2D`/`Collider2D` APIs (not 3D ones). Move bodies through the Rigidbody, not `transform.position`, when physics is involved.
-- Sprites sort by the 2D renderer's custom axis within their sorting layer, a lower one in front (Docs/WorldScale.md). Keep every order on the `Entities` layer at 0: sort a unit, projectile or effect as a `SortingGroup` on its root, and a prop by its sprite's pivot (Sprite Sort Point Pivot). Parts inside a unit's sorting group may order themselves (a player's lantern layer at 1 over its body), the group staying at 0. Never write sorting orders from code, and do not hack `z` positions.
+- Sprites sort by the 2D renderer's custom axis within their sorting layer, a lower one in front (Docs/WorldScale.md). Keep every order on the `Entities` layer at 0: sort a unit, projectile or effect as a `SortingGroup` on its root, and a prop by its sprite's pivot (Sprite Sort Point Pivot). Parts inside a unit's sorting group may order themselves (a carried lantern's layer at 1 over its body), the group staying at 0. Never write sorting orders from code, and do not hack `z` positions.
 - Use Pixel Perfect/consistent PPU settings for sprites; import via the Aseprite importer where sources exist.
 
 ### Logging and errors

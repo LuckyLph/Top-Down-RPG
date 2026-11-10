@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -7,26 +8,34 @@ using UnityEngine.Rendering;
 
 /// <summary>
 /// Tests for how the player and the Weasel prefabs are drawn and sorted (Docs/Animation.md, Rules), on the project's
-/// prefabs and assets, which they only read: the player draws the rogue's baked set from its feet with no Mecanim
+/// prefabs and assets, which they only read: the player draws the adventurer's baked set from its feet with no Mecanim
 /// animator, and its weapon plays on those visuals; the sword's hit area is centred half a unit above the feet; the
 /// sword's attack is in the set, which draws weapons only in attacks, the attack's 80 px frames lining up with the 64 px
 /// locomotion frames at the feet, and the greatsword's and the longbow's too; at the player's base speed, and chilled, it
-/// runs at an unclamped rate so its feet keep up; it plays every ability's cast clip, over the run for its Continue
-/// casts; its look comes from the project's catalog, whose first look is the rogue it is drawn as and whose every look
-/// holds every clip it plays, standing, walking and running clips included; the player and the Weasel sort as a group at
-/// their feet, the Weasel's bar apart from it over every unit; the Weasels draw the Weasel's baked set from their feet with no
-/// Mecanim animator, their config's attack clip in it.
+/// runs at an unclamped rate so its feet keep up, and on either side of every boundary between its gaits the gait it
+/// keeps plays unclamped too; its set holds its five idle animations, which its settings wait for; it plays every ability's cast clip, over the run for its Continue
+/// casts; its look comes from the project's catalog, whose first look is the adventurer it is drawn as, the rogue retired
+/// from it, and whose every look holds every clip it plays, standing, walking and running clips included; its colours
+/// come from the project's colours, which the options menu offers too, drawn on a palette beside its body, the
+/// adventurer's sheets carrying palette maps and the Bandit's none; the adventurer wears the project's parts, the
+/// Bandit none; the player and
+/// the Weasel sort as a group at their feet, the Weasel's bar apart from it over every unit; the Weasels draw the
+/// Weasel's baked set from their feet with no Mecanim animator, their config's attack clip in it.
 /// </summary>
 public class CharacterPrefabTests
 {
     private const string PlayerPath = "Assets/Prefabs/Player/Player.prefab";
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
-    private const string SetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
+    private const string SetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
     private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
+    private const string ColoursPath = "Assets/Data/Characters/CharacterColours.asset";
+    private const string PartsPath = "Assets/Sprites/Characters/Adventurer/Parts/Adventurer_Parts.asset";
+    private const string OptionsMenuPath = "Assets/Prefabs/UI/OptionsMenu.prefab";
+    private const string LitMaterialPath = "Assets/Materials/SpritePixelLit.mat";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
+    private const string AdventurerRecipePath = "Assets/Settings/Characters/Recipe_Adventurer.asset";
     private const string ArrowPath = "Assets/Prefabs/Combat/Arrow.prefab";
-    private const string SwordArtPath = "Assets/Settings/Characters/Weapons/WeaponArt_Sword.asset";
     private const string WeaponsFolder = "Assets/Data/Weapons/";
     private const string WeaponArtFolder = "Assets/Settings/Characters/Weapons/";
     private const float OnePixel = 1f / 32f;
@@ -51,10 +60,64 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The player's look draws on its visuals from the project's catalog of looks, whose first, the rogue, is the set and
-    /// locomotion the prefab is drawn with; every look of it holds a complete clip for every clip the player plays (its
-    /// class's and weapons' casts and its weapons' attacks) and complete standing, walking and running clips, at 32
-    /// pixels per unit and pivoted on the feet, with locomotion settings.
+    /// The player's parts (Docs/PlayerCharacter.md, Phases 6 and 7): the catalog's adventurer wears the project's
+    /// adventurer parts, over its own set, the prefab's; the Bandit, drawn in Aseprite, wears none, and so shows no
+    /// gear; the player's look follows the gear of the weapon its controller equips, whose starting weapon's gear is the
+    /// adventurer's own, and every weapon of the catalog names gear the adventurer's parts hold.
+    /// </summary>
+    [Test]
+    public void ThePlayersParts_AreTheAdventurers()
+    {
+        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
+        CharacterParts parts = AssetDatabase.LoadAssetAtPath<CharacterParts>(PartsPath);
+        Assert.That(parts, Is.Not.Null);
+        Assert.That(looks.Get(0).Parts, Is.EqualTo(parts));
+        Assert.That(parts.Look, Is.EqualTo(looks.Get(0).AnimationSet));
+        Assert.That(parts.Look, Is.EqualTo(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath).GetComponentInChildren<CharacterVisuals>(true).AnimationSet));
+        Assert.That(looks.Get(looks.IndexOf("Bandit")).Parts, Is.Null);
+
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        PlayerWeaponController controller = player.GetComponent<PlayerWeaponController>();
+        Assert.That(new SerializedObject(player.GetComponent<PlayerLook>()).FindProperty("weapon").objectReferenceValue, Is.EqualTo(controller));
+        CharacterPartSlot gear = parts.Get(CharacterSlot.Weapon);
+        Assert.That(gear.GearOption(controller.StartingWeapon.Gear), Is.Zero, "the starting weapon's gear is the look's own");
+        for (int i = 0; i < controller.Catalog.Count; i++)
+        {
+            PlayerWeapon weapon = controller.Catalog.Get(i);
+            Assert.That(gear.IndexOf(weapon.Gear), Is.EqualTo(i), weapon.name);
+        }
+    }
+
+    /// <summary>
+    /// The player's colours (Docs/PlayerCharacter.md, Phase 5) are the project's colours, drawn by a palette beside its
+    /// body's renderer, which draws with the lit sprite material, and the options menu offers the same colours; the
+    /// adventurer's set names the dyes its sheets carry, while the Bandit's, drawn in Aseprite, names none.
+    /// </summary>
+    [Test]
+    public void ThePlayersColours_DrawOnAPaletteBesideItsBody()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterColours colours = AssetDatabase.LoadAssetAtPath<CharacterColours>(ColoursPath);
+        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
+        PlayerLook look = player.GetComponent<PlayerLook>();
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        CharacterPalette palette = visuals.GetComponent<CharacterPalette>();
+        Assert.That(colours, Is.Not.Null);
+        Assert.That(palette, Is.Not.Null, "The palette sits beside the body's renderer.");
+        SerializedObject serialized = new(look);
+        Assert.That(serialized.FindProperty("colours").objectReferenceValue, Is.EqualTo(colours));
+        Assert.That(serialized.FindProperty("palette").objectReferenceValue, Is.EqualTo(palette));
+        Assert.That(visuals.GetComponent<SpriteRenderer>().sharedMaterial, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Material>(LitMaterialPath)));
+        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(OptionsMenuPath).GetComponentInChildren<OptionsMenuView>(true).Colours, Is.EqualTo(colours));
+        Assert.That(looks.Get(0).AnimationSet.Dyes, Is.Not.Zero, "The adventurer carries palette maps.");
+        Assert.That(looks.Get(looks.IndexOf("Bandit")).AnimationSet.Dyes, Is.Zero, "The Bandit keeps its own colours.");
+    }
+
+    /// <summary>
+    /// The player's look draws on its visuals from the project's catalog of looks, whose first, the adventurer, is the set
+    /// and locomotion the prefab is drawn with, the rogue no longer one of them; every look of it holds a complete clip
+    /// for every clip the player plays (its class's and weapons' casts and its weapons' attacks) and complete standing,
+    /// walking and running clips, at 32 pixels per unit and pivoted on the feet, with locomotion settings.
     /// </summary>
     [Test]
     public void ThePlayersLooks_HoldEveryClipItPlays()
@@ -68,6 +131,8 @@ public class CharacterPrefabTests
         Assert.That(serialized.FindProperty("catalog").objectReferenceValue, Is.EqualTo(looks));
         Assert.That(serialized.FindProperty("visuals").objectReferenceValue, Is.EqualTo(visuals));
         Assert.That(looks.Count, Is.GreaterThanOrEqualTo(2));
+        Assert.That(looks.Get(0).Name, Is.EqualTo("Adventurer"));
+        Assert.That(looks.IndexOf("Rogue"), Is.EqualTo(-1), "The rogue is retired.");
         Assert.That(looks.Get(0).AnimationSet, Is.EqualTo(visuals.AnimationSet), "The first look is the prefab's own.");
         Assert.That(looks.Get(0).Locomotion, Is.EqualTo(visuals.Locomotion));
 
@@ -98,14 +163,14 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The player's <c>Visuals</c> child sits on its root, the feet, and draws the rogue's set through
+    /// The player's <c>Visuals</c> child sits on its root, the feet, and draws the adventurer's set through
     /// <see cref="CharacterVisuals"/> (which its motor feeds) with a sprite pivoted on the feet; nothing in the prefab
     /// is a Mecanim animator; its sorter sorts by the root, the feet, so a hit's nudge of the sprite never re-sorts it;
     /// the feet collider on the root starts within a pixel of the feet and lies within the sprite's width; and neither
     /// the player nor the arrow it shoots is scaled, so their pixels are the terrain's.
     /// </summary>
     [Test]
-    public void ThePlayer_DrawsTheRogueFromItsFeet()
+    public void ThePlayer_DrawsTheAdventurerFromItsFeet()
     {
         GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
@@ -146,10 +211,10 @@ public class CharacterPrefabTests
 
     /// <summary>
     /// The player plays its casts on its visuals (<see cref="PlayerCastVisuals"/>, wired to its abilities and visuals),
-    /// and every ability of its class and of every catalog weapon names a cast clip in the rogue's set with a release
-    /// frame, released 60 ms and followed through for 0.24 s (the instant Leap's flourish 0.3 s); the Continue casts
-    /// (Smite and Whirl) also name their clip over the run, eight run frames under the same cast frames and release, and
-    /// the others none; only Smite, the one cast over 0.5 s, channels.
+    /// and every ability of its class and of every catalog weapon names a cast clip in the adventurer's set with a
+    /// release frame, released 60 ms and followed through for 0.24 s (the instant Leap's flourish 0.3 s); the Continue
+    /// casts (Smite and Whirl) also name their clip over the run, eight run frames under the same cast frames and
+    /// release, and the others none; only Smite, the one cast over 0.5 s, channels.
     /// </summary>
     [Test]
     public void ThePlayer_PlaysEveryAbilitysCastClip()
@@ -217,84 +282,111 @@ public class CharacterPrefabTests
     }
 
     /// <summary>
-    /// The sword's attack is in the rogue's set with the contact frame its motion keys (frame 4, after a windup of frames
-    /// 0 to 3), and the set holds no carried clips: the weapons only show in their attacks and their own casts, never
-    /// standing or moving. The attack's 80 px
-    /// frames pivot on the feet like the 64 px locomotion frames: in every direction the first attack frame and the first
-    /// idle frame put the top of the hood at the same height above the feet and the boots within a pixel of each other
-    /// (the sword's own pixels left out, since its first frame holds it low).
+    /// The set holds no carried clips: the weapons only show in their attacks and their own casts, never standing or
+    /// moving.
     /// </summary>
     [Test]
-    public void TheSwordsClips_AreInTheSet_AndLineUpWithTheLocomotionAtTheFeet()
+    public void TheSet_DrawsTheWeaponsOnlyInAttacksAndCasts()
     {
-        PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(SwordPath);
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
-        CharacterAnimationClip attack = set.Find(sword.AttackClip);
-        CharacterAnimationClip idle = set.Locomotion(CharacterGait.Idle);
-        Assert.That(attack, Is.Not.Null);
-        Assert.That(attack.HasContact, Is.True);
-        Assert.That(attack.ContactFrame, Is.EqualTo(4));
         foreach (CharacterAnimationClip clip in set.Clips)
         {
             Assert.That(!clip.Armed || clip.HasContact, Is.True, $"{clip.Name}: only attacks and weapon casts draw a weapon.");
             Assert.That(clip.Gait == CharacterGait.None || !clip.Armed, Is.True, $"{clip.Name}: the character stands and moves unarmed.");
         }
-
-        Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
-        Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
-        HashSet<Color32> swordColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(SwordArtPath));
-        for (int direction = 0; direction < CharacterDirections.Count; direction++)
-        {
-            Sprite attackFrame = attack.SpriteAt(direction, 0);
-            Sprite idleFrame = idle.SpriteAt(direction, 0);
-            Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(80f, 80f)));
-            Assert.That(idleFrame.rect.size, Is.EqualTo(new Vector2(64f, 64f)));
-            OpaqueRows(attackSheet, attackFrame, swordColours, out int attackBottom, out int attackTop);
-            OpaqueRows(idleSheet, idleFrame, swordColours, out int idleBottom, out int idleTop);
-            string name = CharacterDirections.Name(direction);
-            Assert.That(attackTop, Is.EqualTo(idleTop), $"{name}: the hood's top.");
-            Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(1), $"{name}: the boots.");
-        }
     }
 
     /// <summary>
-    /// The greatsword's and the longbow's attacks (contact frame 5 each) start where the character stands: in every
-    /// direction their first frame (96 and 80 px, pivoted on the feet) puts the top of the hood within a pixel of the
-    /// idle's and the boots within two, the weapon's own pixels left out. The greatsword's first pose bends its knees,
-    /// sitting the hood a pixel lower in most directions.
+    /// Each attack of the sword, the greatsword and the longbow is in the adventurer's set with the contact frame its
+    /// motion keys (the sword's frame 4 after a windup of frames 0 to 3, the others' frame 5) and starts where the
+    /// character stands: its frames (80, 96 and 80 px) pivot on the feet like the 64 px locomotion frames, and in every
+    /// direction its first frame puts the top of the head within a pixel of the idle's and the boots within two, the
+    /// weapon's own pixels left out, and the sword carried at the hip with its scabbard, the look's own gear, whose empty
+    /// scabbard the sword's attacks keep (Docs/PlayerCharacter.md, Phase 7). The greatsword's attacks start lower, their first poses bending the knees: the
+    /// cleave's head within two pixels, the sweep's within three.
     /// </summary>
     [Test]
-    public void TheGreatswordAndBowAttacks_LineUpWithTheLocomotionAtTheFeet()
+    public void ThePlayersAttacks_AreInTheSet_AndLineUpWithTheLocomotionAtTheFeet()
     {
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
         CharacterAnimationClip idle = set.Locomotion(CharacterGait.Idle);
         Texture2D idleSheet = Track(LoadSheet(idle.SpriteAt(0, 0)));
-        string[] weapons = { "Greatsword", "Longbow" };
-        string[] arts = { "WeaponArt_Greatsword", "WeaponArt_Bow" };
-        float[] sizes = { 96f, 80f };
+        string[] weapons = { "Sword", "Greatsword", "Longbow" };
+        string[] arts = { "WeaponArt_Sword", "WeaponArt_Greatsword", "WeaponArt_Bow" };
+        AdventurerRecipe adventurer = AssetDatabase.LoadAssetAtPath<AdventurerRecipe>(AdventurerRecipePath);
+        HashSet<Color32> carried = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[0] + ".asset"));
+        foreach (CharacterMaterial leather in new[] { CharacterMaterial.Belt, CharacterMaterial.Fittings })
+        {
+            ColourRamp ramp = adventurer.Ramp(leather);
+            carried.UnionWith(new[] { ramp.Outline, ramp.Shadow, ramp.Middle, ramp.Light });
+        }
+
+        float[] sizes = { 80f, 96f, 80f };
+        int[] contacts = { 4, 5, 5 };
+        int[][] headDrops = { new[] { 1, 1 }, new[] { 2, 3 }, new[] { 1, 1 } };
         for (int w = 0; w < weapons.Length; w++)
         {
             PlayerWeapon weapon = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(WeaponsFolder + weapons[w] + ".asset");
-            CharacterAnimationClip attack = set.Find(weapon.AttackClip);
-            Assert.That(attack, Is.Not.Null, weapons[w]);
-            Assert.That(attack.ContactFrame, Is.EqualTo(5), weapons[w]);
-            Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
             HashSet<Color32> weaponColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[w] + ".asset"));
-            for (int direction = 0; direction < CharacterDirections.Count; direction++)
+            Assert.That(weapon.AttackCount, Is.EqualTo(2), weapons[w]);
+            for (int a = 0; a < weapon.AttackCount; a++)
             {
-                Sprite attackFrame = attack.SpriteAt(direction, 0);
-                Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(sizes[w], sizes[w])));
-                OpaqueRows(attackSheet, attackFrame, weaponColours, out int attackBottom, out int attackTop);
-                OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), weaponColours, out int idleBottom, out int idleTop);
-                string name = $"{weapons[w]} {CharacterDirections.Name(direction)}";
-                Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(1), $"{name}: the hood's top.");
-                Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+                CharacterAnimationClip attack = set.Find(weapon.AttackClipOf(a));
+                Assert.That(attack, Is.Not.Null, weapon.AttackClipOf(a));
+                Assert.That(attack.HasContact, Is.True, attack.Name);
+                Assert.That(attack.ContactFrame, Is.EqualTo(contacts[w]), attack.Name);
+                Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    Sprite attackFrame = attack.SpriteAt(direction, 0);
+                    Assert.That(attackFrame.rect.size, Is.EqualTo(new Vector2(sizes[w], sizes[w])), attack.Name);
+                    HashSet<Color32> leftOut = new(weaponColours.Concat(carried));
+                    OpaqueRows(attackSheet, attackFrame, leftOut, out int attackBottom, out int attackTop);
+                    OpaqueRows(idleSheet, idle.SpriteAt(direction, 0), leftOut, out int idleBottom, out int idleTop);
+                    string name = $"{attack.Name} {CharacterDirections.Name(direction)}";
+                    Assert.That(Mathf.Abs(attackTop - idleTop), Is.LessThanOrEqualTo(headDrops[w][a]), $"{name}: the head's top.");
+                    Assert.That(Mathf.Abs(attackBottom - idleBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+                }
             }
         }
     }
 
     /// <summary>
-    /// At the player's base move speed, and slowed by Chill, the player's locomotion settings pick the rogue's run and
+    /// Each of the player's weapons has two attacks that flow into each other: in every direction the last frame of one
+    /// puts the top of the head and the boots within two pixels of the other's first frame, the weapon's own pixels left
+    /// out, so attacking again in the recovery carries on from the pose it ended in (Docs/PlayerCharacter.md, Phase 4).
+    /// </summary>
+    [Test]
+    public void ThePlayersAttacks_EndWhereTheOtherAttackStarts()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(SetPath);
+        string[] weapons = { "Sword", "Greatsword", "Longbow" };
+        string[] arts = { "WeaponArt_Sword", "WeaponArt_Greatsword", "WeaponArt_Bow" };
+        for (int w = 0; w < weapons.Length; w++)
+        {
+            PlayerWeapon weapon = AssetDatabase.LoadAssetAtPath<PlayerWeapon>(WeaponsFolder + weapons[w] + ".asset");
+            HashSet<Color32> weaponColours = WeaponColours(AssetDatabase.LoadAssetAtPath<CharacterWeaponArt>(WeaponArtFolder + arts[w] + ".asset"));
+            for (int a = 0; a < weapon.AttackCount; a++)
+            {
+                CharacterAnimationClip attack = set.Find(weapon.AttackClipOf(a));
+                CharacterAnimationClip next = set.Find(weapon.AttackClipOf((a + 1) % weapon.AttackCount));
+                Assert.That(next, Is.Not.SameAs(attack), weapons[w]);
+                Texture2D attackSheet = Track(LoadSheet(attack.SpriteAt(0, 0)));
+                Texture2D nextSheet = Track(LoadSheet(next.SpriteAt(0, 0)));
+                for (int direction = 0; direction < CharacterDirections.Count; direction++)
+                {
+                    OpaqueRows(attackSheet, attack.SpriteAt(direction, attack.FrameCount - 1), weaponColours, out int endBottom, out int endTop);
+                    OpaqueRows(nextSheet, next.SpriteAt(direction, 0), weaponColours, out int startBottom, out int startTop);
+                    string name = $"{attack.Name} into {next.Name} {CharacterDirections.Name(direction)}";
+                    Assert.That(Mathf.Abs(endTop - startTop), Is.LessThanOrEqualTo(2), $"{name}: the head's top.");
+                    Assert.That(Mathf.Abs(endBottom - startBottom), Is.LessThanOrEqualTo(2), $"{name}: the boots.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// At the player's base move speed, and slowed by Chill, the player's locomotion settings pick the adventurer's run and
     /// play it at speed over its natural speed without clamping, so its feet keep up going east or west.
     /// </summary>
     [Test]
@@ -315,6 +407,70 @@ public class CharacterPrefabTests
             Assert.That(animator.PlaybackRate, Is.EqualTo(speed / run.NaturalSpeed).Within(1e-5f), $"{speed} u/s");
             Assert.That(animator.PlaybackRate, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{speed} u/s");
         }
+    }
+
+    /// <summary>
+    /// Around each boundary between the player's gaits, walk to run and run to sprint, the gait the hysteresis keeps
+    /// plays at its speed over its natural speed without clamping: the lower gait just under the share above the
+    /// boundary where it gives way, the upper one at the share below it where it still holds. So the feet never slide
+    /// changing gaits (Docs/PlayerCharacter.md, Phase 2).
+    /// </summary>
+    [Test]
+    public void ThePlayersGaits_PlayUnclamped_OnEitherSideOfEveryBoundary()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        CharacterLocomotionSettings locomotion = (CharacterLocomotionSettings)new SerializedObject(visuals).FindProperty("locomotion").objectReferenceValue;
+        CharacterAnimationSet set = visuals.AnimationSet;
+        CharacterGait[] gaits = { CharacterGait.Walk, CharacterGait.Run, CharacterGait.Sprint };
+        for (int i = 0; i + 1 < gaits.Length; i++)
+        {
+            CharacterGait lower = gaits[i];
+            CharacterGait upper = gaits[i + 1];
+            float boundary = locomotion.From(upper);
+            float up = boundary * (1f + locomotion.GaitHysteresis) - 0.001f;
+            float down = boundary * (1f - locomotion.GaitHysteresis);
+            Assert.That(CharacterLocomotionLayer.Pick(lower, up, locomotion), Is.EqualTo(lower), $"{lower} at {up} u/s");
+            Assert.That(CharacterLocomotionLayer.Pick(upper, down, locomotion), Is.EqualTo(upper), $"{upper} at {down} u/s");
+            Assert.That(up / set.Locomotion(lower).NaturalSpeed, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{lower} at {up} u/s");
+            Assert.That(down / set.Locomotion(upper).NaturalSpeed, Is.InRange(locomotion.MinRate, locomotion.MaxRate), $"{upper} at {down} u/s");
+        }
+    }
+
+    /// <summary>
+    /// The player's set holds its five idle animations, complete in every direction in 64 px frames on the feet,
+    /// unarmed and without a contact frame; its locomotion settings wait a few seconds of standing before the first and
+    /// longer between the next (Docs/PlayerCharacter.md, Phase 3).
+    /// </summary>
+    [Test]
+    public void ThePlayersSet_HoldsItsIdleAnimations_AndItsSettingsWaitForThem()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
+        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
+        List<string> names = new();
+        foreach (CharacterAnimationClip clip in visuals.AnimationSet.Clips)
+        {
+            if (!clip.IsIdleAnimation)
+            {
+                continue;
+            }
+
+            names.Add(clip.Name);
+            Assert.That(clip.IsComplete, Is.True, clip.Name);
+            Assert.That(clip.Armed, Is.False, clip.Name);
+            Assert.That(clip.ContactFrame, Is.EqualTo(-1), clip.Name);
+            Assert.That(clip.Duration, Is.InRange(1f, 2.5f), clip.Name);
+            Sprite first = clip.SpriteAt(CharacterDirections.South, 0);
+            Assert.That(first.rect.size, Is.EqualTo(new Vector2(64f, 64f)), clip.Name);
+            Assert.That(first.pixelsPerUnit, Is.EqualTo(32f), clip.Name);
+            Assert.That(first.pivot, Is.EqualTo(visuals.AnimationSet.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.South, 0).pivot), clip.Name);
+        }
+
+        Assert.That(names, Is.EqualTo(new[] { "IdleLookAround", "IdleStretch", "IdleScratch", "IdleTapFoot", "IdleYawn" }));
+        CharacterLocomotionSettings locomotion = visuals.Locomotion;
+        Assert.That(locomotion.IdleAnimationAfter, Is.InRange(3f, 20f));
+        Assert.That(locomotion.IdleAnimationGapMin, Is.GreaterThanOrEqualTo(locomotion.IdleAnimationAfter));
+        Assert.That(locomotion.IdleAnimationGapMax, Is.GreaterThan(locomotion.IdleAnimationGapMin));
     }
 
     /// <summary>

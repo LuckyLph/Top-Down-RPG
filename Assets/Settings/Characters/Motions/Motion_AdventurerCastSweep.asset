@@ -1,0 +1,259 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b9a1372f36dc8d4fb5066fa2487f2e3, type: 3}
+  m_Name: Motion_AdventurerCastSweep
+  m_EditorClassIdentifier: TopDownRPG.Editor::KeyedMotion
+  keys:
+  - time: 0
+    easing: 0
+    pelvisHeight: 14
+    lean: 5
+    twist: 8
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -3.4, y: 2, z: 1.5}
+    rightFoot: {x: 3.4, y: -2, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 2.6, y: 5.4, z: 16}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 0.8, y: -0.4, z: -0.8}
+    blade: {x: 0.35, y: 0.75, z: -0.55}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.14
+    easing: 0
+    pelvisHeight: 13.8
+    lean: 0
+    twist: 25
+    hipTwist: 0
+    headTurn: -8
+    leftFoot: {x: -3.4, y: 2, z: 1.5}
+    rightFoot: {x: 3.4, y: -2, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 3.6, y: 4, z: 21}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 0.9, y: -0.4, z: -0.4}
+    blade: {x: 0.20006002, y: 0.45013505, z: 0.87026113}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: 0.05
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.28
+    easing: 0
+    pelvisHeight: 13.6
+    lean: -6
+    twist: 55
+    hipTwist: 0
+    headTurn: -20
+    leftFoot: {x: -3.4, y: 2, z: 1.5}
+    rightFoot: {x: 3.4, y: -2, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 5, y: -2, z: 25}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 1, y: -0.3, z: -0.3}
+    blade: {x: 0.19916525, y: -0.5974958, z: 0.7767445}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: 0.1
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.4
+    easing: 2
+    pelvisHeight: 11.6
+    lean: 16
+    twist: 80
+    hipTwist: 30
+    headTurn: -30
+    leftFoot: {x: -4.6, y: 3, z: 1.5}
+    rightFoot: {x: 4.6, y: -3, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 6, y: -5, z: 12.5}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 1, y: 0, z: -0.5}
+    blade: {x: 0.39950094, y: -0.7990019, z: -0.44943854}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: -0.1
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 0
+  - time: 0.5
+    easing: 3
+    pelvisHeight: 11.2
+    lean: 18
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -4.6, y: 3, z: 1.5}
+    rightFoot: {x: 4.6, y: -3, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 8, y: 3, z: 11.5}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 0.4, y: -0.4, z: -0.8}
+    blade: {x: 0.9205064, y: 0.25013763, z: -0.30016515}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: -0.06
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 120
+  - time: 0.62
+    easing: 3
+    pelvisHeight: 11.2
+    lean: 18
+    twist: 0
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -4.6, y: 3, z: 1.5}
+    rightFoot: {x: 4.6, y: -3, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 8, y: 3, z: 11.5}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 0.4, y: -0.4, z: -0.8}
+    blade: {x: 0.9205064, y: 0.25013763, z: -0.30016515}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: -0.06
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 240
+  - time: 0.76
+    easing: 1
+    pelvisHeight: 12
+    lean: 12
+    twist: -20
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -4.6, y: 3, z: 1.5}
+    rightFoot: {x: 4.6, y: -3, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 5, y: 6, z: 14}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 0.4, y: -0.4, z: -0.8}
+    blade: {x: 0.51847583, y: 0.82956135, z: -0.20739034}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 330
+  - time: 1
+    easing: 0
+    pelvisHeight: 14
+    lean: 5
+    twist: 8
+    hipTwist: 0
+    headTurn: 0
+    leftFoot: {x: -3.4, y: 2, z: 1.5}
+    rightFoot: {x: 3.4, y: -2, z: 1.5}
+    leftHand: {x: -5.4, y: 0.3, z: 14.2}
+    rightHand: {x: 2.6, y: 5.4, z: 16}
+    leftPole: {x: -0.8, y: -0.4, z: -0.8}
+    rightPole: {x: 0.8, y: -0.4, z: -0.8}
+    blade: {x: 0.35, y: 0.75, z: -0.55}
+    bowUp: {x: 0, y: 0, z: 1}
+    bowAim: {x: 0, y: 1, z: 0}
+    draw: 0
+    arrow: 0
+    kick: 0
+    stretch: 0
+    headTilt: 0
+    eyesClosed: 0
+    mouthOpen: 0
+    spin: 360
+  frameTimes:
+  - 0
+  - 0.14
+  - 0.28
+  - 0.4
+  - 0.5
+  - 0.62
+  - 0.76
+  - 0.9
+  frameMilliseconds: 64000000640000006400000032000000640000006e0000007800000078000000
+  contactFrame: 4
+  hipsFollowKeys: 0
+  capeFlow: 0.12
+  smears:
+  - frame: 4
+    from: 0.4
+    to: 0.5
+  - frame: 5
+    from: 0.5
+    to: 0.62
+  - frame: 6
+    from: 0.62
+    to: 0.72
+  smearSamples: 24
+  effects:
+  - frame: 4
+    kind: 0
+    size: 1.4
+    hands: 0
+  - frame: 5
+    kind: 0
+    size: 1.2
+    hands: 0
+  light:
+    outline:
+      serializedVersion: 2
+      rgba: 0
+    shadow:
+      serializedVersion: 2
+      rgba: 0
+    middle:
+      serializedVersion: 2
+      rgba: 0
+    light:
+      serializedVersion: 2
+      rgba: 0
+  posedOn: {fileID: 11400000, guid: b94799e667524ff45803916f0da9c8a9, type: 2}
+  idleAnimation: 0
+  headFollow: 1
+  headLag: 0.06
+  hairFollow: 1.5
+  hairLag: 0.1

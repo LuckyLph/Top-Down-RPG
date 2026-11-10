@@ -1,8 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// The local player's mouse-driven input for one frame: pointer, move button, attack move, stop, ability and lantern
-/// keys. Every read is neutral while gameplay input is disabled.
+/// The local player's mouse-driven input for one frame: pointer, move button, attack move, stop and ability keys. Every read is neutral while gameplay input is disabled.
 /// </summary>
 public interface IPlayerInput
 {
@@ -13,7 +12,6 @@ public interface IPlayerInput
     bool MoveHeld { get; }
     bool AttackMovePressedThisFrame { get; }
     bool StopPressedThisFrame { get; }
-    bool LanternPressedThisFrame { get; }
 
     /// <summary>
     /// Whether the key for ability <paramref name="slot"/> (0 to <see cref="AbilitySlots.Count"/> - 1) went down this frame.

@@ -29,6 +29,7 @@ public class AsepriteCharacterTests
     private const string OutsideFolder = "Assets/Tests/AsepriteOutside";
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Rogue.asset";
     private const string RogueSetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
+    private const string LanternPath = "Assets/Settings/Characters/Lantern.asset";
     private const string PlayerPath = "Assets/Prefabs/Player/Player.prefab";
     private const string WeaselPath = "Assets/Prefabs/Mobs/Weasel.prefab";
     private const string FileName = "Bandit_Run.aseprite";
@@ -647,32 +648,35 @@ public class AsepriteCharacterTests
     }
 
     /// <summary>
-    /// The rogue's baked run, carrying its lantern, written as a file by the Phase 0 helper (the lantern on its three
-    /// layers) and generated gives the baked body sheet, lantern sheet and glow byte for byte, the glow as the lantern
-    /// sheet's secondary texture, every lantern slice's rect and pivot, and each frame's light at full strength within
-    /// half a pixel of the baked one (its pixel holds the baked light); generating again writes nothing; and the file
-    /// written again without its lantern loses the lantern sheet, its glow and the set's lantern.
+    /// The rogue's run baked carrying the lantern (in memory: no character the game ships carries one), written as a file
+    /// by the Phase 0 helper (the lantern on its three layers) and generated, gives the baked body sheet, and a lantern
+    /// sheet and glow holding exactly the baker's packed layer and glow, the glow as the lantern sheet's secondary
+    /// texture, every lantern slice's rect and pivot as packed, and each frame's light at full strength within half a
+    /// pixel of the baked one (its pixel holds the baked light); generating again writes nothing; and the file written
+    /// again without its lantern loses the lantern sheet, its glow and the set's lantern.
     /// </summary>
     [Test]
-    public void Generate_TheRoguesLanternOnItsLayers_GivesTheBakedLanternSheetAndGlow()
+    public void Generate_ALanternOnItsLayers_GivesTheBakedLanternSheetAndGlow()
     {
-        CharacterRecipe rogue = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
+        CharacterRecipe rogue = LanternRecipe();
         CharacterClip run = rogue.Clips.Single(c => c.Name == "Run");
         CharacterSheet sheet = new CharacterBaker(rogue).Bake(run);
-        CharacterAnimationClip baked = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath).Find("Run");
+        float naturalSpeed = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath).Find("Run").NaturalSpeed;
         string lanternName = "Run" + CharacterSheetWriter.LanternSuffix;
         string lanternPath = CharacterSheetWriter.SheetPath(Character, lanternName);
         string glowPath = CharacterSheetWriter.GlowPath(Character, lanternName);
+        Dictionary<string, SpriteSheetFiles.Slice> packed = CharacterSheetWriter.PackLantern(Character, sheet, out _, out Color32[] packedPixels, out Color32[] packedGlow).ToDictionary(slice => slice.Name);
+        CharacterFrameLight[] bakedLights = CharacterSheetWriter.LanternLights(sheet);
         Object file = Import(AsepriteFileWriter.FromSheet(sheet), "Run");
-        AsepriteCharacterRecipe recipe = Recipe(Character, new AsepriteClip(file, CharacterGait.Run, false, baked.NaturalSpeed, run.Pivot));
+        AsepriteCharacterRecipe recipe = Recipe(Character, new AsepriteClip(file, CharacterGait.Run, false, naturalSpeed, run.Pivot));
 
         AsepriteReport report = AsepriteCharacterWriter.Generate(recipe);
 
         Assert.That(report.Problems, Is.Empty);
         Assert.That(report.Written, Does.Contain(lanternPath));
         Assert.That(File.ReadAllBytes(CharacterSheetWriter.SheetPath(Character, "Run")), Is.EqualTo(File.ReadAllBytes(CharacterSheetWriter.SheetPath(rogue, run))));
-        Assert.That(File.ReadAllBytes(lanternPath), Is.EqualTo(File.ReadAllBytes(CharacterSheetWriter.SheetPath(rogue.SheetName, lanternName))));
-        Assert.That(File.ReadAllBytes(glowPath), Is.EqualTo(File.ReadAllBytes(CharacterSheetWriter.GlowPath(rogue.SheetName, lanternName))));
+        Assert.That(ReadPng(lanternPath), Is.EqualTo(packedPixels));
+        Assert.That(ReadPng(glowPath), Is.EqualTo(packedGlow));
         SecondarySpriteTexture secondary = ((TextureImporter)AssetImporter.GetAtPath(lanternPath)).secondarySpriteTextures.Single();
         Assert.That(secondary.name, Is.EqualTo(SpriteSheetFiles.GlowTextureName));
         Assert.That(AssetDatabase.GetAssetPath(secondary.texture), Is.EqualTo(glowPath));
@@ -683,17 +687,19 @@ public class AsepriteCharacterTests
             for (int frame = 0; frame < clip.FrameCount; frame++)
             {
                 string where = $"{CharacterDirections.Name(direction)} {frame}";
+                string name = CharacterSheetWriter.SliceName(Character, lanternName, direction, frame);
                 Sprite layer = clip.LanternAt(direction, frame, 0);
-                Sprite bakedLayer = baked.LanternAt(direction, frame, 0);
-                Assert.That(layer != null, Is.EqualTo(bakedLayer != null), where);
+                Assert.That(layer != null, Is.EqualTo(packed.ContainsKey(name)), where);
                 if (layer != null)
                 {
-                    Assert.That(layer.name, Is.EqualTo(CharacterSheetWriter.SliceName(Character, lanternName, direction, frame)), where);
-                    Assert.That((layer.rect, layer.pivot), Is.EqualTo((bakedLayer.rect, bakedLayer.pivot)), where);
+                    SpriteSheetFiles.Slice slice = packed[name];
+                    Assert.That(layer.name, Is.EqualTo(name), where);
+                    Assert.That(layer.rect, Is.EqualTo(slice.Rect), where);
+                    Assert.That(Vector2.Distance(layer.pivot, new Vector2(slice.Pivot.x * slice.Rect.width, slice.Pivot.y * slice.Rect.height)), Is.LessThan(1e-3f), where);
                 }
 
                 CharacterFrameLight light = clip.LanternLightAt(direction, frame, 0);
-                Vector2 bakedLight = baked.LanternLightAt(direction, frame, 0).Offset;
+                Vector2 bakedLight = bakedLights[direction * clip.FrameCount + frame].Offset;
                 Assert.That(light.Strength, Is.EqualTo(1f), where);
                 Assert.That(Mathf.Abs(light.Offset.x - bakedLight.x), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
                 Assert.That(Mathf.Abs(light.Offset.y - bakedLight.y), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
@@ -901,6 +907,30 @@ public class AsepriteCharacterTests
     {
         RectInt rect = CharacterSheet.FrameRect(direction, frame, frames.FrameSize);
         return sheet[(rect.y + frames.FrameSize.y - 1 - y) * frames.SheetWidth + rect.x + x];
+    }
+
+    /// <summary>
+    /// The rogue's recipe carrying the lantern, made in memory, since no character the game ships carries one.
+    /// </summary>
+    private CharacterRecipe LanternRecipe()
+    {
+        CharacterRecipe recipe = Object.Instantiate(AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath));
+        created.Add(recipe);
+        SerializedObject serialized = new(recipe);
+        serialized.FindProperty("lantern").objectReferenceValue = AssetDatabase.LoadAssetAtPath<CharacterLanternArt>(LanternPath);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        return recipe;
+    }
+
+    /// <summary>
+    /// The pixels of the PNG at <paramref name="path"/>, rows from the bottom.
+    /// </summary>
+    private Color32[] ReadPng(string path)
+    {
+        Texture2D texture = new(2, 2);
+        created.Add(texture);
+        texture.LoadImage(File.ReadAllBytes(path));
+        return texture.GetPixels32();
     }
 
     /// <summary>

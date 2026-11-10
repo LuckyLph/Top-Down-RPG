@@ -33,6 +33,12 @@ public abstract class CharacterMotion : ScriptableObject
     public virtual int ContactFrame => -1;
 
     /// <summary>
+    /// Whether the motion is an idle animation, played once on its own after the character has stood still a while
+    /// (Docs/PlayerCharacter.md, Phase 3).
+    /// </summary>
+    public virtual bool IsIdleAnimation => false;
+
+    /// <summary>
     /// How many frames of a gait the motion is drawn over: 0 for a motion drawn by itself. Frame
     /// <c>g * (FrameCount / GaitFrames) + f</c> is its frame f over gait frame g.
     /// </summary>

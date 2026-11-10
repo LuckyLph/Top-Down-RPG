@@ -40,6 +40,7 @@ public sealed class MarkerRecipe : PropRecipe, IPropLightSettings
     private const float PlinthSink = 0.04f;
     private const float Chamfer = 0.05f;
     private const float FacetReach = 0.9f;
+    private const float FacetTiltMin = 0.1f;
     private const float RuneWidth = 0.075f;
     private const float RuneHeight = 0.08f;
     private const float RuneStep = 0.18f;
@@ -174,7 +175,8 @@ public sealed class MarkerRecipe : PropRecipe, IPropLightSettings
     }
 
     /// <summary>
-    /// A tapering standing stone, its sides hewn by a few random faces, its top rounded by six more, leaning a little,
+    /// A tapering standing stone, its sides hewn by a few random faces, each tilted up so the stone never narrows toward
+    /// its foot, its top rounded by six more, leaning a little,
     /// on an octagonal plinth of dressed stone, with a chain of diamond runes carved down the middle of its front face:
     /// flat and dark while it sleeps, glowing with a glowing halo once <paramref name="awake"/>. Its light shines from
     /// the runes, in either state, so the prefab drawn from the sleeping variant carries it.
@@ -236,7 +238,7 @@ public sealed class MarkerRecipe : PropRecipe, IPropLightSettings
         {
             float angle = drawing.Range(0f, 2f * Mathf.PI);
             float z = z0 + stoneHeight * drawing.Range(0.15f, 0.85f);
-            Vector3 n = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle) * 1.6f, drawing.Range(-0.3f, 0.5f)).normalized;
+            Vector3 n = new Vector3(Mathf.Cos(angle), Mathf.Sin(angle) * 1.6f, Mathf.Max(drawing.Range(-0.3f, 0.5f), FacetTiltMin)).normalized;
             Vector3 on = new(Mathf.Cos(angle) * stoneFoot.x * FacetReach, Mathf.Sin(angle) * stoneFoot.y * FacetReach, z);
             planes.Add(new Vector4(n.x, n.y, n.z, Vector3.Dot(n, on)));
         }

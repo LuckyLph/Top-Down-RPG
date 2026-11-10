@@ -17,11 +17,8 @@ using VContainer.Unity;
 /// keeps awake the casters within its reach in any loaded chunk, letting them sleep again as it goes out, so a caster
 /// runs only near a burning light. It writes only when the share has moved by a step too small to see or a flicker step
 /// has passed, allocating nothing. The lighting dev panel may force the prop lights and the ground's glow on or off,
-/// still the flicker, turn the glowing pixels off and keep the lights' shadows off, on this machine alone. The players'
-/// lanterns (Phase 9, <see cref="PlayerLantern"/>) read from it the share the night lights burn at in the world shown
-/// (<see cref="NightLightsShown"/>), by which the local player's lights itself, and the flicker's step
-/// (<see cref="FlickerStep"/>). Presentation each machine draws on its own: nothing is sent, and nothing in the game
-/// reads it.
+/// still the flicker, turn the glowing pixels off and keep the lights' shadows off, on this machine alone.
+/// Presentation each machine draws on its own: nothing is sent, and nothing in the game reads it.
 /// </summary>
 public sealed class PropLighting : IStartable, ITickable, IDisposable
 {
@@ -59,33 +56,6 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     /// The night's lights' share last written.
     /// </summary>
     public float Shown => shown;
-
-    /// <summary>
-    /// The flicker's step last written: 0 while nothing flickers (no day clock, or the dev panel stills it).
-    /// </summary>
-    public int FlickerStep => shownStep;
-
-    /// <summary>
-    /// The share the night lights burn at in the world shown on this machine (<see cref="WorldLighting.IsShown"/>): all
-    /// of them indoors, the share last written outdoors or with no world shown.
-    /// </summary>
-    public float NightLightsShown
-    {
-        get
-        {
-            IReadOnlyList<LoadedWorld> loaded = worlds != null ? worlds.Loaded : null;
-            for (int i = 0; loaded != null && i < loaded.Count; i++)
-            {
-                WorldLighting lighting = loaded[i].Lighting;
-                if (lighting != null && lighting.IsShown)
-                {
-                    return lighting.Profile == WorldLightingProfile.Indoor ? 1f : shown;
-                }
-            }
-
-            return shown;
-        }
-    }
 
     /// <summary>
     /// How many chunks' lights it burns.

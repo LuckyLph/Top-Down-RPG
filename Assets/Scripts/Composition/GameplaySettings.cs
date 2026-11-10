@@ -3,8 +3,8 @@ using UnityEngine;
 /// <summary>
 /// Session tuning registered in the Gameplay scope: how long a dead player waits to respawn, how close a player comes to
 /// a waystone to discover it and what it is shown then, how far apart players arriving at the same entry stand, how
-/// often a world session saves, how far a saved place on ground no longer walkable looks for walkable ground, and how
-/// long a travelling player stays protected at most.
+/// often a world session saves, how far a saved place on ground no longer walkable looks for walkable ground, how
+/// long a travelling player stays protected at most, and how players' composed outfits are kept and built.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Gameplay Settings", fileName = "GameplaySettings")]
 public class GameplaySettings : ScriptableObject
@@ -36,6 +36,13 @@ public class GameplaySettings : ScriptableObject
     [SerializeField, Min(1), Tooltip("A saved place on ground a player can no longer stand on (its world was regenerated or repainted) moves to the nearest walkable cell at most this many cells away (Manhattan distance), or else to the player's nearest discovered waystone. Keep it within the load extents' smaller side (18 cells), the ground loaded around the place.")]
     private int savedPlaceSearchCells = 16;
 
+    [Header("Outfits")]
+    [SerializeField, Min(0), Tooltip("Composed outfits nobody wears that are kept, the most recently worn, so a player switching back to one (a weapon's gear, a part put back) shows it at once (Docs/PlayerCharacter.md, Phase 7). Each is about 15 MiB.")]
+    private int spareOutfits = 2;
+
+    [SerializeField, Min(1), Tooltip("Sprites of a composed outfit made per frame on the main thread, so building one (2616 sprites for the adventurer) spreads over a few frames.")]
+    private int outfitSpritesPerFrame = 500;
+
     public float RespawnDelaySeconds => respawnDelaySeconds;
     public int WaystoneReachCells => waystoneReachCells;
     public string WaystoneDiscoveredText => waystoneDiscoveredText;
@@ -44,6 +51,8 @@ public class GameplaySettings : ScriptableObject
     public float AutosaveIntervalSeconds => autosaveIntervalSeconds;
     public int SavedPlaceSearchCells => savedPlaceSearchCells;
     public float TripProtectionSeconds => tripProtectionSeconds;
+    public int SpareOutfits => spareOutfits;
+    public int OutfitSpritesPerFrame => outfitSpritesPerFrame;
 
     /// <summary>
     /// Builds unsaved settings for tests.

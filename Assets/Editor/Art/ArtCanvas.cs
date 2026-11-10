@@ -12,7 +12,10 @@ using UnityEngine;
 /// <see cref="Shade"/> then turns them into colours through a table of <see cref="ArtMaterial"/>s: covers, flat ramps,
 /// a light colour only where the surface faces the light strongly, patterns and tone offsets, inner lines where a nearer
 /// part overlaps a farther one, and an outline around everything. Points under the ground can be hidden, so a prop sinks
-/// into it. Pixels are stored rows from the bottom.
+/// into it. Pixels are stored rows from the bottom. A character drawn a layer at a time (Docs/PlayerCharacter.md,
+/// Phase 6) is drawn in steps (<see cref="BeginStep"/>), every layer's painter taking the same steps in the same order
+/// but drawing only its own, and each pixel keeps the step that drew it, so merging the layers
+/// (<see cref="MergeFrom"/>) breaks a tie as drawing them all onto one canvas would: the earlier step keeps the pixel.
 /// </summary>
 public class ArtCanvas
 {
@@ -52,6 +55,8 @@ public class ArtCanvas
     private readonly float[] depth;
     private readonly int[] material;
     private readonly int[] part;
+    private readonly int[] step;
+    private int currentStep;
     private readonly Vector3[] normal;
     private readonly Vector3[] worldNormal;
     private readonly Vector3[] worldPosition;
@@ -69,6 +74,7 @@ public class ArtCanvas
         depth = new float[width * height];
         material = new int[width * height];
         part = new int[width * height];
+        step = new int[width * height];
         normal = new Vector3[width * height];
         worldNormal = new Vector3[width * height];
         worldPosition = new Vector3[width * height];
@@ -86,6 +92,29 @@ public class ArtCanvas
     public bool HidesBelowGround { get; set; }
 
     /// <summary>
+    /// Whether the drawing calls draw: false between a <see cref="BeginStep"/> that does not draw and the next, so a
+    /// layer's painter takes another layer's steps without drawing them.
+    /// </summary>
+    public bool Drawing { get; private set; } = true;
+
+    /// <summary>
+    /// Starts the next drawing step, drawn when <paramref name="draws"/>; what it draws keeps its number.
+    /// </summary>
+    public void BeginStep(bool draws)
+    {
+        currentStep++;
+        Drawing = draws;
+    }
+
+    /// <summary>
+    /// The drawing step that drew a filled pixel.
+    /// </summary>
+    public int StepAt(int x, int y)
+    {
+        return step[y * Width + x];
+    }
+
+    /// <summary>
     /// Empties every pixel.
     /// </summary>
     public void Clear()
@@ -95,6 +124,7 @@ public class ArtCanvas
             depth[i] = float.PositiveInfinity;
             material[i] = Empty;
             part[i] = Empty;
+            step[i] = 0;
             normal[i] = Vector3.zero;
             worldNormal[i] = Vector3.zero;
             worldPosition[i] = Vector3.zero;
@@ -207,6 +237,61 @@ public class ArtCanvas
     }
 
     /// <summary>
+    /// Empties pixel (<paramref name="x"/>, <paramref name="y"/>).
+    /// </summary>
+    public void ClearPixel(int x, int y)
+    {
+        int i = y * Width + x;
+        depth[i] = float.PositiveInfinity;
+        material[i] = Empty;
+        part[i] = Empty;
+        step[i] = 0;
+        normal[i] = Vector3.zero;
+        worldNormal[i] = Vector3.zero;
+        worldPosition[i] = Vector3.zero;
+    }
+
+    /// <summary>
+    /// Takes every filled pixel of <paramref name="layer"/>, a canvas of the same size drawn in the same steps, that lies
+    /// in front of this one's, or at the same depth from an earlier step: what drawing both onto one canvas would give.
+    /// </summary>
+    public void MergeFrom(ArtCanvas layer)
+    {
+        for (int i = 0; i < depth.Length; i++)
+        {
+            if (layer.material[i] == Empty || layer.depth[i] > depth[i] || (layer.depth[i] == depth[i] && layer.step[i] >= step[i]))
+            {
+                continue;
+            }
+
+            depth[i] = layer.depth[i];
+            material[i] = layer.material[i];
+            part[i] = layer.part[i];
+            step[i] = layer.step[i];
+            normal[i] = layer.normal[i];
+            worldNormal[i] = layer.worldNormal[i];
+            worldPosition[i] = layer.worldPosition[i];
+        }
+    }
+
+    /// <summary>
+    /// The tone a filled pixel takes before any line is drawn, as <see cref="Shade"/> gives it to a material with no
+    /// cover, tone height, tone offset or pattern: 1 (the middle) when <paramref name="flat"/>, else 2 (the light) above
+    /// <paramref name="lightThreshold"/>, 0 (the shadow) at or below <paramref name="shadowThreshold"/> and 1 between,
+    /// by how much its surface faces the light.
+    /// </summary>
+    public int BaseTone(int x, int y, bool flat, float lightThreshold, float shadowThreshold)
+    {
+        if (flat)
+        {
+            return 1;
+        }
+
+        float lit = Vector3.Dot(normal[y * Width + x], Light);
+        return lit > lightThreshold ? 2 : lit > shadowThreshold ? 1 : 0;
+    }
+
+    /// <summary>
     /// How many pixels hold material id <paramref name="value"/>.
     /// </summary>
     public int CountId(int value)
@@ -229,6 +314,11 @@ public class ArtCanvas
     /// </summary>
     public void Sphere(Vector3 world, float radius, int value, int owner, float minRadius = 0f, ArtEnvelope envelope = null, float blend = 0f, float depthOffset = 0f)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         Vector3 centre = Project(world);
         centre.z += depthOffset;
         float r = Mathf.Max(radius * Scale, minRadius);
@@ -274,6 +364,7 @@ public class ArtCanvas
                 depth[i] = z;
                 material[i] = value;
                 part[i] = owner;
+                step[i] = currentStep;
                 normal[i] = viewNormal;
                 worldNormal[i] = surfaceNormal;
                 worldPosition[i] = surface;
@@ -287,6 +378,11 @@ public class ArtCanvas
     /// </summary>
     public void Disc(Vector3 world, float radius, int value, int owner)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         Vector3 centre = Project(world);
         float r2 = radius * radius;
         int x0 = Mathf.Max(Mathf.FloorToInt(centre.x + Pivot.x - radius - 1f), 0);
@@ -313,6 +409,11 @@ public class ArtCanvas
     /// </summary>
     public void Dot(Vector3 world, int value, int owner)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         Vector2Int pixel = PixelOf(world);
         if (Contains(pixel.x, pixel.y))
         {
@@ -340,6 +441,11 @@ public class ArtCanvas
     /// </summary>
     public void Triangle(Vector3 a, Vector3 b, Vector3 c, int value, int owner)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         Vector3 pa = Project(a);
         Vector3 pb = Project(b);
         Vector3 pc = Project(c);
@@ -382,6 +488,11 @@ public class ArtCanvas
     /// </summary>
     public void Ellipsoid(Vector3 centre, Vector3 axisX, Vector3 axisY, Vector3 axisZ, int value, int owner, ArtEnvelope envelope = null, float blend = 0f, float depthOffset = 0f)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         Vector3 extent = new(
             Mathf.Abs(axisX.x) + Mathf.Abs(axisY.x) + Mathf.Abs(axisZ.x),
             Mathf.Abs(axisX.y) + Mathf.Abs(axisY.y) + Mathf.Abs(axisZ.y),
@@ -432,6 +543,11 @@ public class ArtCanvas
     /// </summary>
     public void Convex(IReadOnlyList<Vector4> planes, Bounds bounds, int value, int owner)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         if (!PixelBounds(bounds, out int x0, out int x1, out int y0, out int y1))
         {
             return;
@@ -494,6 +610,11 @@ public class ArtCanvas
     /// </summary>
     public void Field(Func<Vector3, float> field, Bounds bounds, Func<Vector3, Vector3, int> materialAt, int owner, float step = 0.35f)
     {
+        if (!Drawing)
+        {
+            return;
+        }
+
         if (!PixelBounds(bounds, out int x0, out int x1, out int y0, out int y1))
         {
             return;
@@ -698,6 +819,7 @@ public class ArtCanvas
         depth[index] = z;
         material[index] = value;
         part[index] = owner;
+        step[index] = currentStep;
         normal[index] = new Vector3(0f, 0f, -1f);
         worldNormal[index] = ToWorld(normal[index]);
         worldPosition[index] = world;
@@ -718,6 +840,7 @@ public class ArtCanvas
         depth[index] = t;
         material[index] = value;
         part[index] = owner;
+        step[index] = currentStep;
         worldNormal[index] = surfaceNormal;
         normal[index] = ToView(surfaceNormal);
         worldPosition[index] = world;

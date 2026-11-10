@@ -39,7 +39,7 @@ public class WeaselRecipeTests
 
     /// <summary>
     /// A new baker of the same recipe gives the same pixels and PNG bytes, clip for clip, and they are the sheets the
-    /// project holds.
+    /// project holds, without palette maps: the Weasel's colours are its own.
     /// </summary>
     [Test]
     public void Bake_SameRecipe_GivesTheSameBytes_AsTheProjectsSheets()
@@ -53,7 +53,10 @@ public class WeaselRecipeTests
             Assert.That(second.Pixels.SequenceEqual(first.Pixels), Is.True, clip.Name);
             Assert.That(TerrainMaterialWriter.EncodePng(second.Width, second.Height, second.Pixels), Is.EqualTo(png), clip.Name);
             Assert.That(File.ReadAllBytes(CharacterSheetWriter.SheetPath(recipe, clip)), Is.EqualTo(png), clip.Name);
+            Assert.That(first.PaletteMap, Is.Null, clip.Name);
         }
+
+        Assert.That(recipe.HasDyes, Is.False);
     }
 
     /// <summary>
@@ -181,13 +184,14 @@ public class WeaselRecipeTests
 
     /// <summary>
     /// The project's animation set holds every clip of the recipe: the unarmed idle, walk and run as its locomotion and
-    /// the armed attack with its contact frame, every direction and frame a slice of its sheet.
+    /// the armed attack with its contact frame, every direction and frame a slice of its sheet; it names no dyes.
     /// </summary>
     [Test]
     public void TheProjectsAnimationSet_HoldsEveryClip()
     {
         CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(CharacterSheetWriter.SetPath(recipe));
         Assert.That(set, Is.Not.Null);
+        Assert.That(set.Dyes, Is.Zero);
         Assert.That(set.Clips.Select(c => c.Name), Is.EqualTo(new[] { "Idle", "Walk", "Run", "DaggerSlash" }));
         Assert.That(set.Locomotion(CharacterGait.Idle).Name, Is.EqualTo("Idle"));
         Assert.That(set.Locomotion(CharacterGait.Walk).Name, Is.EqualTo("Walk"));

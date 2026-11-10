@@ -224,7 +224,7 @@ public class HandDrawnCharacterPlayModeTests
         spriteRenderer = visuals.GetComponent<SpriteRenderer>();
         CharacterLookCatalog looks = player.GetComponent<PlayerLook>().Catalog;
         banditSet = looks.Get(looks.IndexOf(Bandit)).AnimationSet;
-        Assert.That(visuals.AnimationSet, Is.Not.EqualTo(banditSet), "The player starts as the rogue.");
+        Assert.That(visuals.AnimationSet, Is.Not.EqualTo(banditSet), "The player starts as the adventurer.");
         SceneBootTestHelper.ResolveFromMain<UserSettings>().SetCharacterLook(Bandit);
         commands = new ScriptedCommands();
         player.SetCommandSource(commands);

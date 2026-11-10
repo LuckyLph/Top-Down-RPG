@@ -52,6 +52,18 @@ public abstract class CharacterPainter
     }
 
     protected CharacterCanvas Canvas => canvas;
+
+    /// <summary>
+    /// The weapon the clip drawn holds, none for a clip without one.
+    /// </summary>
+    protected CharacterWeaponArt Weapon => weapon;
+
+    /// <summary>
+    /// Whether <see cref="Paint"/> draws the weapon, its smear and effects and a cast's light, each in a drawing step of
+    /// its own (<see cref="ArtCanvas.BeginStep"/>): what every layer of a character drawn a layer at a time shares, so
+    /// only its body's layer draws them (Docs/PlayerCharacter.md, Phase 6).
+    /// </summary>
+    protected virtual bool PaintsShared => true;
     protected Vector3 Forward { get; private set; }
     protected Vector3 Right { get; private set; }
 
@@ -64,6 +76,7 @@ public abstract class CharacterPainter
     {
         Face(facingDegrees);
         DrawBody(pose, joints);
+        canvas.BeginStep(PaintsShared);
         if (weapon != null && weapon.Kind == WeaponKind.Blade)
         {
             WeaponPainter painter = new(weapon, canvas, World);
@@ -99,6 +112,7 @@ public abstract class CharacterPainter
         }
 
         DrawHead(pose, joints);
+        canvas.BeginStep(PaintsShared);
         foreach (MotionEffect effect in effects)
         {
             if (effect.IsLight)
@@ -106,6 +120,16 @@ public abstract class CharacterPainter
                 DrawLights(effect, joints);
             }
         }
+
+        DrawCarried(pose, joints);
+    }
+
+    /// <summary>
+    /// Draws what the character carries outside its hands, after everything else so the drawing steps before it keep
+    /// their order (Docs/PlayerCharacter.md, Phase 7): nothing for a body plan without such gear.
+    /// </summary>
+    protected virtual void DrawCarried(CharacterPose pose, CharacterJoints joints)
+    {
     }
 
     /// <summary>

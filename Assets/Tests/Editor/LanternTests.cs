@@ -1,35 +1,25 @@
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.TestTools.Constraints;
 using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
-/// Tests for the lantern every player carries (Docs/Lighting.md, Phase 9): the animator showing each frame's lantern
-/// layer and light, held with its sprite and over a gait; the visuals drawing the layer and casting its light only while
-/// it burns, beside a cast's light; showing it allocating nothing; the owner's lantern lighting itself at sunset and
-/// going out at sunrise, the key's choice holding until the next of those, and a copy showing its owner's choice; its
-/// light flickering within its share; the rogue's set carrying it on every frame as the baker draws it, and every
-/// look's (the Bandit's from its files' lantern layers) where the rogue's hangs; hanging plumb from the left hand or,
-/// while a weapon takes that hand, at the hip; the layer over a sheet being the frame drawn with the lantern, glowing
-/// at its glass; the layer packed tightly with its slices pivoted on the feet and written with its
-/// glow; a hit's flash covering it with the body; the player prefab carrying it; and the lantern key, rebindable,
-/// reaching the local player's lantern.
+/// Tests for a carried lantern (Docs/Lighting.md, Phase 9), which no character the game ships carries since the
+/// player's was removed: the animator showing each frame's lantern layer and light, held with its sprite and over a
+/// gait; the visuals drawing the layer and casting its light only while it burns, beside a cast's light; showing it
+/// allocating nothing; the baker hanging it plumb from the left hand or, while a weapon takes that hand, at the hip;
+/// the layer over a sheet being the frame drawn with the lantern, glowing at its glass; the layer packed tightly with
+/// its slices pivoted on the feet; and a hit's flash covering it with the body.
 /// </summary>
 public class LanternTests
 {
     private const string RecipePath = "Assets/Settings/Characters/Recipe_Rogue.asset";
-    private const string RogueSetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
-    private const string PlayerPath = "Assets/Prefabs/Player/Player.prefab";
-    private const string ActionsPath = "Assets/InputSystem_Actions.inputactions";
-    private const string RebindablePath = "Assets/Data/Input/RebindableActions.asset";
-    private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
+    private const string LanternPath = "Assets/Settings/Characters/Lantern.asset";
     private const float Intensity = 0.8f;
     private const int Release = 4;
     private const int HiddenRunFrame = 3;
@@ -195,7 +185,6 @@ public class LanternTests
     public void ShowingTheLantern_AllocatesNothingWhileItBurns()
     {
         CharacterVisuals visuals = CreateVisuals(out _, out Light2D light, out _);
-        PlayerLantern lantern = CreateLantern(visuals);
         visuals.SetLocomotion(Vector2.right * 4f, Vector2.right);
 
         void Run()
@@ -203,189 +192,17 @@ public class LanternTests
             for (int step = 0; step < 24; step++)
             {
                 clock.Advance(0.05f);
-                lantern.Show(true);
+                visuals.ShowLantern(true, Intensity * (1f + 0.04f * (step % 3 - 1)));
                 visuals.Tick();
             }
         }
 
-        lantern.Show(true);
+        visuals.ShowLantern(true, Intensity);
         visuals.Tick();
         Run();
         Run();
         Assert.That(() => Run(), Is.Not.AllocatingGCMemory());
         Assert.That(light.enabled, Is.True);
-    }
-
-    /// <summary>
-    /// The owner's lantern lights itself as the night lights' share reaches its share at sunset and goes out as it
-    /// falls below at sunrise, each only as it crosses, raising the change each time; the key lights it or puts it out
-    /// at any time, and that choice holds until the share next crosses.
-    /// </summary>
-    [Test]
-    public void TheOwnersLantern_LightsItselfAtSunset_GoesOutAtSunrise_AndTheKeyHoldsUntilTheNext()
-    {
-        CharacterVisuals visuals = CreateVisuals(out _, out _, out _);
-        PlayerLantern lantern = CreateLantern(visuals);
-        List<bool> changes = new();
-        lantern.Changed += changes.Add;
-        lantern.DecideLocally();
-        Assert.That(lantern.Deciding, Is.True);
-        Assert.That(lantern.Lit, Is.False, "Without night lights it starts out.");
-
-        lantern.Decide(0.5f);
-        Assert.That(lantern.Lit, Is.False, "Evening: not yet.");
-        lantern.Decide(lantern.AutoShare);
-        Assert.That(lantern.Lit, Is.True, "Sunset lights it.");
-        Assert.That(visuals.LanternLit, Is.True);
-        lantern.Decide(1f);
-        Assert.That(changes, Is.EqualTo(new[] { true }));
-
-        lantern.Toggle();
-        Assert.That(lantern.Lit, Is.False, "The key puts it out at night.");
-        lantern.Decide(1f);
-        Assert.That(lantern.Lit, Is.False, "and the night does not light it again.");
-        lantern.Decide(0f);
-        Assert.That(lantern.Lit, Is.False, "Sunrise.");
-        lantern.Toggle();
-        Assert.That(lantern.Lit, Is.True, "The key lights it by day.");
-        lantern.Decide(0.2f);
-        Assert.That(lantern.Lit, Is.True, "and the day does not put it out.");
-        lantern.Decide(0.9f);
-        Assert.That(lantern.Lit, Is.True, "Sunset keeps it lit.");
-        lantern.Decide(0.1f);
-        Assert.That(lantern.Lit, Is.False, "Sunrise puts it out.");
-        Assert.That(changes, Is.EqualTo(new[] { true, false, true, false }));
-    }
-
-    /// <summary>
-    /// A copy's lantern burns or goes out as its owner decides, raising no change of its own, and the key does nothing
-    /// to it.
-    /// </summary>
-    [Test]
-    public void ACopysLantern_ShowsItsOwnersChoice_AndTheKeyDoesNothing()
-    {
-        CharacterVisuals visuals = CreateVisuals(out _, out _, out _);
-        PlayerLantern lantern = CreateLantern(visuals);
-        int changes = 0;
-        lantern.Changed += _ => changes++;
-
-        lantern.Toggle();
-        Assert.That(lantern.Lit, Is.False, "Only the owner's key counts.");
-        lantern.Show(true);
-        Assert.That(lantern.Lit, Is.True);
-        Assert.That(visuals.LanternLit, Is.True);
-        lantern.Show(false);
-        Assert.That(visuals.LanternLit, Is.False);
-        Assert.That(changes, Is.Zero);
-    }
-
-    /// <summary>
-    /// The lantern's light flickers at each of the night lights' steps to a strength within its share either way, the
-    /// same step always giving the same strength.
-    /// </summary>
-    [Test]
-    public void TheLanternsLight_FlickersWithinItsShare_StepByStep()
-    {
-        PlayerLantern lantern = CreateLantern(CreateVisuals(out _, out _, out _));
-        HashSet<float> strengths = new();
-        for (int step = 0; step < 200; step++)
-        {
-            float strength = lantern.StrengthAt(step);
-            Assert.That(strength, Is.InRange(Intensity * 0.96f, Intensity * 1.04f), $"step {step}");
-            Assert.That(lantern.StrengthAt(step), Is.EqualTo(strength));
-            strengths.Add(strength);
-        }
-
-        Assert.That(strengths.Count, Is.GreaterThan(100), "It flickers.");
-    }
-
-    /// <summary>
-    /// The rogue's set carries the lantern on every clip, a light on every frame at full as the baker draws it, and a
-    /// layer on every frame but those where the body hides the whole lantern.
-    /// </summary>
-    [Test]
-    public void TheRoguesSet_CarriesTheLanternOnEveryFrame_AsTheBakerDrawsIt()
-    {
-        CharacterRecipe recipe = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
-        CharacterAnimationSet rogue = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath);
-        CharacterBaker baker = new(recipe);
-        foreach (CharacterAnimationClip shipped in rogue.Clips)
-        {
-            Assert.That(shipped.HasLantern, Is.True, shipped.Name);
-            for (int direction = 0; direction < CharacterDirections.Count; direction++)
-            {
-                for (int gaitFrame = 0; gaitFrame < Mathf.Max(1, shipped.GaitFrames); gaitFrame++)
-                {
-                    for (int frame = 0; frame < shipped.FrameCount; frame++)
-                    {
-                        Assert.That(shipped.LanternLightAt(direction, frame, gaitFrame).Strength, Is.EqualTo(1f), $"{shipped.Name} {direction} {frame}");
-                    }
-                }
-            }
-        }
-
-        foreach (string name in HandClips.Concat(HipClips).Append("Run"))
-        {
-            CharacterClip clip = recipe.Clips.First(c => c.Name == name);
-            CharacterAnimationClip shipped = rogue.Find(name);
-            CharacterSheet sheet = baker.Bake(clip);
-            CharacterFrameLight[] baked = CharacterSheetWriter.LanternLights(sheet);
-            int columns = sheet.FrameCount;
-            for (int direction = 0; direction < CharacterDirections.Count; direction++)
-            {
-                for (int column = 0; column < columns; column++)
-                {
-                    CharacterFrameLight expected = baked[direction * columns + column];
-                    CharacterFrameLight actual = shipped.LanternLightAt(direction, column, 0);
-                    Assert.That(Vector2.Distance(actual.Offset, expected.Offset), Is.LessThan(1e-5f), $"{name} {direction} {column}");
-                    bool drawn = LayerPixels(sheet, direction, column) > 0;
-                    Assert.That(shipped.LanternAt(direction, column, 0) != null, Is.EqualTo(drawn), $"{name} {direction} {column}: a layer exactly where the lantern shows.");
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Every look of the catalog carries the lantern on every clip: the Bandit's, read from its files' lantern layers
-    /// (Docs/AsepriteCharacters.md, Phase 4), has a layer on exactly the rogue's frames, cut and pivoted as the rogue's,
-    /// and its light within half a pixel of the rogue's at full strength, its light's pixel marked in the file.
-    /// </summary>
-    [Test]
-    public void EveryLook_CarriesTheLantern_WhereTheRoguesHangs()
-    {
-        CharacterLookCatalog looks = AssetDatabase.LoadAssetAtPath<CharacterLookCatalog>(LooksPath);
-        CharacterAnimationSet rogue = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath);
-        Assert.That(looks.Count, Is.GreaterThan(1));
-        for (int i = 0; i < looks.Count; i++)
-        {
-            CharacterLook look = looks.Get(i);
-            foreach (CharacterAnimationClip clip in look.AnimationSet.Clips)
-            {
-                string name = $"{look.Name} {clip.Name}";
-                Assert.That(clip.HasLantern, Is.True, name);
-                CharacterAnimationClip baked = rogue.Find(clip.Name);
-                for (int direction = 0; direction < CharacterDirections.Count; direction++)
-                {
-                    for (int frame = 0; frame < clip.FrameCount; frame++)
-                    {
-                        string where = $"{name} {CharacterDirections.Name(direction)} {frame}";
-                        Sprite layer = clip.LanternAt(direction, frame, 0);
-                        Sprite bakedLayer = baked.LanternAt(direction, frame, 0);
-                        Assert.That(layer != null, Is.EqualTo(bakedLayer != null), where);
-                        if (layer != null)
-                        {
-                            Assert.That((layer.rect, layer.pivot), Is.EqualTo((bakedLayer.rect, bakedLayer.pivot)), where);
-                        }
-
-                        CharacterFrameLight light = clip.LanternLightAt(direction, frame, 0);
-                        CharacterFrameLight bakedLight = baked.LanternLightAt(direction, frame, 0);
-                        Assert.That(light.Strength, Is.EqualTo(1f), where);
-                        Assert.That(Mathf.Abs(light.Offset.x - bakedLight.Offset.x), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
-                        Assert.That(Mathf.Abs(light.Offset.y - bakedLight.Offset.y), Is.LessThanOrEqualTo(0.5f / CharacterSheetWriter.PixelsPerUnit + 1e-5f), where);
-                    }
-                }
-            }
-        }
     }
 
     /// <summary>
@@ -396,7 +213,7 @@ public class LanternTests
     [Test]
     public void TheLantern_HangsFromTheLeftHand_OrAtTheHipWhileAWeaponTakesIt()
     {
-        CharacterRecipe recipe = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
+        CharacterRecipe recipe = LanternRecipe();
         CharacterLanternArt lantern = recipe.Lantern;
         CharacterBaker baker = new(recipe);
         CharacterCanvas view = new(8, 8, Vector2Int.zero, baker.Scale);
@@ -445,7 +262,7 @@ public class LanternTests
     [Test]
     public void TheLanternLayer_OverTheSheet_IsTheFrameDrawnWithTheLantern_GlowingAtItsGlass()
     {
-        CharacterRecipe recipe = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
+        CharacterRecipe recipe = LanternRecipe();
         CharacterBaker baker = new(recipe);
         foreach (string name in new[] { "Walk", "BowShot" })
         {
@@ -496,7 +313,7 @@ public class LanternTests
     [Test]
     public void PackLantern_CutsEachFrameToItsBox_PivotedOnTheFeet()
     {
-        CharacterRecipe recipe = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
+        CharacterRecipe recipe = LanternRecipe();
         CharacterClip clip = recipe.Clips.First(c => c.Name == "Run");
         CharacterSheet sheet = new CharacterBaker(recipe).Bake(clip);
         IReadOnlyList<SpriteSheetFiles.Slice> slices = CharacterSheetWriter.PackLantern("Rogue", sheet, out Vector2Int size, out Color32[] pixels, out Color32[] glow);
@@ -538,52 +355,6 @@ public class LanternTests
     }
 
     /// <summary>
-    /// The written lantern sheets are the packed layers, sliced as packed, with their packed glow as their secondary
-    /// texture <c>_GlowTex</c>, and the rogue's set draws each frame's layer from them.
-    /// </summary>
-    [Test]
-    public void TheWrittenLanternSheets_AreThePackedLayers_WithTheirGlow()
-    {
-        CharacterRecipe recipe = AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath);
-        CharacterAnimationSet rogue = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(RogueSetPath);
-        CharacterBaker baker = new(recipe);
-        foreach (string name in new[] { "Idle", "Run", "GreatswordCleave" })
-        {
-            CharacterClip clip = recipe.Clips.First(c => c.Name == name);
-            CharacterSheet sheet = baker.Bake(clip);
-            IReadOnlyList<SpriteSheetFiles.Slice> slices = CharacterSheetWriter.PackLantern(recipe.SheetName, sheet, out Vector2Int size, out Color32[] pixels, out Color32[] glow);
-            string path = CharacterSheetWriter.SheetPath(recipe.SheetName, name + CharacterSheetWriter.LanternSuffix);
-            string glowPath = CharacterSheetWriter.GlowPath(recipe.SheetName, name + CharacterSheetWriter.LanternSuffix);
-            Assert.That(ReadPng(path), Is.EqualTo(pixels), name);
-            Assert.That(ReadPng(glowPath), Is.EqualTo(glow), name);
-            TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            Assert.That(importer.secondarySpriteTextures.Length, Is.EqualTo(1), name);
-            Assert.That(importer.secondarySpriteTextures[0].name, Is.EqualTo(SpriteSheetFiles.GlowTextureName));
-            Assert.That(importer.secondarySpriteTextures[0].texture, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Texture2D>(glowPath)));
-
-            CharacterAnimationClip shipped = rogue.Find(name);
-            Dictionary<string, SpriteSheetFiles.Slice> byName = slices.ToDictionary(slice => slice.Name);
-            for (int direction = 0; direction < CharacterDirections.Count; direction++)
-            {
-                for (int column = 0; column < sheet.FrameCount; column++)
-                {
-                    Sprite sprite = shipped.LanternAt(direction, column, 0);
-                    if (sprite == null)
-                    {
-                        continue;
-                    }
-
-                    SpriteSheetFiles.Slice slice = byName[sprite.name];
-                    Assert.That(AssetDatabase.GetAssetPath(sprite), Is.EqualTo(path));
-                    Assert.That(sprite.rect, Is.EqualTo(slice.Rect), sprite.name);
-                    Assert.That(Vector2.Distance(sprite.pivot, new Vector2(slice.Pivot.x * slice.Rect.width, slice.Pivot.y * slice.Rect.height)), Is.LessThan(1e-3f), sprite.name);
-                    Assert.That(sprite.name, Is.EqualTo(CharacterSheetWriter.SliceName(recipe.SheetName, name + CharacterSheetWriter.LanternSuffix, direction, column)));
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// A hit's flash mixes the lantern's layer toward the flash colour with the body, through a property block of its
     /// own, and both draw as their material does again once it ends.
     /// </summary>
@@ -609,107 +380,6 @@ public class LanternTests
         feedback.Tick(0.06f);
         Assert.That(layer.HasPropertyBlock(), Is.False, "and draws as its material does once the flash ends.");
         Assert.That(body.HasPropertyBlock(), Is.False);
-    }
-
-    /// <summary>
-    /// The player prefab carries the lantern: its layer drawn by a renderer of its own under the visuals, over the body
-    /// inside the character's sorting group at order 1, with the body's material and rendering layers and no sprite
-    /// until it burns, flashing with it; its light a point light in the lamp glass's tone (255, 204, 110) of radius 3.5
-    /// with URP's default falloff, on blend style 0 and the Default, Terrain and Entities sorting layers, casting no
-    /// shadow, off; and the lantern burning at 0.8, flickering by 0.04, lighting itself at the night lights' share at
-    /// sunset.
-    /// </summary>
-    [Test]
-    public void ThePlayerPrefab_CarriesTheLantern()
-    {
-        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPath);
-        CharacterVisuals visuals = player.GetComponentInChildren<CharacterVisuals>(true);
-        SpriteRenderer body = visuals.GetComponent<SpriteRenderer>();
-        SpriteRenderer layer = visuals.LanternRenderer;
-        Assert.That(layer, Is.Not.Null);
-        Assert.That(layer.transform.parent, Is.EqualTo(visuals.transform));
-        Assert.That(layer.transform.localPosition, Is.EqualTo(Vector3.zero));
-        Assert.That(layer.sprite, Is.Null);
-        Assert.That(layer.sortingLayerName, Is.EqualTo(body.sortingLayerName));
-        Assert.That(layer.sortingOrder, Is.EqualTo(body.sortingOrder + 1), "Over the body inside the character's group.");
-        Assert.That(layer.sharedMaterial, Is.EqualTo(body.sharedMaterial));
-        Assert.That(layer.renderingLayerMask, Is.EqualTo(body.renderingLayerMask), "It casts the sun's shadow with the body.");
-        Assert.That(player.GetComponent<HitFeedback>().Lantern, Is.EqualTo(layer), "It flashes with the body.");
-
-        Light2D light = visuals.LanternLight;
-        Assert.That(light, Is.Not.Null);
-        Assert.That(light, Is.Not.EqualTo(visuals.CastLight));
-        Assert.That(light.transform.parent, Is.EqualTo(visuals.transform));
-        Assert.That(light.lightType, Is.EqualTo(Light2D.LightType.Point));
-        Assert.That(light.blendStyleIndex, Is.Zero);
-        Assert.That((Color32)light.color, Is.EqualTo(new Color32(255, 204, 110, 255)));
-        Assert.That(light.pointLightOuterRadius, Is.EqualTo(3.5f));
-        Assert.That(light.pointLightInnerRadius, Is.Zero);
-        Assert.That(light.falloffIntensity, Is.EqualTo(0.5f));
-        Assert.That(light.shadowsEnabled, Is.False, "It casts no shadow.");
-        Assert.That(light.enabled, Is.False, "Off until it burns.");
-        string[] layers = light.targetSortingLayers.Select(SortingLayer.IDToName).ToArray();
-        Assert.That(layers, Is.EquivalentTo(new[] { "Default", "Terrain", "Entities" }));
-
-        PlayerLantern lantern = player.GetComponent<PlayerLantern>();
-        Assert.That(lantern, Is.Not.Null);
-        Assert.That(lantern.Intensity, Is.EqualTo(Intensity));
-        Assert.That(lantern.Flicker, Is.EqualTo(0.04f));
-        Assert.That(lantern.AutoShare, Is.EqualTo(0.7f));
-        SerializedObject serialized = new(lantern);
-        Assert.That(serialized.FindProperty("visuals").objectReferenceValue, Is.EqualTo(visuals));
-    }
-
-    /// <summary>
-    /// The lantern key is the project's player action Lantern on L, rebindable as Lantern under Other; read by the
-    /// local command source, it reaches the local player's lantern through its controller, which lights it or puts it
-    /// out; a remote copy's controller reads no command.
-    /// </summary>
-    [Test]
-    public void TheLanternKey_IsLRebindableUnderOther_AndReachesTheLocalPlayersLantern()
-    {
-        InputActionAsset actions = AssetDatabase.LoadAssetAtPath<InputActionAsset>(ActionsPath);
-        InputAction action = actions.FindAction($"{PlayerInputService.PlayerMapName}/{PlayerInputService.LanternActionName}", true);
-        Assert.That(action.bindings.Select(binding => binding.path), Is.EqualTo(new[] { "<Keyboard>/l" }));
-        Assert.That(action.bindings[0].groups, Is.EqualTo("Keyboard&Mouse"));
-        RebindableActionList list = AssetDatabase.LoadAssetAtPath<RebindableActionList>(RebindablePath);
-        int index = Enumerable.Range(0, list.Count).Single(i => list[i].Action.action.name == PlayerInputService.LanternActionName);
-        Assert.That(list[index].Label, Is.EqualTo("Lantern"));
-        Assert.That(list[index].Section, Is.EqualTo("Other"));
-
-        GameObject cameraObject = Track(new GameObject("Camera"));
-        Camera camera = cameraObject.AddComponent<Camera>();
-        camera.orthographic = true;
-        FakePlayerInput input = new() { GameplayEnabled = true, LanternPressedThisFrame = true };
-        LocalPlayerCommandSource source = new(input, camera, null, null);
-        Assert.That(source.ReadCommand().LanternPressed, Is.True);
-        input.LanternPressedThisFrame = false;
-        Assert.That(source.ReadCommand().LanternPressed, Is.False);
-
-        GameObject root = Track(new GameObject("Player"));
-        root.AddComponent<BoxCollider2D>().size = new Vector2(0.4f, 0.2f);
-        root.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
-        PlayerController controller = root.AddComponent<PlayerController>();
-        controller.Construct(clock);
-        TestPlayerControlSettings.Assign(controller, Track(TestPlayerControlSettings.Create()));
-        PlayerLantern lantern = root.AddComponent<PlayerLantern>();
-        lantern.Configure(CreateVisuals(out _, out _, out _), Intensity, 0.04f);
-        lantern.DecideLocally();
-        controller.SetCommandSource(source);
-
-        input.LanternPressedThisFrame = true;
-        controller.Tick();
-        Assert.That(lantern.Lit, Is.True, "The key lights it.");
-        input.LanternPressedThisFrame = false;
-        controller.Tick();
-        Assert.That(lantern.Lit, Is.True, "Only a press toggles it.");
-        input.LanternPressedThisFrame = true;
-        controller.Tick();
-        Assert.That(lantern.Lit, Is.False, "and puts it out.");
-
-        controller.SetSimulatesMovement(false);
-        controller.Tick();
-        Assert.That(lantern.Lit, Is.False, "A remote copy reads no command.");
     }
 
     /// <summary>
@@ -744,16 +414,6 @@ public class LanternTests
     }
 
     /// <summary>
-    /// The pixels of the PNG at <paramref name="path"/>, rows from the bottom.
-    /// </summary>
-    private Color32[] ReadPng(string path)
-    {
-        Texture2D texture = Track(new Texture2D(2, 2));
-        texture.LoadImage(File.ReadAllBytes(path));
-        return texture.GetPixels32();
-    }
-
-    /// <summary>
     /// Character visuals of the test set on the manual clock, with a cast light, a lantern layer renderer and a lantern
     /// light on children.
     /// </summary>
@@ -780,13 +440,15 @@ public class LanternTests
     }
 
     /// <summary>
-    /// A lantern of <see cref="Intensity"/> flickering by 0.04 on its own object, shown by <paramref name="visuals"/>.
+    /// The rogue's recipe carrying the lantern, made in memory, since no character the game ships carries one.
     /// </summary>
-    private PlayerLantern CreateLantern(CharacterVisuals visuals)
+    private CharacterRecipe LanternRecipe()
     {
-        PlayerLantern lantern = Track(new GameObject("Lantern")).AddComponent<PlayerLantern>();
-        lantern.Configure(visuals, Intensity, 0.04f);
-        return lantern;
+        CharacterRecipe recipe = Track(Object.Instantiate(AssetDatabase.LoadAssetAtPath<CharacterRecipe>(RecipePath)));
+        SerializedObject serialized = new(recipe);
+        serialized.FindProperty("lantern").objectReferenceValue = AssetDatabase.LoadAssetAtPath<CharacterLanternArt>(LanternPath);
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        return recipe;
     }
 
     /// <summary>

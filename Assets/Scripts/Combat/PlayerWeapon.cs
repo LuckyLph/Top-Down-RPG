@@ -17,8 +17,8 @@ public enum AttackDelivery
 /// <summary>
 /// A weapon the player can equip: the <see cref="Hit"/> each attack deals, the attack's cooldown, range and timeline
 /// (windup, contact and recovery at attack speed 1) with its cancel rules, how its hit lands at contact (the area a
-/// melee weapon searches, or the projectile a ranged one launches), the clip of the character's animation set its
-/// attack plays (the only frames that draw it), its HUD icon, and the two abilities it grants (the A and S slots). A
+/// melee weapon searches, or the projectile a ranged one launches), the clips of the character's animation set its
+/// attacks play (the only frames that draw it), its HUD icon, and the two abilities it grants (the A and S slots). A
 /// weapon is named on the wire by its index in the <see cref="WeaponCatalog"/>, and in saves by its id, its asset's
 /// GUID, which the editor keeps.
 /// </summary>
@@ -79,8 +79,12 @@ public sealed class PlayerWeapon : ScriptableObject
     private ProjectileVisual projectileVisual;
 
     [Header("Animation")]
-    [SerializeField, Tooltip("The clip of the character's animation set the attack plays, stretched to its timeline. The weapon only shows in it.")]
+    [SerializeField, Tooltip("The clip of the character's animation set the weapon's first attack plays, stretched to its timeline. The weapon only shows in its attacks.")]
     private string attackClip = "SwordSlash";
+    [SerializeField, Tooltip("The clips of the weapon's other attacks, which follow the first in this order on the wire. An attack is followed by another one at random, never by itself. A set without one of these clips plays the first attack's instead.")]
+    private string[] otherAttackClips = new string[0];
+    [SerializeField, Tooltip("The option of a look's weapon part slot that shows this weapon's gear outside its attacks: the weapon carried at the hip or on the back, and its scabbard, sling or quiver (Docs/PlayerCharacter.md, Phase 7). A look without it shows no gear.")]
+    private string gear = string.Empty;
 
     [Header("Presentation")]
     [SerializeField] private Sprite hudIcon;
@@ -103,7 +107,22 @@ public sealed class PlayerWeapon : ScriptableObject
     public float HitDistance => Mathf.Max(0f, hitDistance);
     public Vector2 HitSize => new(Mathf.Max(0f, hitSize.x), Mathf.Max(0f, hitSize.y));
     public string AttackClip => attackClip;
+    public string Gear => gear ?? string.Empty;
     public Sprite HudIcon => hudIcon;
+
+    /// <summary>
+    /// How many attacks the weapon has: the first and the others.
+    /// </summary>
+    public int AttackCount => 1 + (otherAttackClips != null ? otherAttackClips.Length : 0);
+
+    /// <summary>
+    /// The clip attack <paramref name="attack"/> plays: 0 is the first attack's, then the others' in order, and the first
+    /// attack's for an index outside them.
+    /// </summary>
+    public string AttackClipOf(int attack)
+    {
+        return attack > 0 && attack < AttackCount ? otherAttackClips[attack - 1] : attackClip;
+    }
 
     /// <summary>
     /// Keeps exactly four directional hit offsets and <see cref="AbilityCount"/> ability entries in the inspector, and
@@ -155,8 +174,9 @@ public sealed class PlayerWeapon : ScriptableObject
     /// Builds an unsaved, hidden runtime weapon with the given values, for tests that must not touch project assets, its
     /// id <c>test-</c> and its name.
     /// Offsets and abilities are truncated or padded to their fixed counts; the timeline defaults to 0.15 s, 0.05 s and
-    /// 0.15 s with both cancel rules on, the hit area to 0.9 by 0.9, and the attack clip to the sword's. With a
-    /// <paramref name="projectile"/> it fires that projectile instead of searching its area.
+    /// 0.15 s with both cancel rules on, the hit area to 0.9 by 0.9, and the attack clip to the sword's, with no other
+    /// attacks, and no gear unless <paramref name="gearName"/> names it. With a <paramref name="projectile"/> it fires
+    /// that projectile instead of searching its area.
     /// </summary>
     public static PlayerWeapon Create(
         string name,
@@ -176,7 +196,9 @@ public sealed class PlayerWeapon : ScriptableObject
         bool cancelWindupByMove = true,
         bool cancellableRecovery = true,
         string attackClipName = "SwordSlash",
-        ProjectileSpec? projectile = null)
+        ProjectileSpec? projectile = null,
+        string[] otherAttackClipNames = null,
+        string gearName = "")
     {
         PlayerWeapon weapon = CreateInstance<PlayerWeapon>();
         weapon.weaponId = $"test-{name}";
@@ -195,6 +217,8 @@ public sealed class PlayerWeapon : ScriptableObject
         weapon.hitOffsets = NormalizeDirectionalOffsets(offsets);
         weapon.hitSize = size ?? new Vector2(0.9f, 0.9f);
         weapon.attackClip = attackClipName;
+        weapon.otherAttackClips = otherAttackClipNames ?? new string[0];
+        weapon.gear = gearName;
         if (projectile.HasValue)
         {
             ProjectileSpec spec = projectile.Value;

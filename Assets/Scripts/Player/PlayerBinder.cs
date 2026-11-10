@@ -2,9 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Hooks a spawned player into the Gameplay scope: the local player gets the local command source, simulates its own
-/// movement, draws the look the local settings choose (<see cref="PlayerLook.FollowLocalChoice"/>) and decides when its
-/// lantern burns (<see cref="PlayerLantern.DecideLocally"/>), offline and online alike, joins the registry and becomes
-/// the tracked local player; a remote copy only joins the registry and shows replicated movement. Placing a player is
+/// movement, draws the look the local settings choose (<see cref="PlayerLook.FollowLocalChoice"/>), offline and online
+/// alike, joins the registry and becomes the tracked local player; a remote copy only joins the registry and shows replicated movement. Placing a player is
 /// the world session's (its start, trips and respawns).
 /// </summary>
 public sealed class PlayerBinder
@@ -25,8 +24,7 @@ public sealed class PlayerBinder
 
     /// <summary>
     /// Binds <paramref name="controller"/> as this machine's player: drives it from local input, has it follow the
-    /// local settings' look and decide its lantern, registers it and publishes it as the local player. Returns its
-    /// registry handle.
+    /// local settings' look, registers it and publishes it as the local player. Returns its registry handle.
     /// </summary>
     public PlayerHandle BindLocal(PlayerController controller)
     {
@@ -35,11 +33,6 @@ public sealed class PlayerBinder
         if (controller.TryGetComponent(out PlayerLook look))
         {
             look.FollowLocalChoice();
-        }
-
-        if (controller.TryGetComponent(out PlayerLantern lantern))
-        {
-            lantern.DecideLocally();
         }
 
         LocalPlayer local = new(controller);

@@ -39,6 +39,9 @@ MonoBehaviour:
   projectileHoming: 1
   projectileVisual: {fileID: 0}
   attackClip: GreatswordCleave
+  otherAttackClips:
+  - GreatswordSweep
+  gear: Greatsword
   hudIcon: {fileID: -2024084140, guid: 9cd7f6d08b7c8ff4fa743a30e5098a4f, type: 3}
   abilities:
   - {fileID: 11400000, guid: e71a7e2bae02e514faaeb331f39be8c3, type: 2}

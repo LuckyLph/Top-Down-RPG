@@ -19,9 +19,16 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 /// hold ends at the release; a cast started at another's release (a buffered cast, Docs/KnownGaps.md, Phase 7) waits
 /// for that release's time, then gathers in what is left of its cast time and releases on the update it completes, an
 /// instant one releasing as it starts, a hit-stop holding the first release on, moving starting it at once and a stop
-/// dropping it; updates allocate nothing once warm; the visuals put the sprite on their renderer, the
-/// weapon plays its attack on them while the character stands and runs unarmed, and a copy's attack plays on through
-/// a switch to its weapon that arrives after it.
+/// dropping it; updates allocate nothing once warm; standing still plays an idle animation after the wait and another
+/// after a gap, never the one before, moving, an action or a hold cutting one and starting the wait over, two animators
+/// seeded alike picking alike and none playing without a random source (Docs/PlayerCharacter.md, Phase 3); the
+/// visuals put the sprite on their renderer, go on where they were in another outfit of the same look, an action and a
+/// hold carrying on, and start over in another look (Docs/PlayerCharacter.md, Phase 7), two seeded alike playing the
+/// same idle animations, the weapon plays its
+/// attack on them while the character stands and runs unarmed, and a copy's attack plays on through a switch to its
+/// weapon that arrives after it; a weapon's attacks start with its first, then never repeat, the next picked at random
+/// among the others (in order without a random source), starting over when it is equipped; and a copy plays the attack
+/// the owner made, the first attack's clip where its set lacks that attack's (Docs/PlayerCharacter.md, Phase 4).
 /// </summary>
 public class CharacterAnimatorTests
 {
@@ -30,6 +37,7 @@ public class CharacterAnimatorTests
     private const float SprintNatural = 5.6f;
     private const int Contact = 4;
     private const int CastRelease = 4;
+    private const float IdleAfter = 2f;
 
     private readonly List<Object> created = new();
     private ManualClock clock;
@@ -38,14 +46,16 @@ public class CharacterAnimatorTests
 
     /// <summary>
     /// Builds settings (walk from 0.1, run from 2.4, sprint from 5.6 units per second, 10% hysteresis, rates 0.5 to
-    /// 1.5, an 8 degree direction margin) and a set of idle (4 frames of 0.25 s), walk (8 of 0.125 s), run (8 of
-    /// 0.1 s) and sprint (8 of 0.075 s) clips, each sprite its own.
+    /// 1.5, an 8 degree direction margin, the first idle animation after 2 s and the next 3 to 5 s after one ends) and
+    /// a set of idle (4 frames of 0.25 s), walk (8 of 0.125 s), run (8 of 0.1 s) and sprint (8 of 0.075 s) clips,
+    /// three attacks (Slash, Backhand and Thrust), casts, and two idle animations (Fidget, 3 frames of 0.1 s, and Yawn,
+    /// 4 of 0.1 s), each sprite its own.
     /// </summary>
     [SetUp]
     public void SetUp()
     {
         clock = new ManualClock();
-        settings = Track(CharacterLocomotionSettings.Create(0.1f, 2.4f, 5.6f, 0.1f, 0.5f, 1.5f, 8f));
+        settings = Track(CharacterLocomotionSettings.Create(0.1f, 2.4f, 5.6f, 0.1f, 0.5f, 1.5f, 8f, 0.25f, IdleAfter, 3f, 5f));
         set = Track(CharacterAnimationSet.Create(new[]
         {
             Clip("Idle", CharacterGait.Idle, 4, 0.25f, 0f),
@@ -53,10 +63,14 @@ public class CharacterAnimatorTests
             Clip("Run", CharacterGait.Run, 8, 0.1f, RunNatural),
             Clip("Sprint", CharacterGait.Sprint, 8, 0.075f, SprintNatural),
             AttackClip("Slash"),
+            AttackClip("Backhand"),
+            AttackClip("Thrust"),
             CastClip("Cast", 0),
             CastClip("CastRun", 8),
             CastClip("Second", 0),
-            FlourishClip("Flourish")
+            FlourishClip("Flourish"),
+            IdleAnimationClip("Fidget", 3),
+            IdleAnimationClip("Yawn", 4)
         }));
     }
 
@@ -991,6 +1005,154 @@ public class CharacterAnimatorTests
     }
 
     /// <summary>
+    /// Standing still, nothing plays until the wait is over; then an idle animation plays from its first frame at its
+    /// natural pace in the direction faced, and once it has played the character stands again.
+    /// </summary>
+    [Test]
+    public void StandingStill_PlaysAnIdleAnimation_AfterTheWait_ThenStandsAgain()
+    {
+        CharacterAnimator animator = new(set, settings, clock, new ScriptedRandom(0f));
+        animator.Update(Vector2.zero, Vector2.left);
+        clock.Advance(IdleAfter - 0.05f);
+        animator.Update(Vector2.zero, Vector2.left);
+        Assert.That(animator.ShowsIdleAnimation, Is.False);
+        Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)));
+
+        clock.Advance(0.1f);
+        Sprite first = animator.Update(Vector2.zero, Vector2.left);
+        Assert.That(animator.ShowsIdleAnimation, Is.True);
+        Assert.That(animator.Clip.Name, Is.EqualTo("Fidget"));
+        Assert.That(first, Is.SameAs(set.Find("Fidget").SpriteAt(CharacterDirections.West, 0)));
+
+        clock.Advance(0.15f);
+        animator.Update(Vector2.zero, Vector2.left);
+        Assert.That(animator.Frame, Is.EqualTo(1));
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.left);
+        Assert.That(animator.Frame, Is.EqualTo(2));
+
+        clock.Advance(0.06f);
+        Sprite after = animator.Update(Vector2.zero, Vector2.left);
+        Assert.That(animator.ShowsIdleAnimation, Is.False, "It plays once.");
+        Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)));
+        Assert.That(after, Is.SameAs(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.West, animator.Frame)));
+    }
+
+    /// <summary>
+    /// While the character keeps standing, the next idle animation starts the picked gap after the last one ended, and
+    /// it is never the one before.
+    /// </summary>
+    [Test]
+    public void TheNextIdleAnimation_FollowsAfterItsGap_AndIsNeverTheOneBefore()
+    {
+        CharacterAnimator animator = new(set, settings, clock, new ScriptedRandom(0f, 0.5f, 0f, 0f, 0.99f));
+        animator.Update(Vector2.zero, Vector2.down);
+        clock.Advance(IdleAfter);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Clip.Name, Is.EqualTo("Fidget"));
+
+        clock.Advance(0.35f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.ShowsIdleAnimation, Is.False);
+        clock.Advance(3.9f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.ShowsIdleAnimation, Is.False, "The gap picked halfway between 3 and 5 s is 4 s from Fidget's end.");
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.ShowsIdleAnimation, Is.True);
+        Assert.That(animator.Clip.Name, Is.EqualTo("Yawn"), "The pick that would repeat Fidget falls on the other one.");
+
+        clock.Advance(0.45f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.ShowsIdleAnimation, Is.False);
+        clock.Advance(3f);
+        animator.Update(Vector2.zero, Vector2.down);
+        Assert.That(animator.Clip.Name, Is.EqualTo("Fidget"), "After Yawn, the shortest gap and any pick give Fidget again.");
+    }
+
+    /// <summary>
+    /// Moving, an action or a hold (a hit-stop) cuts an idle animation at once, and standing again starts the wait
+    /// over; a hold shows the character standing.
+    /// </summary>
+    [Test]
+    public void Moving_AnAction_OrAHold_CutsAnIdleAnimation_AndStartsTheWaitOver()
+    {
+        CharacterAnimator animator = new(set, settings, clock, new SystemRandom(3));
+        StandUntilAnIdleAnimation(animator);
+        animator.Update(Vector2.right * RunNatural, Vector2.right);
+        Assert.That(animator.ShowsIdleAnimation, Is.False);
+        Assert.That(animator.Gait, Is.EqualTo(CharacterGait.Run));
+        AssertTheWaitStartsOver(animator);
+
+        animator.PlayAction(set.Find("Slash"), Vector2.right, new AttackTimeline(0.1f, 0.05f, 0.1f), false);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.ShowsIdleAnimation, Is.False);
+        Assert.That(animator.IsActing, Is.True);
+        clock.Advance(0.12f);
+        animator.Update(Vector2.zero, Vector2.right);
+        clock.Advance(0.2f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.IsActing, Is.False);
+        AssertTheWaitStartsOver(animator);
+
+        animator.Hold(0.1f);
+        Sprite held = animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.ShowsIdleAnimation, Is.False);
+        Assert.That(animator.Clip, Is.SameAs(set.Locomotion(CharacterGait.Idle)), "The hold shows the character standing.");
+        Assert.That(held, Is.SameAs(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.East, animator.Frame)));
+        AssertTheWaitStartsOver(animator);
+    }
+
+    /// <summary>
+    /// Two animators of the same set seeded alike pick the same idle animations at the same times; without a random
+    /// source, or with a set that has none, nothing plays however long the character stands; standing through idle
+    /// animations allocates nothing once warm.
+    /// </summary>
+    [Test]
+    public void IdleAnimations_SeededAlikePickAlike_NeedASource_AndDoNotAllocate()
+    {
+        CharacterAnimator one = new(set, settings, clock, new SystemRandom(11));
+        CharacterAnimator other = new(set, settings, clock, new SystemRandom(11));
+        CharacterAnimator unseeded = new(set, settings, clock);
+        CharacterAnimationSet bare = Track(CharacterAnimationSet.Create(new[] { Clip("Idle", CharacterGait.Idle, 1, 0.25f, 0f) }));
+        CharacterAnimator without = new(bare, settings, clock, new SystemRandom(11));
+        int played = 0;
+        string previous = null;
+        for (int step = 0; step < 3000; step++)
+        {
+            clock.Advance(0.02f);
+            one.Update(Vector2.zero, Vector2.down);
+            other.Update(Vector2.zero, Vector2.down);
+            unseeded.Update(Vector2.zero, Vector2.down);
+            without.Update(Vector2.zero, Vector2.down);
+            Assert.That(other.ShowsIdleAnimation, Is.EqualTo(one.ShowsIdleAnimation), $"step {step}");
+            Assert.That(other.Clip, Is.SameAs(one.Clip), $"step {step}");
+            Assert.That(unseeded.ShowsIdleAnimation, Is.False);
+            Assert.That(without.ShowsIdleAnimation, Is.False);
+            string name = one.ShowsIdleAnimation ? one.Clip.Name : null;
+            if (name != null && name != previous)
+            {
+                played++;
+            }
+
+            previous = name ?? previous;
+        }
+
+        Assert.That(played, Is.GreaterThan(5), "A minute of standing plays several idle animations.");
+
+        TestDelegate stand = () =>
+        {
+            for (int i = 0; i < 400; i++)
+            {
+                clock.Advance(0.05f);
+                one.Update(Vector2.zero, Vector2.down);
+            }
+        };
+        stand();
+        Assert.That(stand, Is.Not.AllocatingGCMemory());
+    }
+
+    /// <summary>
     /// The visuals feed their animator the movement they were given and put its sprite on their renderer, on the
     /// injected clock.
     /// </summary>
@@ -1017,6 +1179,82 @@ public class CharacterAnimatorTests
         visuals.SetLocomotion(Vector2.zero, Vector2.left);
         visuals.Tick();
         Assert.That(renderer.sprite, Is.SameAs(set.Locomotion(CharacterGait.Idle).SpriteAt(CharacterDirections.West, 0)));
+    }
+
+    /// <summary>
+    /// Visuals given another outfit of the same look, a set of the same clips drawn by other sprites
+    /// (Docs/PlayerCharacter.md, Phase 7), go on where they were: an attack showing plays on in the new sprites, its
+    /// contact frame on time, and a hit-stop's held frame takes the new set's sprite; a set of other clips starts the
+    /// animator over, stopping the attack.
+    /// </summary>
+    [Test]
+    public void AnOutfitOfTheSameClips_KeepsTheActionAndTheHold_AnotherSetStartsOver()
+    {
+        SpriteRenderer renderer = CreateVisuals(out CharacterVisuals visuals);
+        List<CharacterAnimationClip> dressed = new();
+        foreach (CharacterAnimationClip clip in set.Clips)
+        {
+            dressed.Add(clip.WithSprites(Sprites("Outfit" + clip.Name, clip.FrameCount * Mathf.Max(1, clip.GaitFrames))));
+        }
+
+        CharacterAnimationSet outfit = Track(CharacterAnimationSet.Create(dressed));
+        CharacterAnimationClip slash = set.Find("Slash");
+        CharacterAnimationClip outfitSlash = outfit.Find("Slash");
+        Assert.That(set.SameClipsAs(outfit), Is.True);
+
+        visuals.PlayAction(slash, Vector2.right, new AttackTimeline(0.5f, 0.125f, 0.25f), false);
+        visuals.Tick();
+        clock.Advance(0.3f);
+        visuals.Tick();
+        int frame = visuals.Animator.Frame;
+        Assert.That(frame, Is.InRange(1, Contact - 1));
+
+        visuals.SetLook(outfit, settings);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.True, "the attack plays on");
+        Assert.That(visuals.Animator.Clip, Is.SameAs(outfitSlash));
+        Assert.That(visuals.Animator.Frame, Is.EqualTo(frame));
+        Assert.That(renderer.sprite, Is.SameAs(outfitSlash.SpriteAt(CharacterDirections.East, frame)));
+
+        clock.Advance(0.2f);
+        Assert.That(visuals.HoldContact(0.1f), Is.True);
+        visuals.Tick();
+        Assert.That(renderer.sprite, Is.SameAs(outfitSlash.SpriteAt(CharacterDirections.East, Contact)), "the contact frame on time");
+        visuals.SetLook(set, settings);
+        clock.Advance(0.05f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsHolding, Is.True);
+        Assert.That(renderer.sprite, Is.SameAs(slash.SpriteAt(CharacterDirections.East, Contact)), "the held frame in the new set's sprite");
+
+        CharacterAnimationSet other = Track(CharacterAnimationSet.Create(new[] { Clip("Idle", CharacterGait.Idle, 4, 0.25f, 0f) }));
+        visuals.SetLook(other, settings);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.False, "another look starts over");
+        Assert.That(renderer.sprite, Is.SameAs(other.Clips[0].SpriteAt(CharacterDirections.South, 0)));
+    }
+
+    /// <summary>
+    /// Two visuals seeded alike (<see cref="CharacterVisuals.SeedIdleAnimations"/>, a player's network id on every
+    /// machine) put the same idle animations on their renderers while their characters stand.
+    /// </summary>
+    [Test]
+    public void Visuals_SeededAlike_ShowTheSameIdleAnimations()
+    {
+        SpriteRenderer oneRenderer = CreateVisuals(out CharacterVisuals one);
+        SpriteRenderer otherRenderer = CreateVisuals(out CharacterVisuals other);
+        one.SeedIdleAnimations(27);
+        other.SeedIdleAnimations(27);
+        bool showedOne = false;
+        for (int step = 0; step < 1500; step++)
+        {
+            clock.Advance(0.02f);
+            one.Tick();
+            other.Tick();
+            Assert.That(otherRenderer.sprite, Is.SameAs(oneRenderer.sprite), $"step {step}");
+            showedOne |= one.Animator.ShowsIdleAnimation;
+        }
+
+        Assert.That(showedOne, Is.True);
     }
 
     /// <summary>
@@ -1078,10 +1316,81 @@ public class CharacterAnimatorTests
     }
 
     /// <summary>
-    /// A tracked player with a weapon controller on the test clock, resolving hits with authority, and its visuals on a
-    /// child playing the test set: <paramref name="visuals"/> and their <paramref name="renderer"/>.
+    /// A weapon with three attacks starts with its first, then follows each with one of the other two picked at random,
+    /// never the same twice in a row, raising and showing the attack it starts; equipping it again starts over from the
+    /// first. Without a random source a weapon's two attacks alternate.
     /// </summary>
-    private PlayerWeaponController CreateArmedPlayer(out CharacterVisuals visuals, out SpriteRenderer renderer)
+    [Test]
+    public void AWeaponsAttacks_StartWithTheFirst_ThenNeverRepeat()
+    {
+        PlayerWeaponController weapon = CreateArmedPlayer(out CharacterVisuals visuals, out _, new ScriptedRandom(0.75f, 0.6f, 0.1f, 0f));
+        PlayerWeapon sword = Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash", otherAttackClipNames: new[] { "Backhand", "Thrust" }));
+        weapon.Equip(sword);
+        int started = -1;
+        weapon.AttackStarted += (attack, _, _) => started = attack;
+
+        int[] attacks = { 0, 2, 1, 2, 0 };
+        for (int i = 0; i < attacks.Length; i++)
+        {
+            Assert.That(weapon.TryAttack(Vector2.down), Is.True, $"attack {i}");
+            visuals.Tick();
+            Assert.That(started, Is.EqualTo(attacks[i]), $"attack {i}");
+            Assert.That(visuals.Animator.Clip.Name, Is.EqualTo(sword.AttackClipOf(attacks[i])), $"attack {i}");
+            clock.Advance(1.1f);
+            weapon.Tick();
+        }
+
+        weapon.Equip(sword);
+        Assert.That(weapon.TryAttack(Vector2.down), Is.True);
+        Assert.That(started, Is.EqualTo(0), "Equipping the weapon starts its attacks over.");
+
+        PlayerWeaponController plain = CreateArmedPlayer(out CharacterVisuals plainVisuals, out _);
+        plain.Equip(Track(PlayerWeapon.Create("Pair", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash", otherAttackClipNames: new[] { "Backhand" })));
+        for (int i = 0; i < 4; i++)
+        {
+            Assert.That(plain.TryAttack(Vector2.down), Is.True, $"attack {i}");
+            plainVisuals.Tick();
+            Assert.That(plainVisuals.Animator.Clip.Name, Is.EqualTo(i % 2 == 0 ? "Slash" : "Backhand"), $"attack {i}");
+            clock.Advance(1.1f);
+            plain.Tick();
+        }
+    }
+
+    /// <summary>
+    /// A copy plays the attack the owner made, named by its index: the weapon's second attack plays its own clip, an
+    /// attack whose clip the set lacks plays the first attack's (as the Bandit's set holds each weapon's first attack
+    /// only), and an index past the weapon's attacks plays nothing.
+    /// </summary>
+    [Test]
+    public void ACopy_PlaysTheAttackTheOwnerMade_OrTheFirstWhereItsSetLacksIt()
+    {
+        PlayerWeaponController weapon = CreateArmedPlayer(out CharacterVisuals visuals, out _);
+        PlayerWeapon sword = Track(PlayerWeapon.Create("Sword", 1, 1f, 0.5f, new Vector2[4], windup: 0.25f, contact: 0.125f, recovery: 0.25f, attackClipName: "Slash", otherAttackClipNames: new[] { "Backhand", "Lunge" }));
+        weapon.SetCatalog(Track(WeaponCatalog.Create(sword)));
+        weapon.Equip(sword);
+
+        weapon.PlayRemoteAttack(0, 1, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.Clip.Name, Is.EqualTo("Backhand"));
+
+        weapon.StopRemoteAttack();
+        weapon.PlayRemoteAttack(0, 2, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.True);
+        Assert.That(visuals.Animator.Clip.Name, Is.EqualTo("Slash"), "The set has no Lunge.");
+
+        weapon.StopRemoteAttack();
+        weapon.PlayRemoteAttack(0, 3, Vector2.down, 1f);
+        visuals.Tick();
+        Assert.That(visuals.Animator.IsActing, Is.False, "The weapon has no fourth attack.");
+    }
+
+    /// <summary>
+    /// A tracked player with a weapon controller on the test clock, resolving hits with authority and picking its next
+    /// attack with <paramref name="random"/> (none by default), and its visuals on a child playing the test set:
+    /// <paramref name="visuals"/> and their <paramref name="renderer"/>.
+    /// </summary>
+    private PlayerWeaponController CreateArmedPlayer(out CharacterVisuals visuals, out SpriteRenderer renderer, IRandom random = null)
     {
         GameObject player = Track(new GameObject("Player"));
         GameObject child = new("Visuals");
@@ -1094,8 +1403,55 @@ public class CharacterAnimatorTests
         serialized.ApplyModifiedPropertiesWithoutUndo();
         visuals.Construct(clock);
         PlayerWeaponController weapon = player.AddComponent<PlayerWeaponController>();
-        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock);
+        weapon.Construct(TestCombat.CreateAttackService(FixedGameAuthority.Authoritative), null, clock, random);
         return weapon;
+    }
+
+    /// <summary>
+    /// A character's visuals on the test set and settings, injected with the test clock, standing still; returns its
+    /// renderer.
+    /// </summary>
+    private SpriteRenderer CreateVisuals(out CharacterVisuals visuals)
+    {
+        GameObject owner = Track(new GameObject("Visuals"));
+        SpriteRenderer renderer = owner.AddComponent<SpriteRenderer>();
+        visuals = owner.AddComponent<CharacterVisuals>();
+        SerializedObject serialized = new(visuals);
+        serialized.FindProperty("animationSet").objectReferenceValue = set;
+        serialized.FindProperty("locomotion").objectReferenceValue = settings;
+        serialized.ApplyModifiedPropertiesWithoutUndo();
+        visuals.Construct(clock);
+        visuals.SetLocomotion(Vector2.zero, Vector2.down);
+        return renderer;
+    }
+
+    /// <summary>
+    /// Stands still facing east until an idle animation shows.
+    /// </summary>
+    private void StandUntilAnIdleAnimation(CharacterAnimator animator)
+    {
+        animator.Update(Vector2.zero, Vector2.right);
+        for (int step = 0; step < 1000 && !animator.ShowsIdleAnimation; step++)
+        {
+            clock.Advance(0.02f);
+            animator.Update(Vector2.zero, Vector2.right);
+        }
+
+        Assert.That(animator.ShowsIdleAnimation, Is.True);
+    }
+
+    /// <summary>
+    /// Standing again from now, no idle animation shows until the first wait is over, and one does once it is.
+    /// </summary>
+    private void AssertTheWaitStartsOver(CharacterAnimator animator)
+    {
+        animator.Update(Vector2.zero, Vector2.right);
+        clock.Advance(IdleAfter - 0.05f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.ShowsIdleAnimation, Is.False, "The wait starts over.");
+        clock.Advance(0.1f);
+        animator.Update(Vector2.zero, Vector2.right);
+        Assert.That(animator.ShowsIdleAnimation, Is.True, "An idle animation plays once the wait is over.");
     }
 
     /// <summary>
@@ -1166,6 +1522,20 @@ public class CharacterAnimatorTests
     }
 
     /// <summary>
+    /// An idle animation of <paramref name="frames"/> frames of 0.1 s, each sprite its own.
+    /// </summary>
+    private CharacterAnimationClip IdleAnimationClip(string name, int frames)
+    {
+        float[] frameSeconds = new float[frames];
+        for (int frame = 0; frame < frames; frame++)
+        {
+            frameSeconds[frame] = 0.1f;
+        }
+
+        return CharacterAnimationClip.Create(name, CharacterGait.None, false, Sprites(name, frames), frameSeconds, 0f, clipIdleAnimation: true);
+    }
+
+    /// <summary>
     /// A clip of <paramref name="frames"/> frames of <paramref name="seconds"/> each, with a sprite of its own for every
     /// direction and frame.
     /// </summary>
@@ -1204,5 +1574,40 @@ public class CharacterAnimatorTests
     {
         created.Add(instance);
         return instance;
+    }
+
+    /// <summary>
+    /// A random source giving its shares (0 to 1) in turn, scaled into each range asked for, the last one over and over.
+    /// </summary>
+    private sealed class ScriptedRandom : IRandom
+    {
+        private readonly float[] shares;
+        private int next;
+
+        /// <summary>
+        /// A source giving <paramref name="values"/> in turn.
+        /// </summary>
+        public ScriptedRandom(params float[] values)
+        {
+            shares = values;
+        }
+
+        /// <summary>
+        /// The next share scaled from <paramref name="minInclusive"/> to <paramref name="maxInclusive"/>.
+        /// </summary>
+        public float Range(float minInclusive, float maxInclusive)
+        {
+            float share = shares[Mathf.Min(next, shares.Length - 1)];
+            next++;
+            return minInclusive + share * (maxInclusive - minInclusive);
+        }
+
+        /// <summary>
+        /// The centre of the unit circle.
+        /// </summary>
+        public Vector2 InsideUnitCircle()
+        {
+            return Vector2.zero;
+        }
     }
 }

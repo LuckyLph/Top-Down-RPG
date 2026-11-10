@@ -152,3 +152,17 @@ MonoBehaviour:
     to: 0.53
   smearSamples: 24
   effects: []
+  light:
+    outline:
+      serializedVersion: 2
+      rgba: 0
+    shadow:
+      serializedVersion: 2
+      rgba: 0
+    middle:
+      serializedVersion: 2
+      rgba: 0
+    light:
+      serializedVersion: 2
+      rgba: 0
+  posedOn: {fileID: 11400000, guid: b94799e667524ff45803916f0da9c8a9, type: 2}

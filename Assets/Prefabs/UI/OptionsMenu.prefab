@@ -1565,6 +1565,7 @@ MonoBehaviour:
   confirmYesButton: {fileID: 8382667931523857069}
   confirmNoButton: {fileID: 6818143165243078286}
   looks: {fileID: 11400000, guid: 7ee68ec85e15d1d41aba52af430bb49e, type: 2}
+  colours: {fileID: 11400000, guid: fdc585b5f9c89a14c8b9639a63694965, type: 2}
 --- !u!1 &6955804362817374433
 GameObject:
   m_ObjectHideFlags: 0

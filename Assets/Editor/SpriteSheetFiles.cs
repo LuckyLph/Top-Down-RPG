@@ -15,7 +15,7 @@ using UnityEngine;
 /// maximum size gets the size it needs. An asset written beside a sheet keeps its GUID and is saved only when it
 /// changed. A glow written beside a sheet (<see cref="WriteGlow"/>) is a plain texture the sheet takes as a secondary
 /// texture (<see cref="SetSecondaryTextures"/>), the props' and the characters' lanterns' alike, and so are a prop
-/// sheet's normals (<see cref="WriteNormals"/>).
+/// sheet's normals (<see cref="WriteNormals"/>) and a character sheet's palette map (<see cref="WritePaletteMap"/>).
 /// </summary>
 public static class SpriteSheetFiles
 {
@@ -63,7 +63,7 @@ public static class SpriteSheetFiles
     /// </summary>
     public static bool WriteGlow(string path, int width, int height, Color32[] pixels)
     {
-        return WriteSecondary(path, width, height, pixels, true);
+        return WriteSecondary(path, width, height, pixels, true, false);
     }
 
     /// <summary>
@@ -73,14 +73,32 @@ public static class SpriteSheetFiles
     /// </summary>
     public static bool WriteNormals(string path, int width, int height, Color32[] pixels)
     {
-        return WriteSecondary(path, width, height, pixels, false);
+        return WriteSecondary(path, width, height, pixels, false, false);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="codes"/>, a byte per pixel (rows from the bottom), as a PNG of grey levels at
+    /// <paramref name="path"/> when its bytes changed and imports it as a character sheet's palette map
+    /// (Docs/PlayerCharacter.md, Phase 5), as <see cref="WriteGlow"/> imports a glow but as a single channel, red, so
+    /// the texture holds each byte exactly (R8, linear). Returns whether the file or its import settings changed.
+    /// </summary>
+    public static bool WritePaletteMap(string path, int width, int height, byte[] codes)
+    {
+        Color32[] pixels = new Color32[codes.Length];
+        for (int i = 0; i < codes.Length; i++)
+        {
+            byte code = codes[i];
+            pixels[i] = new Color32(code, code, code, 255);
+        }
+
+        return WriteSecondary(path, width, height, pixels, false, true);
     }
 
     /// <summary>
     /// Writes a texture a sheet takes as a secondary texture, as <see cref="WriteGlow"/> describes, its colour in sRGB
-    /// when <paramref name="srgb"/>, else linear.
+    /// when <paramref name="srgb"/>, else linear, and as its red channel alone when <paramref name="singleChannel"/>.
     /// </summary>
-    private static bool WriteSecondary(string path, int width, int height, Color32[] pixels, bool srgb)
+    private static bool WriteSecondary(string path, int width, int height, Color32[] pixels, bool srgb, bool singleChannel)
     {
         int side = Mathf.NextPowerOfTwo(Mathf.Max(width, height));
         bool created = AssetImporter.GetAtPath(path) == null;
@@ -89,7 +107,7 @@ public static class SpriteSheetFiles
             TerrainMaterialWriter.EnsureFolder(Path.GetDirectoryName(path).Replace('\\', '/'));
             File.WriteAllBytes(path, TerrainMaterialWriter.EncodePng(1, 1, new Color32[1]));
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
-            ApplySecondarySettings((TextureImporter)AssetImporter.GetAtPath(path), side, srgb);
+            ApplySecondarySettings((TextureImporter)AssetImporter.GetAtPath(path), side, srgb, singleChannel);
         }
 
         byte[] png = TerrainMaterialWriter.EncodePng(width, height, pixels);
@@ -100,18 +118,22 @@ public static class SpriteSheetFiles
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
         }
 
-        bool changed = ApplySecondarySettings((TextureImporter)AssetImporter.GetAtPath(path), side, srgb);
+        bool changed = ApplySecondarySettings((TextureImporter)AssetImporter.GetAtPath(path), side, srgb, singleChannel);
         return created || written || changed;
     }
 
     /// <summary>
     /// Gives a secondary texture's importer its settings (see <see cref="WriteGlow"/>), its colour in sRGB when
-    /// <paramref name="srgb"/>, and a maximum size of at least <paramref name="side"/>, reimporting it when any changed.
-    /// Returns whether any did.
+    /// <paramref name="srgb"/>, its red channel alone when <paramref name="singleChannel"/>, and a maximum size of at
+    /// least <paramref name="side"/>, reimporting it when any changed. Returns whether any did.
     /// </summary>
-    private static bool ApplySecondarySettings(TextureImporter importer, int side, bool srgb)
+    private static bool ApplySecondarySettings(TextureImporter importer, int side, bool srgb, bool singleChannel)
     {
-        bool changed = importer.textureType != TextureImporterType.Default || importer.spriteImportMode != SpriteImportMode.None || importer.sRGBTexture != srgb
+        TextureImporterType type = singleChannel ? TextureImporterType.SingleChannel : TextureImporterType.Default;
+        TextureImporterSettings settings = new();
+        importer.ReadTextureSettings(settings);
+        bool changed = importer.textureType != type || (singleChannel && settings.singleChannelComponent != TextureImporterSingleChannelComponent.Red)
+            || importer.spriteImportMode != SpriteImportMode.None || importer.sRGBTexture != srgb
             || importer.filterMode != FilterMode.Point || importer.wrapMode != TextureWrapMode.Clamp || importer.mipmapEnabled
             || importer.textureCompression != TextureImporterCompression.Uncompressed || importer.npotScale != TextureImporterNPOTScale.None
             || importer.isReadable || importer.alphaIsTransparency || importer.maxTextureSize < side;
@@ -120,7 +142,14 @@ public static class SpriteSheetFiles
             return false;
         }
 
-        importer.textureType = TextureImporterType.Default;
+        importer.textureType = type;
+        if (singleChannel)
+        {
+            importer.ReadTextureSettings(settings);
+            settings.singleChannelComponent = TextureImporterSingleChannelComponent.Red;
+            importer.SetTextureSettings(settings);
+        }
+
         importer.spriteImportMode = SpriteImportMode.None;
         importer.sRGBTexture = srgb;
         importer.filterMode = FilterMode.Point;

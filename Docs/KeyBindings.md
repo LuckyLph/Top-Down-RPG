@@ -31,7 +31,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 
 | Topic | Decision |
 |---|---|
-| Rebindable actions | `MoveClick`, `AttackMove`, `Stop`, `Ability1`…`Ability6`, and since Lighting.md's Phase 9 `Lantern`. `Point` (the pointer) and the new `Menu` action are fixed. |
+| Rebindable actions | `MoveClick`, `AttackMove`, `Stop`, `Ability1`…`Ability6`. `Point` (the pointer) and the new `Menu` action are fixed. Lighting.md's Phase 9 added `Lantern` under Other, removed with the player's lantern on 2026-11-05. |
 | Bindings per action | One, in the `Keyboard&Mouse` group. |
 | Allowed inputs | Any keyboard key except Escape, and the mouse buttons (left, right, middle, back, forward). Not the pointer, its delta, the scroll wheel, or other devices. |
 | Reserved keys | Escape opens and closes menus and cancels a rebind, so it can never be bound. |
@@ -53,7 +53,6 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | `Stop` | Stop | Movement | S | Yes |
 | `Ability1`…`Ability4` | Class ability 1…4 | Class abilities | Q W E R | Yes |
 | `Ability5`, `Ability6` | Weapon ability 1, 2 | Weapon abilities | 1 2 | Yes |
-| `Lantern` | Lantern | Other | L | Yes |
 | `Point` | – | – | Pointer position | No |
 | `Menu` | – | – | Escape, gamepad Start | No |
 
@@ -65,6 +64,8 @@ Short labels for the ability bar: the layout's key name for keys ("Q", "Space", 
 
 - One screen with a Controls section for now, built from data: a row per rebindable action, under its section header, showing the label, the current binding and a reset button. The footer has Reset all and Back.
 - Above the controls, a Character section with one Look row ([AsepriteCharacters.md](AsepriteCharacters.md), Phase 2), when the screen names a catalog of more than one look: its button shows the look the local player is drawn with and moves to the next one, its reset back to the first. The choice is saved at once and the local player changes with it, in game too. Reset all leaves it alone.
+- Under the Look row, a part row per slot of more than one option of the first look that wears parts ([PlayerCharacter.md](PlayerCharacter.md), Phases 6 and 7: Hair, Headwear, Top, Cape, Legs, Boots, Hands and Bag; none for the weapon's slot, which shows the gear of the weapon equipped): its button shows the option the local player wears and moves to the next one, its reset back to the slot's first, the look's own. Saved at once, the local player changing with it once its outfit is composed, in game too; Reset all leaves them alone.
+- Under the part rows, a colour row per choice of the colours the screen names whose dyes a look's sheets or parts carry ([PlayerCharacter.md](PlayerCharacter.md), Phases 5 to 7: Skin, Hair, Eyes, Tunic, Shirt, Trousers, Boots, Belt, Buckle, Gloves, Strap, Pouch, Headwear, Cape and Lining; the gloves and the satchel's strap and pouch show since Phase 7 made them parts): its button shows the swatch the local player is drawn in and moves to the next one of the choice's list, its reset back to the choice's own swatch, the colours the look was baked in. Saved at once, the local player changing with it, in game too; Reset all leaves them alone.
 - Selecting a binding (click, Enter, or gamepad South) starts listening on the next frame, so the click that opened it is never captured. A modal panel says "Press a key or mouse button for Class ability 1. Esc to cancel."
 - While listening, the panel blocks pointer clicks on the rest of the screen and UI navigation and submit are suspended, so the key pressed only rebinds. Escape cancels. The press that ends listening (including Escape) is not also read as Back or Submit.
 - A refused input (Escape is the only one) cancels. A key that is already this action's binding ends listening with no change.
@@ -87,7 +88,7 @@ Short labels for the ability bar: the layout's key name for keys ("Q", "Space", 
 
 ### Saving
 
-- `settings.json` holds a format version and the binding overrides as written by `InputActionAsset.SaveBindingOverridesAsJson()`, which keys each override by action and binding id. Renaming an action keeps its override; an override for a binding that no longer exists is ignored. It also holds the install's player id and the name of the local player's look (AsepriteCharacters.md, Phase 2); a file from before either reads them empty, so the format version stayed 1.
+- `settings.json` holds a format version and the binding overrides as written by `InputActionAsset.SaveBindingOverridesAsJson()`, which keys each override by action and binding id. Renaming an action keeps its override; an override for a binding that no longer exists is ignored. It also holds the install's player id, the name of the local player's look (AsepriteCharacters.md, Phase 2), the swatch picked for each of its colour choices by name, a choice's own left out (PlayerCharacter.md, Phase 5), and the option picked for each of its part slots by name, a slot's first left out (PlayerCharacter.md, Phase 6; the hands and the bag too since its Phase 7, never the weapon's slot, which follows the weapon equipped); a file from before any of them reads them empty, so the format version stayed 1.
 - It is loaded once at boot, before any menu shows, and written after every change, through the same atomic `FileSaveStore` as the save.
 - A missing file means defaults. A malformed file, or one with an older format version, is ignored with a warning and replaced on the next change. A file written by a newer build is ignored with a warning and never overwritten: changes made in this session apply but are not saved.
 - After loading, if two rebindable actions end up on the same input (possible only when a later build changes a default), the overrides involved are dropped with a warning and the file is rewritten.

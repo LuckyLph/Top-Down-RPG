@@ -14,7 +14,7 @@ public class WeaponCatalogTests
 {
     private const string CatalogPath = "Assets/Data/Weapons/WeaponCatalog.asset";
     private const string PlayerPrefabPath = "Assets/Prefabs/Player/Player.prefab";
-    private const string AnimationSetPath = "Assets/Sprites/Characters/Rogue/Rogue_AnimationSet.asset";
+    private const string AnimationSetPath = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
 
     private readonly List<Object> created = new();
 
@@ -82,10 +82,11 @@ public class WeaponCatalogTests
     }
 
     /// <summary>
-    /// Every catalog weapon plays a clip of the rogue's set that has a contact frame and draws a weapon, has its own
-    /// generated HUD icon and two abilities no other weapon has, and a timeline that fills its cooldown at most. The
-    /// greatsword is melee with a wider and deeper area than the sword; the longbow fires a homing projectile that
-    /// flies past its attack range, with its arrow's visual.
+    /// Every catalog weapon has two attacks, each playing a clip of the adventurer's set (the player's default look) that
+    /// has a contact frame and draws a weapon, its own generated HUD icon and two abilities no other weapon has, and a
+    /// timeline that fills its cooldown at most, and names the gear it shows outside its attacks (Docs/PlayerCharacter.md,
+    /// Phase 7). The greatsword is melee with a wider and deeper area than the sword; the longbow fires a homing projectile
+    /// that flies past its attack range, with its arrow's visual.
     /// </summary>
     [Test]
     public void EveryCatalogWeapon_HasItsClipIconAbilitiesAndHit()
@@ -97,9 +98,14 @@ public class WeaponCatalogTests
         for (int i = 0; i < catalog.Count; i++)
         {
             PlayerWeapon weapon = catalog.Get(i);
-            CharacterAnimationClip clip = set.Find(weapon.AttackClip);
-            Assert.That(clip, Is.Not.Null, weapon.name);
-            Assert.That(clip.HasContact && clip.Armed, Is.True, weapon.name);
+            Assert.That(weapon.AttackCount, Is.EqualTo(2), weapon.name);
+            for (int attack = 0; attack < weapon.AttackCount; attack++)
+            {
+                CharacterAnimationClip clip = set.Find(weapon.AttackClipOf(attack));
+                Assert.That(clip, Is.Not.Null, $"{weapon.name} {attack}");
+                Assert.That(clip.HasContact && clip.Armed, Is.True, $"{weapon.name} {attack}");
+            }
+
             Assert.That(weapon.HudIcon, Is.Not.Null, weapon.name);
             Assert.That(AssetDatabase.GetAssetPath(weapon.HudIcon), Does.StartWith(WeaponSpriteWriter.Folder + "/Icon_"), weapon.name);
             Assert.That(icons.Add(weapon.HudIcon), Is.True, weapon.name);
@@ -118,8 +124,13 @@ public class WeaponCatalogTests
         Assert.That(sword.FiresProjectile || greatsword.FiresProjectile, Is.False);
         Assert.That(greatsword.HitSize.x, Is.GreaterThan(sword.HitSize.x));
         Assert.That(greatsword.HitSize.y, Is.GreaterThan(sword.HitSize.y));
+        Assert.That(sword.AttackClip, Is.EqualTo("SwordSlash"));
+        Assert.That(sword.AttackClipOf(1), Is.EqualTo("SwordBackhand"));
         Assert.That(greatsword.AttackClip, Is.EqualTo("GreatswordCleave"));
+        Assert.That(greatsword.AttackClipOf(1), Is.EqualTo("GreatswordSweep"));
         Assert.That(longbow.AttackClip, Is.EqualTo("BowShot"));
+        Assert.That(longbow.AttackClipOf(1), Is.EqualTo("BowCantedShot"));
+        Assert.That(new[] { sword.Gear, greatsword.Gear, longbow.Gear }, Is.EqualTo(new[] { "Sword", "Greatsword", "Longbow" }), "the gear each shows outside its attacks");
         Assert.That(longbow.FiresProjectile, Is.True);
         ProjectileSpec arrow = longbow.Projectile;
         Assert.That(arrow.Homing, Is.True);
@@ -136,8 +147,9 @@ public class WeaponCatalogTests
     }
 
     /// <summary>
-    /// For every catalog weapon, its timeline divided by attack speed keeps its shape, and the action layer playing its
-    /// clip on that timeline shows the contact frame from exactly the end of the windup, at attack speed 1 and 1.5.
+    /// For every catalog weapon, its timeline divided by attack speed keeps its shape, and the action layer playing each
+    /// of its attacks' clips on that timeline shows the contact frame from exactly the end of the windup, at attack speed
+    /// 1 and 1.5.
     /// </summary>
     [Test]
     public void EveryCatalogWeapon_ShowsItsContactFrameAtContact_UnderAttackSpeed()
@@ -154,17 +166,21 @@ public class WeaponCatalogTests
                 Assert.That(timeline.Windup, Is.EqualTo(natural.Windup / speed).Within(0.0001f));
                 Assert.That(timeline.Recovery / timeline.Windup, Is.EqualTo(natural.Recovery / natural.Windup).Within(0.0001f));
 
-                CharacterAnimationClip clip = set.Find(weapon.AttackClip);
-                CharacterActionLayer layer = new();
-                Assert.That(layer.Play(clip, CharacterDirections.South, timeline, 0f, false), Is.True);
-                layer.Advance(timeline.Windup - 0.001f);
-                Assert.That(layer.Phase, Is.EqualTo(AttackPhase.Windup), $"{weapon.name} at {speed}");
-                Assert.That(layer.Frame, Is.LessThan(clip.ContactFrame));
-                layer.Advance(timeline.Windup + 0.001f);
-                Assert.That(layer.Frame, Is.EqualTo(clip.ContactFrame), $"{weapon.name} at {speed}");
-                layer.Advance(timeline.Windup + timeline.Contact + 0.001f);
-                Assert.That(layer.Phase, Is.EqualTo(AttackPhase.Recovery));
-                Assert.That(layer.Frame, Is.GreaterThan(clip.ContactFrame));
+                for (int attack = 0; attack < weapon.AttackCount; attack++)
+                {
+                    string name = $"{weapon.AttackClipOf(attack)} at {speed}";
+                    CharacterAnimationClip clip = set.Find(weapon.AttackClipOf(attack));
+                    CharacterActionLayer layer = new();
+                    Assert.That(layer.Play(clip, CharacterDirections.South, timeline, 0f, false), Is.True, name);
+                    layer.Advance(timeline.Windup - 0.001f);
+                    Assert.That(layer.Phase, Is.EqualTo(AttackPhase.Windup), name);
+                    Assert.That(layer.Frame, Is.LessThan(clip.ContactFrame), name);
+                    layer.Advance(timeline.Windup + 0.001f);
+                    Assert.That(layer.Frame, Is.EqualTo(clip.ContactFrame), name);
+                    layer.Advance(timeline.Windup + timeline.Contact + 0.001f);
+                    Assert.That(layer.Phase, Is.EqualTo(AttackPhase.Recovery), name);
+                    Assert.That(layer.Frame, Is.GreaterThan(clip.ContactFrame), name);
+                }
             }
         }
     }

@@ -35,6 +35,16 @@ public enum CharacterMaterial
     EarInside,
     Wraps,
     WrapsBand,
+    Skin,
+    Hair,
+    Brow,
+    Mouth,
+    Blush,
+    EyeGlint,
+    MouthInside,
+    Strap,
+    Pouch,
+    Headwear,
     Steel,
     Guard,
     Grip,
@@ -91,7 +101,11 @@ public enum CharacterPart
     Lantern,
     LanternBail,
     LanternGlass,
-    LanternWick
+    LanternWick,
+    Headwear,
+    Scabbard,
+    Quiver,
+    Sling
 }
 
 /// <summary>
@@ -143,34 +157,6 @@ public enum CastHands
 }
 
 /// <summary>
-/// The four colours a material is drawn in, darkest first: its outline, then its shadow, middle and light tones.
-/// </summary>
-[Serializable]
-public struct ColourRamp
-{
-    [SerializeField] private Color32 outline;
-    [SerializeField] private Color32 shadow;
-    [SerializeField] private Color32 middle;
-    [SerializeField] private Color32 light;
-
-    /// <summary>
-    /// Creates a ramp of the four colours, darkest first.
-    /// </summary>
-    public ColourRamp(Color32 outline, Color32 shadow, Color32 middle, Color32 light)
-    {
-        this.outline = outline;
-        this.shadow = shadow;
-        this.middle = middle;
-        this.light = light;
-    }
-
-    public Color32 Outline => outline;
-    public Color32 Shadow => shadow;
-    public Color32 Middle => middle;
-    public Color32 Light => light;
-}
-
-/// <summary>
 /// Which character materials are flat (always their middle tone) and which draw no outline.
 /// </summary>
 public static class CharacterMaterials
@@ -212,7 +198,8 @@ public static class CharacterMaterials
 
     /// <summary>
     /// Whether <paramref name="material"/> is drawn in its middle tone whatever its surface faces: the face, the inside
-    /// of the hood, the eyes, the inside of the ears, the smears, a cast's light and the lantern's glass and wick.
+    /// of the hood, the eyes, the inside of the ears and of an open mouth, the smears, a cast's light and the lantern's
+    /// glass and wick.
     /// </summary>
     public static bool IsFlat(CharacterMaterial material)
     {
@@ -223,6 +210,11 @@ public static class CharacterMaterials
             case CharacterMaterial.Face:
             case CharacterMaterial.FaceShade:
             case CharacterMaterial.Eye:
+            case CharacterMaterial.Brow:
+            case CharacterMaterial.Mouth:
+            case CharacterMaterial.Blush:
+            case CharacterMaterial.EyeGlint:
+            case CharacterMaterial.MouthInside:
             case CharacterMaterial.SmearNew:
             case CharacterMaterial.SmearMiddle:
             case CharacterMaterial.SmearOld:
@@ -249,6 +241,11 @@ public static class CharacterMaterials
             case CharacterMaterial.Face:
             case CharacterMaterial.FaceShade:
             case CharacterMaterial.Eye:
+            case CharacterMaterial.Brow:
+            case CharacterMaterial.Mouth:
+            case CharacterMaterial.Blush:
+            case CharacterMaterial.EyeGlint:
+            case CharacterMaterial.MouthInside:
             case CharacterMaterial.Bangs:
             case CharacterMaterial.Mask:
             case CharacterMaterial.BowString:
@@ -309,6 +306,36 @@ public sealed class CharacterClip
     public CharacterWeaponArt Weapon => weapon;
     public Vector2Int FrameSize => frameSize;
     public Vector2Int Pivot => pivot;
+}
+
+/// <summary>
+/// A lock of hair standing off a bare head: a tapering capsule from a root on the head's surface to a tip, both placed
+/// in the face's frame (right, up, forward, the head tipped toward the camera), so a hairstyle turns with the head.
+/// </summary>
+[Serializable]
+public struct HairLock
+{
+    [Tooltip("Where the lock grows from, in degrees from the face's middle: across (right positive) and up.")]
+    [SerializeField] private Vector2 root;
+    [Tooltip("Where its tip lies from its root, in head radii: right, up and forward.")]
+    [SerializeField] private Vector3 tip;
+    [Tooltip("Its radius at the root and at the tip, in head radii.")]
+    [SerializeField] private Vector2 radius;
+
+    /// <summary>
+    /// Creates a lock growing from <paramref name="rootDegrees"/> to <paramref name="tipOffset"/>, tapering over
+    /// <paramref name="radii"/>.
+    /// </summary>
+    public HairLock(Vector2 rootDegrees, Vector3 tipOffset, Vector2 radii)
+    {
+        root = rootDegrees;
+        tip = tipOffset;
+        radius = radii;
+    }
+
+    public Vector2 Root => root;
+    public Vector3 Tip => tip;
+    public Vector2 Radius => radius;
 }
 
 /// <summary>

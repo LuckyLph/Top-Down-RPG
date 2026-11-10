@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// The local machine's preferences as written to disk: a format version, the key binding overrides, this install's
-/// player id and the name of the look its player is drawn with. A file without a player id or a look (written before
-/// there was one) reads with an empty one.
+/// player id, the name of the look its player is drawn with, the swatch it picked for each of its colour choices
+/// (Docs/PlayerCharacter.md, Phase 5) and the option it picked for each of its part slots (Phase 6), by name. A file
+/// without a player id, a look, colours or parts (written before there was one) reads with an empty one.
 /// </summary>
 [Serializable]
 public sealed class UserSettingsData
@@ -15,17 +17,22 @@ public sealed class UserSettingsData
     [SerializeField] private string inputBindingOverrides;
     [SerializeField] private string playerId;
     [SerializeField] private string characterLook;
+    [SerializeField] private List<UserColourPick> characterColours = new();
+    [SerializeField] private List<UserPartPick> characterParts = new();
 
     /// <summary>
     /// Creates settings data in the current format holding <paramref name="inputBindingOverrides"/>,
-    /// <paramref name="playerId"/> and <paramref name="characterLook"/>.
+    /// <paramref name="playerId"/>, <paramref name="characterLook"/>, <paramref name="colours"/> and
+    /// <paramref name="parts"/>.
     /// </summary>
-    public UserSettingsData(string inputBindingOverrides, string playerId, string characterLook)
+    public UserSettingsData(string inputBindingOverrides, string playerId, string characterLook, IEnumerable<UserColourPick> colours = null, IEnumerable<UserPartPick> parts = null)
     {
         version = CurrentVersion;
         this.inputBindingOverrides = inputBindingOverrides;
         this.playerId = playerId;
         this.characterLook = characterLook;
+        characterColours = colours != null ? new List<UserColourPick>(colours) : new List<UserColourPick>();
+        characterParts = parts != null ? new List<UserPartPick>(parts) : new List<UserPartPick>();
     }
 
     /// <summary>
@@ -39,6 +46,8 @@ public sealed class UserSettingsData
     public string InputBindingOverrides => inputBindingOverrides ?? string.Empty;
     public string PlayerId => playerId ?? string.Empty;
     public string CharacterLook => characterLook ?? string.Empty;
+    public IReadOnlyList<UserColourPick> CharacterColours => characterColours ?? new List<UserColourPick>();
+    public IReadOnlyList<UserPartPick> CharacterParts => characterParts ?? new List<UserPartPick>();
 
     /// <summary>
     /// The data as pretty-printed JSON.
@@ -66,4 +75,48 @@ public sealed class UserSettingsData
             return false;
         }
     }
+}
+
+/// <summary>
+/// The swatch picked for one colour choice of the local player's character, both by name.
+/// </summary>
+[Serializable]
+public struct UserColourPick
+{
+    [SerializeField] private string choice;
+    [SerializeField] private string swatch;
+
+    /// <summary>
+    /// Creates the pick of <paramref name="swatchName"/> for <paramref name="choiceName"/>.
+    /// </summary>
+    public UserColourPick(string choiceName, string swatchName)
+    {
+        choice = choiceName;
+        swatch = swatchName;
+    }
+
+    public string Choice => choice ?? string.Empty;
+    public string Swatch => swatch ?? string.Empty;
+}
+
+/// <summary>
+/// The option picked for one part slot of the local player's character, both by name.
+/// </summary>
+[Serializable]
+public struct UserPartPick
+{
+    [SerializeField] private string slot;
+    [SerializeField] private string part;
+
+    /// <summary>
+    /// Creates the pick of <paramref name="partName"/> for <paramref name="slotName"/>.
+    /// </summary>
+    public UserPartPick(string slotName, string partName)
+    {
+        slot = slotName;
+        part = partName;
+    }
+
+    public string Slot => slot ?? string.Empty;
+    public string Part => part ?? string.Empty;
 }

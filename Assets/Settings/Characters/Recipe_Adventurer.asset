@@ -1,0 +1,701 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0dd45fc7aaf5f3a4dbc51b9948825de2, type: 3}
+  m_Name: Recipe_Adventurer
+  m_EditorClassIdentifier: TopDownRPG.Editor::AdventurerRecipe
+  sheetName: Adventurer
+  targetHeight: 40
+  clips:
+  - name: Idle
+    motion: {fileID: 11400000, guid: 2d7f9e9f3b4d04b429a9962402b691f6, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Walk
+    motion: {fileID: 11400000, guid: ad5be423a6a80ff40a907433628351b5, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Run
+    motion: {fileID: 11400000, guid: 3255699690179d34a8727bf3c3ca057f, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: Sprint
+    motion: {fileID: 11400000, guid: 385f1f9455cf74448b6223d0a86ea6d3, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: SwordSlash
+    motion: {fileID: 11400000, guid: 945aa2bcfb126934e8d6a342bf395be8, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: GreatswordCleave
+    motion: {fileID: 11400000, guid: 504ba24ee2154b444bf044ac78377349, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 96, y: 96}
+    pivot: {x: 48, y: 28}
+  - name: BowShot
+    motion: {fileID: 11400000, guid: 3e749cad4a101f544962968c9c79e341, type: 2}
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: CastBolt
+    motion: {fileID: 11400000, guid: 00f5ded0d18c19b46b59ca0c8409b847, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: CastLeap
+    motion: {fileID: 11400000, guid: 352fada5c228ca54ca8035653d2a55a2, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: CastMend
+    motion: {fileID: 11400000, guid: 1f7eecc80cbe3d6429729b06e153a58c, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: CastSmite
+    motion: {fileID: 11400000, guid: 7ae47e173596f3d4fb41f320b176ddbd, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: CastSmiteRun
+    motion: {fileID: 11400000, guid: d6eb15a4cb08cf449b2817c2f03656db, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: CastWhirl
+    motion: {fileID: 11400000, guid: d140b08042624fb48be4cb0e05321ef2, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: CastWhirlRun
+    motion: {fileID: 11400000, guid: e014eebdbc0f28d45beba2cb6a2362f9, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: CastLunge
+    motion: {fileID: 11400000, guid: b8ada0fc7f0cb044f8066e07916a2287, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: CastSweep
+    motion: {fileID: 11400000, guid: 0e9dce6f67fd90a47a1a79a0f73e4367, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 96, y: 96}
+    pivot: {x: 48, y: 28}
+  - name: CastCharge
+    motion: {fileID: 11400000, guid: d193d535cc740e649b20e2e281c7048b, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 96, y: 96}
+    pivot: {x: 48, y: 28}
+  - name: CastVolley
+    motion: {fileID: 11400000, guid: 4933e837f5cd45c4e96deac2ff3cd731, type: 2}
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: CastRoll
+    motion: {fileID: 11400000, guid: f53ac9ead56e25740b6e68a4e84ebb12, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: IdleLookAround
+    motion: {fileID: 11400000, guid: 17dbb69b2df6dbc4b8417591470c72bf, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleStretch
+    motion: {fileID: 11400000, guid: 4739585cbc6816c48bd23120a35210af, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleScratch
+    motion: {fileID: 11400000, guid: c54ea2a38d4a52c4280e1b181f0a67a6, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleTapFoot
+    motion: {fileID: 11400000, guid: 82f3a6e00e770ec4a97926412e9834a3, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: IdleYawn
+    motion: {fileID: 11400000, guid: def31e7a170d5d14f88acbf16bfb707a, type: 2}
+    weapon: {fileID: 0}
+    frameSize: {x: 64, y: 64}
+    pivot: {x: 32, y: 12}
+  - name: SwordBackhand
+    motion: {fileID: 11400000, guid: 1850280a10cbd494daf37515af9b8c79, type: 2}
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  - name: GreatswordSweep
+    motion: {fileID: 11400000, guid: 9dc91089c8e9ab841be92e0d754a63ed, type: 2}
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    frameSize: {x: 96, y: 96}
+    pivot: {x: 48, y: 28}
+  - name: BowCantedShot
+    motion: {fileID: 11400000, guid: b7b1e90b2197f1c4f8474666ba011a67, type: 2}
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    frameSize: {x: 80, y: 80}
+    pivot: {x: 40, y: 22}
+  lantern: {fileID: 0}
+  thigh: 5
+  shin: 5
+  ankle: 1.5
+  upperArm: 4.4
+  forearm: 4
+  torso: 8.5
+  neckToHead: 5.6
+  headRadius: 6.6
+  shoulderHalfWidth: 4.4
+  hipHalfWidth: 2.5
+  torsoRadius: {x: 3.2, y: 3.5}
+  limbThickness: 1
+  handRadius: 1.5
+  lightThreshold: 0.64
+  shadowThreshold: 0.28
+  innerLineGap: 2.6
+  hairOptions:
+  - name: Tousled
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 18, y: 6, z: 20, w: 0.12}
+    locks:
+    - root: {x: 0, y: 75}
+      tip: {x: 0.05, y: 0.42, z: -0.1}
+      radius: {x: 0.3, y: 0.06}
+    - root: {x: 35, y: 65}
+      tip: {x: 0.32, y: 0.32, z: -0.05}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: -35, y: 65}
+      tip: {x: -0.3, y: 0.36, z: -0.1}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: 180, y: 40}
+      tip: {x: 0, y: 0.15, z: -0.38}
+      radius: {x: 0.3, y: 0.06}
+    - root: {x: -30, y: 45}
+      tip: {x: 0.5, y: -0.3, z: 0.2}
+      radius: {x: 0.3, y: 0.08}
+    - root: {x: 70, y: 15}
+      tip: {x: 0.05, y: -0.4, z: 0.05}
+      radius: {x: 0.22, y: 0.07}
+    - root: {x: -70, y: 15}
+      tip: {x: -0.05, y: -0.4, z: 0.05}
+      radius: {x: 0.22, y: 0.07}
+  - name: Crop
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 26, y: 3, z: 14, w: 0.08}
+    locks:
+    - root: {x: 0, y: 72}
+      tip: {x: 0, y: 0.16, z: 0.06}
+      radius: {x: 0.27, y: 0.12}
+    - root: {x: 40, y: 60}
+      tip: {x: 0.12, y: 0.13, z: 0}
+      radius: {x: 0.25, y: 0.1}
+    - root: {x: -40, y: 60}
+      tip: {x: -0.12, y: 0.13, z: 0}
+      radius: {x: 0.25, y: 0.1}
+  - name: Long
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 18, y: 6, z: 20, w: 0.12}
+    locks:
+    - root: {x: 0, y: 75}
+      tip: {x: 0.05, y: 0.42, z: -0.1}
+      radius: {x: 0.3, y: 0.06}
+    - root: {x: 35, y: 65}
+      tip: {x: 0.32, y: 0.32, z: -0.05}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: -35, y: 65}
+      tip: {x: -0.3, y: 0.36, z: -0.1}
+      radius: {x: 0.28, y: 0.05}
+    - root: {x: -30, y: 45}
+      tip: {x: 0.5, y: -0.3, z: 0.2}
+      radius: {x: 0.3, y: 0.08}
+    - root: {x: 180, y: 30}
+      tip: {x: 0, y: -1, z: -0.3}
+      radius: {x: 0.42, y: 0.3}
+    - root: {x: 140, y: 20}
+      tip: {x: 0.2, y: -0.95, z: -0.2}
+      radius: {x: 0.36, y: 0.26}
+    - root: {x: -140, y: 20}
+      tip: {x: -0.2, y: -0.95, z: -0.2}
+      radius: {x: 0.36, y: 0.26}
+    - root: {x: 80, y: 10}
+      tip: {x: 0.08, y: -0.85, z: 0.02}
+      radius: {x: 0.26, y: 0.18}
+    - root: {x: -80, y: 10}
+      tip: {x: -0.08, y: -0.85, z: 0.02}
+      radius: {x: 0.26, y: 0.18}
+  - name: Ponytail
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 24, y: 4, z: 16, w: 0.1}
+    locks:
+    - root: {x: 180, y: 25}
+      tip: {x: 0, y: -0.25, z: -0.55}
+      radius: {x: 0.3, y: 0.22}
+    - root: {x: 180, y: 10}
+      tip: {x: 0, y: -0.95, z: -0.5}
+      radius: {x: 0.24, y: 0.12}
+    - root: {x: 75, y: 15}
+      tip: {x: 0.04, y: -0.25, z: 0}
+      radius: {x: 0.2, y: 0.08}
+    - root: {x: -75, y: 15}
+      tip: {x: -0.04, y: -0.25, z: 0}
+      radius: {x: 0.2, y: 0.08}
+  - name: Spiky
+    face: {x: 78, y: -6, z: 46}
+    fringe: {x: 18, y: 6, z: 20, w: 0.12}
+    locks:
+    - root: {x: -30, y: 45}
+      tip: {x: 0.5, y: -0.3, z: 0.2}
+      radius: {x: 0.3, y: 0.08}
+    - root: {x: 0, y: 80}
+      tip: {x: 0, y: 0.6, z: -0.05}
+      radius: {x: 0.28, y: 0.03}
+    - root: {x: 35, y: 70}
+      tip: {x: 0.35, y: 0.5, z: 0}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: -35, y: 70}
+      tip: {x: -0.35, y: 0.5, z: 0}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: 70, y: 55}
+      tip: {x: 0.45, y: 0.3, z: -0.05}
+      radius: {x: 0.24, y: 0.03}
+    - root: {x: -70, y: 55}
+      tip: {x: -0.45, y: 0.3, z: -0.05}
+      radius: {x: 0.24, y: 0.03}
+    - root: {x: 150, y: 50}
+      tip: {x: 0.2, y: 0.35, z: -0.4}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: -150, y: 50}
+      tip: {x: -0.2, y: 0.35, z: -0.4}
+      radius: {x: 0.26, y: 0.03}
+    - root: {x: 180, y: 45}
+      tip: {x: 0, y: 0.3, z: -0.5}
+      radius: {x: 0.28, y: 0.03}
+  headwearOptions:
+  - name: None
+    kind: 0
+    hood: {x: 1.18, y: 1.2, z: 0.45}
+    hoodOpening: {x: 62, y: -10, z: 48}
+    cap: {x: 1.1, y: 20, z: 0.6}
+  - name: Hood
+    kind: 1
+    hood: {x: 1.18, y: 1.2, z: 0.45}
+    hoodOpening: {x: 62, y: -10, z: 48}
+    cap: {x: 1.1, y: 20, z: 0.6}
+  - name: Cap
+    kind: 2
+    hood: {x: 1.18, y: 1.2, z: 0.45}
+    hoodOpening: {x: 62, y: -10, z: 48}
+    cap: {x: 1.1, y: 20, z: 0.6}
+  topOptions:
+  - name: Tunic
+    tunic: 1
+    sleeves: 0
+    skirtLength: 1.4
+  - name: Short sleeves
+    tunic: 1
+    sleeves: 1
+    skirtLength: 1.4
+  - name: Layered
+    tunic: 1
+    sleeves: 2
+    skirtLength: 1.4
+  - name: Shirt
+    tunic: 0
+    sleeves: 0
+    skirtLength: 1.4
+  - name: Long tunic
+    tunic: 1
+    sleeves: 0
+    skirtLength: 2.6
+  capeOptions:
+  - name: None
+    cape: 0
+    strips: 5
+    hem: 0.45
+    lining: 1
+  - name: Cape
+    cape: 1
+    strips: 5
+    hem: 0.45
+    lining: 1
+  - name: Unlined
+    cape: 1
+    strips: 5
+    hem: 0.45
+    lining: 0
+  - name: Long
+    cape: 1
+    strips: 5
+    hem: 0.15
+    lining: 1
+  legOptions:
+  - name: Trousers
+    shorts: 0
+  - name: Shorts
+    shorts: 1
+  bootOptions:
+  - name: Tall
+    size: 1.1
+    top: 0.35
+  - name: Short
+    size: 1.1
+    top: 0.8
+  handOptions:
+  - name: Bare
+    gloves: 0
+  - name: Gloves
+    gloves: 1
+  bagOptions:
+  - name: None
+    satchel: 0
+    pouch: {x: 4.4, y: -1.6, z: -0.6}
+    pouchSize: {x: 1.5, y: 2, z: 1.9}
+  - name: Satchel
+    satchel: 1
+    pouch: {x: 4.4, y: -1.6, z: -0.6}
+    pouchSize: {x: 1.5, y: 2, z: 1.9}
+  weaponOptions:
+  - name: Sword
+    weapon: {fileID: 11400000, guid: 36f96069391e2d841b2a74b165721481, type: 2}
+    place: 0
+    side: -1
+    offset: {x: 5, y: 1.2, z: 1.2}
+    angles: {x: 35, y: 8}
+    scabbard: 1
+    sling: 0
+    quiver: 0
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  - name: Greatsword
+    weapon: {fileID: 11400000, guid: 8c603c4da5ac4bd44be53d2576f8d7fa, type: 2}
+    place: 1
+    side: 1
+    offset: {x: 1, y: 1.6, z: 2.2}
+    angles: {x: 35, y: 0}
+    scabbard: 0
+    sling: 1
+    quiver: 0
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  - name: Longbow
+    weapon: {fileID: 11400000, guid: ec70a28270cc4d54eb9dfcfc7a918e98, type: 2}
+    place: 1
+    side: -1
+    offset: {x: 0, y: 2.6, z: 3}
+    angles: {x: 40, y: 0}
+    scabbard: 0
+    sling: 1
+    quiver: 1
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  - name: None
+    weapon: {fileID: 0}
+    place: 0
+    side: -1
+    offset: {x: 0, y: 0, z: 0}
+    angles: {x: 0, y: 0}
+    scabbard: 0
+    sling: 0
+    quiver: 0
+    quiverPlace: {x: 1.6, y: 1.7, z: 4.4, w: 20}
+    capeDepth: 2.5
+  hairSize: 1.1
+  faceTilt: 20
+  ears: {x: 90, y: -8, z: 0.22}
+  eyes: {x: 18, y: -2}
+  eyeHeight: 2
+  eyeWidth: 2
+  eyeGlint: 1
+  browGap: 2
+  browWidth: 3
+  browTilt: 1
+  mouth: {x: -26, y: 2}
+  mouthCurve: 0
+  blush: {x: 0, y: 0}
+  skin:
+    outline:
+      serializedVersion: 2
+      rgba: 4280824924
+    shadow:
+      serializedVersion: 2
+      rgba: 4285171912
+    middle:
+      serializedVersion: 2
+      rgba: 4287805164
+    light:
+      serializedVersion: 2
+      rgba: 4290303738
+  eye:
+    outline:
+      serializedVersion: 2
+      rgba: 4280423966
+    shadow:
+      serializedVersion: 2
+      rgba: 4280423966
+    middle:
+      serializedVersion: 2
+      rgba: 4280423966
+    light:
+      serializedVersion: 2
+      rgba: 4280423966
+  eyeGlintColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4292267204
+    shadow:
+      serializedVersion: 2
+      rgba: 4292267204
+    middle:
+      serializedVersion: 2
+      rgba: 4292267204
+    light:
+      serializedVersion: 2
+      rgba: 4292267204
+  brow:
+    outline:
+      serializedVersion: 2
+      rgba: 4279377978
+    shadow:
+      serializedVersion: 2
+      rgba: 4279377978
+    middle:
+      serializedVersion: 2
+      rgba: 4279377978
+    light:
+      serializedVersion: 2
+      rgba: 4279377978
+  mouthColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4283457706
+    shadow:
+      serializedVersion: 2
+      rgba: 4283457706
+    middle:
+      serializedVersion: 2
+      rgba: 4283457706
+    light:
+      serializedVersion: 2
+      rgba: 4283457706
+  mouthInside:
+    outline:
+      serializedVersion: 2
+      rgba: 4279377978
+    shadow:
+      serializedVersion: 2
+      rgba: 4279377978
+    middle:
+      serializedVersion: 2
+      rgba: 4279377978
+    light:
+      serializedVersion: 2
+      rgba: 4279377978
+  blushColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4286748398
+    shadow:
+      serializedVersion: 2
+      rgba: 4286748398
+    middle:
+      serializedVersion: 2
+      rgba: 4286748398
+    light:
+      serializedVersion: 2
+      rgba: 4286748398
+  hair:
+    outline:
+      serializedVersion: 2
+      rgba: 4279113770
+    shadow:
+      serializedVersion: 2
+      rgba: 4280170592
+    middle:
+      serializedVersion: 2
+      rgba: 4281095308
+    light:
+      serializedVersion: 2
+      rgba: 4282809528
+  tunic:
+    outline:
+      serializedVersion: 2
+      rgba: 4281212440
+    shadow:
+      serializedVersion: 2
+      rgba: 4287389766
+    middle:
+      serializedVersion: 2
+      rgba: 4289757280
+    light:
+      serializedVersion: 2
+      rgba: 4292258956
+  shirt:
+    outline:
+      serializedVersion: 2
+      rgba: 4280164388
+    shadow:
+      serializedVersion: 2
+      rgba: 4286221462
+    middle:
+      serializedVersion: 2
+      rgba: 4288985796
+    light:
+      serializedVersion: 2
+      rgba: 4291617000
+  trousers:
+    outline:
+      serializedVersion: 2
+      rgba: 4279506972
+    shadow:
+      serializedVersion: 2
+      rgba: 4282009168
+    middle:
+      serializedVersion: 2
+      rgba: 4283589230
+    light:
+      serializedVersion: 2
+      rgba: 4285564050
+  boots:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849046
+    shadow:
+      serializedVersion: 2
+      rgba: 4280299078
+    middle:
+      serializedVersion: 2
+      rgba: 4281090144
+    light:
+      serializedVersion: 2
+      rgba: 4282276482
+  belt:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849562
+    shadow:
+      serializedVersion: 2
+      rgba: 4280169554
+    middle:
+      serializedVersion: 2
+      rgba: 4281092720
+    light:
+      serializedVersion: 2
+      rgba: 4282411158
+  fittings:
+    outline:
+      serializedVersion: 2
+      rgba: 4279118908
+    shadow:
+      serializedVersion: 2
+      rgba: 4280841366
+    middle:
+      serializedVersion: 2
+      rgba: 4282820814
+    light:
+      serializedVersion: 2
+      rgba: 4287421684
+  glovesColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849046
+    shadow:
+      serializedVersion: 2
+      rgba: 4280299078
+    middle:
+      serializedVersion: 2
+      rgba: 4281090144
+    light:
+      serializedVersion: 2
+      rgba: 4282276482
+  strapColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4278849562
+    shadow:
+      serializedVersion: 2
+      rgba: 4280169554
+    middle:
+      serializedVersion: 2
+      rgba: 4281092720
+    light:
+      serializedVersion: 2
+      rgba: 4282411158
+  pouch:
+    outline:
+      serializedVersion: 2
+      rgba: 4279114280
+    shadow:
+      serializedVersion: 2
+      rgba: 4281621124
+    middle:
+      serializedVersion: 2
+      rgba: 4282939562
+    light:
+      serializedVersion: 2
+      rgba: 4285046990
+  headwearColour:
+    outline:
+      serializedVersion: 2
+      rgba: 4279641106
+    shadow:
+      serializedVersion: 2
+      rgba: 4282016308
+    middle:
+      serializedVersion: 2
+      rgba: 4283204682
+    light:
+      serializedVersion: 2
+      rgba: 4285049460
+  hoodInside:
+    outline:
+      serializedVersion: 2
+      rgba: 4279243288
+    shadow:
+      serializedVersion: 2
+      rgba: 4279243288
+    middle:
+      serializedVersion: 2
+      rgba: 4279243288
+    light:
+      serializedVersion: 2
+      rgba: 4279243288
+  cloak:
+    outline:
+      serializedVersion: 2
+      rgba: 4279373870
+    shadow:
+      serializedVersion: 2
+      rgba: 4280821376
+    middle:
+      serializedVersion: 2
+      rgba: 4281612458
+    light:
+      serializedVersion: 2
+      rgba: 4283457750
+  lining:
+    outline:
+      serializedVersion: 2
+      rgba: 4280164388
+    shadow:
+      serializedVersion: 2
+      rgba: 4286221462
+    middle:
+      serializedVersion: 2
+      rgba: 4288985796
+    light:
+      serializedVersion: 2
+      rgba: 4291617000

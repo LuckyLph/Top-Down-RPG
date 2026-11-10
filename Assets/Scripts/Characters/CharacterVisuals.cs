@@ -14,7 +14,9 @@ using VContainer;
 /// light colour, and off for a sprite without one. Visual only, on every machine that plays the casts. A character
 /// carrying a lantern (Docs/Lighting.md, Phase 9) shows it while it burns (<see cref="ShowLantern"/>): the lantern's
 /// layer of each sprite on a renderer of its own drawn over the body, and its light where the frame hangs it, at the
-/// intensity it burns at; out, neither shows.
+/// intensity it burns at; out, neither shows. Standing still a while, the character plays its set's idle animations
+/// (Docs/PlayerCharacter.md, Phase 3), picked by a source seeded with <see cref="SeedIdleAnimations"/>: a player's
+/// network id, so every machine picks the same ones for the same stops.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(SpriteRenderer))]
@@ -47,6 +49,7 @@ public class CharacterVisuals : MonoBehaviour
     private Sprite shownLantern;
     private bool lanternLit;
     private float lanternIntensity;
+    private int idleSeed;
 
     public CharacterAnimationSet AnimationSet => animationSet;
     public CharacterLocomotionSettings Locomotion => locomotion;
@@ -118,9 +121,11 @@ public class CharacterVisuals : MonoBehaviour
     }
 
     /// <summary>
-    /// Draws the character with <paramref name="set"/> at <paramref name="settings"/> from now on: the animator is built
-    /// again on the next use, so an action showing stops and the gait starts over. Nothing changes when either is
-    /// missing or both are the ones drawn.
+    /// Draws the character with <paramref name="set"/> at <paramref name="settings"/> from now on. A set of the same
+    /// clips as the one drawn, at the same settings (another outfit of the same look, Docs/PlayerCharacter.md, Phase 7),
+    /// goes on where the animator is: the action, the gait, an idle animation and a hold carry on in the new sprites.
+    /// Any other set builds the animator again on the next use, so an action showing stops and the gait starts over.
+    /// Nothing changes when either is missing or both are the ones drawn.
     /// </summary>
     public void SetLook(CharacterAnimationSet set, CharacterLocomotionSettings settings)
     {
@@ -129,8 +134,28 @@ public class CharacterVisuals : MonoBehaviour
             return;
         }
 
+        bool goesOn = animator != null && settings == locomotion && animator.Rebind(animationSet, set);
         animationSet = set;
         locomotion = settings;
+        shown = null;
+        if (!goesOn)
+        {
+            animator = null;
+        }
+    }
+
+    /// <summary>
+    /// Picks the idle animations from a source seeded with <paramref name="seed"/> from now on: the animator is built
+    /// again on the next use when the seed changes. Machines seeding a character alike pick its idle animations alike.
+    /// </summary>
+    public void SeedIdleAnimations(int seed)
+    {
+        if (seed == idleSeed)
+        {
+            return;
+        }
+
+        idleSeed = seed;
         animator = null;
         shown = null;
     }
@@ -362,7 +387,7 @@ public class CharacterVisuals : MonoBehaviour
     {
         if (animator == null && animationSet != null && locomotion != null && clock != null)
         {
-            animator = new CharacterAnimator(animationSet, locomotion, clock);
+            animator = new CharacterAnimator(animationSet, locomotion, clock, new SystemRandom(idleSeed));
         }
 
         return animator;

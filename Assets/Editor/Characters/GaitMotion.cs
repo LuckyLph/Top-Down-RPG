@@ -5,11 +5,14 @@ using UnityEngine;
 /// foot slides back along the ground while planted (the first <see cref="duty"/> of its cycle), then swings forward
 /// through the air along a curve; the other foot is half a cycle behind. The pelvis bobs twice a cycle (highest
 /// mid-stance when walking, lowest when running), the body leans, the arms swing against the legs and the shoulders
-/// twist with them, and the cape flows. Frame 0 has the left foot planted in front, so every gait starts at the same
-/// place in the stride. Strides scale with the recipe's legs and arm swings with its arms; a carried weapon changes the
-/// arm that holds it (<see cref="CharacterWeaponArt.Carry"/>). A carried lantern swings twice a cycle, a little behind
-/// the pelvis's bob (<see cref="CharacterPose.LanternSwing"/>). It names its gait (walk, run or sprint), and its ground
-/// speed is how fast a planted foot slides back: the speed at which the feet do not slide.
+/// twist with them, and the cape flows. Its style, all off by default, rounds the bob into a bounce, moves its top and
+/// bottom onto frames, has the head and the hair's tips follow it late, stretches the torso at its top and squashes it
+/// at its bottom, and lifts the hands at both ends of their swing. Frame 0 has the left foot planted in front, so every
+/// gait starts at the same place in the stride. Strides scale with the recipe's legs and arm swings with its arms; a
+/// carried weapon changes the arm that holds it (<see cref="CharacterWeaponArt.Carry"/>). A carried lantern swings
+/// twice a cycle, a little behind the pelvis's bob (<see cref="CharacterPose.LanternSwing"/>). It names its gait (walk,
+/// run or sprint), and its ground speed is how fast a planted foot slides back: the speed at which the feet do not
+/// slide.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/Characters/Gait Motion", fileName = "Motion_Gait")]
 public sealed class GaitMotion : CharacterMotion
@@ -64,6 +67,24 @@ public sealed class GaitMotion : CharacterMotion
     [Tooltip("How far the cape flows back and up, 0 hanging to 1 streaming.")]
     [SerializeField, Range(0f, 1f)] private float capeFlow = 0.55f;
 
+    [Header("Style")]
+    [Tooltip("The bob's shape: 0 a smooth wave, 1 a bounce, round at its top and sharp at its bottom.")]
+    [SerializeField, Range(0f, 1f)] private float bounce;
+    [Tooltip("How much later in the cycle the bob turns than mid-stance, so its top and bottom can land on frames.")]
+    [SerializeField, Range(-0.125f, 0.125f)] private float bobOffset;
+    [Tooltip("How much of the bob the head follows late, 0 none to 1 all of it.")]
+    [SerializeField, Range(0f, 1f)] private float headFollow;
+    [Tooltip("How late the head follows the bob, as a share of the cycle.")]
+    [SerializeField, Range(0f, 0.25f)] private float headLag = 0.08f;
+    [Tooltip("How much of the bob the hair's tips follow late, per head radius of lock.")]
+    [SerializeField, Range(0f, 2f)] private float hairFollow;
+    [Tooltip("How late the hair follows the bob, as a share of the cycle.")]
+    [SerializeField, Range(0f, 0.25f)] private float hairLag = 0.12f;
+    [Tooltip("The share the torso stretches at the bob's top and squashes at its bottom.")]
+    [SerializeField, Range(0f, 0.3f)] private float stretch;
+    [Tooltip("How far the hands rise at both ends of their swing, like a pendulum (rig units for 10.4-unit arms).")]
+    [SerializeField, Min(0f)] private float armArc;
+
     public override int FrameCount => frames;
     public override CharacterGait Gait => gait;
     public float FramesPerSecond => framesPerSecond;
@@ -103,10 +124,11 @@ public sealed class GaitMotion : CharacterMotion
         float armScale = (recipe.UpperArm + recipe.Forearm) / TunedArmLength;
         Vector2 left = FootAt(Mathf.Repeat(phase, 1f), legScale);
         Vector2 right = FootAt(Mathf.Repeat(phase + 0.5f, 1f), legScale);
-        float wave = Mathf.Cos(2f * Mathf.PI * 2f * (phase - duty * 0.5f));
-        float pelvis = recipe.Ankle + (pelvisHeight - recipe.Ankle) * legScale + (bobRisesMidStance ? 1f : -1f) * bob * legScale * wave;
+        float bobHeight = bob * legScale;
+        float pelvis = recipe.Ankle + (pelvisHeight - recipe.Ankle) * legScale + bobHeight * Bob(phase);
         float swing = armSwing * armScale;
         float c = Mathf.Cos(2f * Mathf.PI * phase);
+        float arc = armArc * armScale * Mathf.Abs(c);
         float shoulderHeight = pelvis + recipe.Torso * Mathf.Cos(lean * Mathf.Deg2Rad) - 1.6f;
         float shoulderForward = recipe.Torso * Mathf.Sin(lean * Mathf.Deg2Rad);
         float handHeight = shoulderHeight + armHeight * armScale;
@@ -119,13 +141,16 @@ public sealed class GaitMotion : CharacterMotion
             Twist = -twist * c,
             LeftFoot = new Vector3(-recipe.HipHalfWidth, left.x, recipe.Ankle + left.y),
             RightFoot = new Vector3(recipe.HipHalfWidth, right.x, recipe.Ankle + right.y),
-            LeftHand = new Vector3(-side, shoulderForward - swing * c, handHeight + pump * Mathf.Max(0f, -c)),
-            RightHand = new Vector3(side, shoulderForward + swing * c, handHeight + pump * Mathf.Max(0f, c)),
+            LeftHand = new Vector3(-side, shoulderForward - swing * c, handHeight + pump * Mathf.Max(0f, -c) + arc),
+            RightHand = new Vector3(side, shoulderForward + swing * c, handHeight + pump * Mathf.Max(0f, c) + arc),
             LeftPole = new Vector3(-0.2f, -1f, -0.5f),
             RightPole = new Vector3(0.2f, -1f, -0.5f),
             CapeFlow = capeFlow,
             CapePhase = phase,
-            LanternSwing = Mathf.Sin(2f * Mathf.PI * (2f * phase + LanternLag))
+            LanternSwing = Mathf.Sin(2f * Mathf.PI * (2f * phase + LanternLag)),
+            Stretch = stretch * Bob(phase),
+            HeadLift = headFollow * bobHeight * (Bob(phase - headLag) - Bob(phase)),
+            HairLift = hairFollow * bobHeight * (Bob(phase - hairLag) - Bob(phase))
         };
 
         if (weapon != null)
@@ -134,6 +159,24 @@ public sealed class GaitMotion : CharacterMotion
         }
 
         return pose;
+    }
+
+    /// <summary>
+    /// The bob at <paramref name="phase"/>, from -1 at its bottom to 1 at its top, twice a cycle: highest mid-stance for
+    /// a walk, lowest for a run. A smooth wave, or with <see cref="bounce"/> a bounce's arc, round at the top and sharp
+    /// at the bottom.
+    /// </summary>
+    private float Bob(float phase)
+    {
+        float wave = (bobRisesMidStance ? 1f : -1f) * Mathf.Cos(2f * Mathf.PI * 2f * (phase - duty * 0.5f - bobOffset));
+        if (bounce <= 0f)
+        {
+            return wave;
+        }
+
+        float s = Mathf.Repeat(2f * (phase - duty * 0.5f - bobOffset), 1f);
+        float fromTop = bobRisesMidStance ? Mathf.Min(s, 1f - s) : Mathf.Abs(s - 0.5f);
+        return Mathf.Lerp(wave, 1f - 8f * fromTop * fromTop, bounce);
     }
 
     /// <summary>

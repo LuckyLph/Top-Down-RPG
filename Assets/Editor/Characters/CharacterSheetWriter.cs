@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -22,6 +23,10 @@ using UnityEngine;
 /// tightly (<see cref="PackLantern"/>), with its glow beside it in <see cref="GlowRoot"/> as its secondary texture
 /// <c>_GlowTex</c>; a recipe without a lantern has neither. <see cref="AsepriteCharacterWriter"/> writes a hand-drawn
 /// clip's lantern layer the same way.
+/// A sheet a player can colour (Docs/PlayerCharacter.md, Phase 5) has its palette map beside it in <see cref="GlowRoot"/>,
+/// <c>&lt;sheet name&gt;_&lt;clip&gt;_Palette.png</c>, as its secondary texture <c>_PaletteMap</c>
+/// (<see cref="WritePaletteMap(string, CharacterSheet)"/>), and the set names the dyes they carry; a recipe whose
+/// colours are its own has neither.
 /// A sheet larger than its import's maximum size (a cast drawn over the run's eight frames) gets the size it needs.
 /// Writing a sheet (<see cref="WriteSheet"/>) and a set (<see cref="WriteSet"/>) goes through
 /// <see cref="SpriteSheetFiles"/> and is shared with <see cref="AsepriteCharacterWriter"/>, which writes hand-drawn
@@ -35,8 +40,9 @@ public static class CharacterSheetWriter
     public const int PixelsPerUnit = 32;
 
     /// <summary>
-    /// Bakes and writes every clip of <paramref name="recipe"/>, then its animation set, returning the sheets' paths
-    /// followed by the set's. Logs an error and writes nothing when the recipe cannot bake
+    /// Bakes and writes every clip of <paramref name="recipe"/>, then its animation set, returning the sheets' paths, each
+    /// followed by its palette map's and its lantern layer's when it has them, then the set's. Logs an error and writes
+    /// nothing when the recipe cannot bake
     /// (<see cref="CharacterRecipe.CanGenerate"/>).
     /// </summary>
     public static IReadOnlyList<string> Generate(CharacterRecipe recipe)
@@ -55,6 +61,12 @@ public static class CharacterSheetWriter
             CharacterClip clip = sheet.Clip;
             WriteSheet(recipe.SheetName, clip.Name, clip.FrameSize, clip.Pivot, sheet.FrameCount, sheet.Pixels);
             paths.Add(SheetPath(recipe, clip));
+            WritePaletteMap(recipe.SheetName, sheet);
+            if (sheet.PaletteMap != null)
+            {
+                paths.Add(PaletteMapPath(recipe.SheetName, clip.Name));
+            }
+
             WriteLantern(recipe.SheetName, sheet);
             if (sheet.HasLantern)
             {
@@ -65,7 +77,163 @@ public static class CharacterSheetWriter
         string setPath = SetPath(recipe);
         WriteSet(setPath, BuildSet(recipe, baker, sheets));
         paths.Add(setPath);
+        if (recipe.HasParts)
+        {
+            paths.AddRange(WriteParts(recipe, baker, AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(setPath)));
+        }
+
         return paths;
+    }
+
+    /// <summary>
+    /// Writes the parts of a recipe whose character wears them (Docs/PlayerCharacter.md, Phase 6): every layer of
+    /// <see cref="CharacterBaker.LayerKeys"/>, each a file of every clip's frames (<see cref="CharacterLayer"/>,
+    /// gzipped) in <c>&lt;sheets&gt;/Parts</c>, <c>&lt;name&gt;_Body.bytes</c> for the body and
+    /// <c>&lt;name&gt;_&lt;slot&gt;_&lt;option&gt;[_Under&lt;option&gt;].bytes</c> for each part's option (none for an
+    /// option drawing nothing, and one file for layers alike, as hairstyles whose every lock a hood covers; files no
+    /// longer written are deleted), and the <see cref="CharacterParts"/> naming them,
+    /// <c>&lt;name&gt;_Parts.asset</c>, over <paramref name="set"/>: a file is rewritten and the asset saved only when
+    /// they changed. Returns the paths written.
+    /// </summary>
+    public static IReadOnlyList<string> WriteParts(CharacterRecipe recipe, CharacterBaker baker, CharacterAnimationSet set)
+    {
+        IReadOnlyList<CharacterLayerKey> keys = baker.LayerKeys();
+        CharacterLayerClip[][] clips = new CharacterLayerClip[keys.Count][];
+        for (int k = 0; k < keys.Count; k++)
+        {
+            clips[k] = new CharacterLayerClip[recipe.Clips.Count];
+        }
+
+        for (int c = 0; c < recipe.Clips.Count; c++)
+        {
+            CharacterLayerClip[] layers = baker.BakeLayers(recipe.Clips[c], keys);
+            for (int k = 0; k < keys.Count; k++)
+            {
+                clips[k][c] = layers[k];
+            }
+        }
+
+        string folder = $"{FolderOf(recipe)}/Parts";
+        TerrainMaterialWriter.EnsureFolder(folder);
+        List<string> paths = new();
+        TextAsset[] files = new TextAsset[keys.Count];
+        int[] dyes = new int[keys.Count];
+        List<(byte[] Bytes, TextAsset File)> written = new();
+        CharacterLayerMaterial[] materials = clips[0][0].Materials;
+        for (int k = 0; k < keys.Count; k++)
+        {
+            string path = $"{folder}/{recipe.SheetName}_{LayerName(recipe, keys[k])}.bytes";
+            bool draws = false;
+            foreach (CharacterLayerClip clip in clips[k])
+            {
+                foreach (CharacterLayerFrame frame in clip.Frames)
+                {
+                    foreach (byte material in frame.Material)
+                    {
+                        if (material == CharacterLayer.Empty)
+                        {
+                            continue;
+                        }
+
+                        draws = true;
+                        CharacterDye dye = materials[material].Dye;
+                        dyes[k] |= dye != CharacterDye.None ? 1 << (int)dye : 0;
+                    }
+                }
+            }
+
+            if (!draws && !keys[k].IsBase)
+            {
+                if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+                {
+                    AssetDatabase.DeleteAsset(path);
+                }
+
+                continue;
+            }
+
+            byte[] bytes = new CharacterLayer(clips[k]).Write();
+            int same = written.FindIndex(entry => entry.Bytes.SequenceEqual(bytes));
+            if (same >= 0)
+            {
+                files[k] = written[same].File;
+                if (AssetDatabase.LoadMainAssetAtPath(path) != null)
+                {
+                    AssetDatabase.DeleteAsset(path);
+                }
+
+                continue;
+            }
+
+            if (!File.Exists(path) || !File.ReadAllBytes(path).SequenceEqual(bytes))
+            {
+                File.WriteAllBytes(path, bytes);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            }
+
+            files[k] = AssetDatabase.LoadAssetAtPath<TextAsset>(path);
+            written.Add((bytes, files[k]));
+            paths.Add(path);
+        }
+
+        List<CharacterPartSlot> slots = new();
+        foreach (CharacterSlot slot in (CharacterSlot[])System.Enum.GetValues(typeof(CharacterSlot)))
+        {
+            int count = recipe.PartOptions(slot);
+            if (count == 0)
+            {
+                continue;
+            }
+
+            List<CharacterPartOption> options = new();
+            for (int option = 0; option < count; option++)
+            {
+                List<TextAsset> layers = new();
+                int optionDyes = 0;
+                for (int k = 0; k < keys.Count; k++)
+                {
+                    if (keys[k].Is(slot) && keys[k].Option == option)
+                    {
+                        layers.Add(files[k]);
+                        optionDyes |= dyes[k];
+                    }
+                }
+
+                options.Add(new CharacterPartOption(recipe.PartName(slot, option), optionDyes, layers.ToArray()));
+            }
+
+            slots.Add(new CharacterPartSlot(slot, recipe.PartVariesWith(slot), options));
+        }
+
+        string partsPath = $"{folder}/{recipe.SheetName}_Parts.asset";
+        SpriteSheetFiles.WriteAsset(partsPath, CharacterParts.Create(set, files[0], recipe.InnerLineGap, slots));
+        paths.Add(partsPath);
+        return paths;
+    }
+
+    /// <summary>
+    /// The name of a layer's file: <c>Body</c>, or the slot and its option's name in letters and digits, and for a slot
+    /// drawn under another's option, that option's after <c>Under</c>.
+    /// </summary>
+    public static string LayerName(CharacterRecipe recipe, CharacterLayerKey key)
+    {
+        if (key.IsBase)
+        {
+            return "Body";
+        }
+
+        CharacterSlot slot = (CharacterSlot)key.Slot;
+        string name = $"{slot}_{Letters(recipe.PartName(slot, key.Option))}";
+        int under = recipe.PartVariesWith(slot);
+        return under >= 0 ? $"{name}_Under{Letters(recipe.PartName((CharacterSlot)under, key.Variant))}" : name;
+    }
+
+    /// <summary>
+    /// <paramref name="text"/>'s letters and digits.
+    /// </summary>
+    private static string Letters(string text)
+    {
+        return new string((text ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
     }
 
     /// <summary>
@@ -91,6 +259,43 @@ public static class CharacterSheetWriter
         }
 
         return SpriteSheetFiles.WriteSheet(SheetPath(sheetName, clipName), columns * frameSize.x, CharacterDirections.Count * frameSize.y, pixels, slices);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="sheet"/>'s palette map (see <see cref="WritePaletteMap(string, string, int, int, byte[])"/>).
+    /// </summary>
+    public static bool WritePaletteMap(string sheetName, CharacterSheet sheet)
+    {
+        return WritePaletteMap(sheetName, sheet.Clip.Name, sheet.Width, sheet.Height, sheet.PaletteMap);
+    }
+
+    /// <summary>
+    /// Writes clip <paramref name="clipName"/>'s palette map, <paramref name="paletteMap"/> laid out as its sheet of
+    /// <paramref name="width"/> x <paramref name="height"/> pixels, at <see cref="PaletteMapPath"/> through
+    /// <see cref="SpriteSheetFiles.WritePaletteMap"/>, and gives the sheet it as its only secondary texture
+    /// <c>_PaletteMap</c>; without a map (null), deletes any written before and takes it off the sheet. Returns whether
+    /// the map, its import settings or the sheet's secondary textures changed; a sheet that never had one is left as it
+    /// is.
+    /// </summary>
+    public static bool WritePaletteMap(string sheetName, string clipName, int width, int height, byte[] paletteMap)
+    {
+        string path = SheetPath(sheetName, clipName);
+        string mapPath = PaletteMapPath(sheetName, clipName);
+        if (paletteMap == null)
+        {
+            if (AssetDatabase.LoadMainAssetAtPath(mapPath) == null)
+            {
+                return false;
+            }
+
+            AssetDatabase.DeleteAsset(mapPath);
+            SpriteSheetFiles.SetSecondaryTextures(path, new SecondarySpriteTexture[0]);
+            return true;
+        }
+
+        bool written = SpriteSheetFiles.WritePaletteMap(mapPath, width, height, paletteMap);
+        written |= SpriteSheetFiles.SetSecondaryTextures(path, new[] { new SecondarySpriteTexture { name = CharacterPaletteMap.MapTextureName, texture = AssetDatabase.LoadAssetAtPath<Texture2D>(mapPath) } });
+        return written;
     }
 
     /// <summary>
@@ -255,13 +460,15 @@ public static class CharacterSheetWriter
 
     /// <summary>
     /// An unsaved set of <paramref name="recipe"/>'s clips, baked as <paramref name="sheets"/> (in the recipe's order),
-    /// over the sprites of its written sheets, without touching an asset.
+    /// over the sprites of its written sheets, naming the dyes their palette maps carry, without touching an asset.
     /// </summary>
     public static CharacterAnimationSet BuildSet(CharacterRecipe recipe, CharacterBaker baker, IReadOnlyList<CharacterSheet> sheets)
     {
         List<CharacterAnimationClip> clips = new();
+        int dyes = 0;
         foreach (CharacterSheet sheet in sheets)
         {
+            dyes |= sheet.Dyes;
             CharacterClip clip = sheet.Clip;
             int columns = clip.Motion.FrameCount;
             int gaitFrames = clip.Motion.GaitFrames;
@@ -271,10 +478,10 @@ public static class CharacterSheetWriter
             CharacterFrameLight[] lights = Lights(sheet, out Color lightColour);
             Sprite[] lantern = sheet.HasLantern ? SheetSprites(recipe.SheetName, clip.Name + LanternSuffix, columns) : null;
             clips.Add(CharacterAnimationClip.Create(clip.Name, clip.Motion.Gait, clip.Weapon != null, ordered, seconds, NaturalSpeed(baker, recipe, clip), clip.Motion.ContactFrame, gaitFrames, lightColour, lights,
-                lantern, LanternLights(sheet.LanternCentres)));
+                lantern, LanternLights(sheet.LanternCentres), clip.Motion.IsIdleAnimation));
         }
 
-        return CharacterAnimationSet.Create(clips);
+        return CharacterAnimationSet.Create(clips, dyes);
     }
 
     /// <summary>
@@ -364,6 +571,15 @@ public static class CharacterSheetWriter
     public static string GlowPath(string sheetName, string clipName)
     {
         return $"{GlowRoot}/{sheetName}/{sheetName}_{clipName}_Glow.png";
+    }
+
+    /// <summary>
+    /// The path of the palette map beside sheet <paramref name="clipName"/> among the sheets named
+    /// <paramref name="sheetName"/>.
+    /// </summary>
+    public static string PaletteMapPath(string sheetName, string clipName)
+    {
+        return $"{GlowRoot}/{sheetName}/{sheetName}_{clipName}_Palette.png";
     }
 
     /// <summary>

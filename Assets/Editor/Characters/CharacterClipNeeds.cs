@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// The clips a character's prefab plays, which its animation set must hold (Docs/AsepriteCharacters.md, Validation): a
 /// player's class abilities' cast clips (<see cref="PlayerAbilities"/>), and for every weapon of its catalog
-/// (<see cref="PlayerWeaponController"/>) its attack clip and its abilities' cast clips; a mob's attack clip
+/// (<see cref="PlayerWeaponController"/>) its first attack's clip and its abilities' cast clips; a mob's attack clip
 /// (<see cref="MobController"/>). A Continue cast's clip over the run is not needed: without it the cast plays standing.
+/// Nor are a weapon's other attacks' clips: without one the first attack's plays.
 /// </summary>
 public static class CharacterClipNeeds
 {

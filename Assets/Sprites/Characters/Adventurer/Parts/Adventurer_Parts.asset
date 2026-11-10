@@ -1,0 +1,183 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0397f39ee5c2cf8469e7ba7a30582510, type: 3}
+  m_Name: Adventurer_Parts
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::CharacterParts
+  look: {fileID: 11400000, guid: d5b69de39a2ec284593e26947b1f2a0b, type: 2}
+  body: {fileID: 4900000, guid: 8b122c6ba21c3b3469e2f5dea641f996, type: 3}
+  innerLineGap: 2.6
+  slots:
+  - slot: 0
+    variesWith: 1
+    options:
+    - name: Tousled
+      dyes: 16
+      layers:
+      - {fileID: 4900000, guid: 0e9ea42347e79b34f8570049b4b8104b, type: 3}
+      - {fileID: 4900000, guid: 9b01e225485a24d4f823c48439b5160e, type: 3}
+      - {fileID: 4900000, guid: 7129ff21a16365148bcb943094029669, type: 3}
+    - name: Crop
+      dyes: 16
+      layers:
+      - {fileID: 4900000, guid: e934a0b5c4b5f3b43988053ca6f0bbce, type: 3}
+      - {fileID: 4900000, guid: 1c206a3d2f957254d9bace2f6644d6d0, type: 3}
+      - {fileID: 4900000, guid: 1c206a3d2f957254d9bace2f6644d6d0, type: 3}
+    - name: Long
+      dyes: 16
+      layers:
+      - {fileID: 4900000, guid: 978716069d1e64e48932bdac40041270, type: 3}
+      - {fileID: 4900000, guid: 9b01e225485a24d4f823c48439b5160e, type: 3}
+      - {fileID: 4900000, guid: 90d1474f6ea4f944ab7821564a34d420, type: 3}
+    - name: Ponytail
+      dyes: 16
+      layers:
+      - {fileID: 4900000, guid: 6ef6a2364292b1c46b57d3532cb6851f, type: 3}
+      - {fileID: 4900000, guid: 81a664451592eaf43a9ecc0d734879c7, type: 3}
+      - {fileID: 4900000, guid: 7107293f2b7d0bc40925c20ac081484f, type: 3}
+    - name: Spiky
+      dyes: 16
+      layers:
+      - {fileID: 4900000, guid: 656cf94f0af69b84c909b8837b842282, type: 3}
+      - {fileID: 4900000, guid: 9b01e225485a24d4f823c48439b5160e, type: 3}
+      - {fileID: 4900000, guid: 9b01e225485a24d4f823c48439b5160e, type: 3}
+  - slot: 1
+    variesWith: -1
+    options:
+    - name: None
+      dyes: 0
+      layers:
+      - {fileID: 0}
+    - name: Hood
+      dyes: 131072
+      layers:
+      - {fileID: 4900000, guid: 493cdd37d353ae84badb472ab9e52153, type: 3}
+    - name: Cap
+      dyes: 131072
+      layers:
+      - {fileID: 4900000, guid: 3664c492eb6ac97499511b97b6440a81, type: 3}
+  - slot: 2
+    variesWith: -1
+    options:
+    - name: Tunic
+      dyes: 768
+      layers:
+      - {fileID: 4900000, guid: 0aa95eb1658638c478b4d62b44e5efe5, type: 3}
+    - name: Short sleeves
+      dyes: 770
+      layers:
+      - {fileID: 4900000, guid: cf25ab0894474c9479b056c0d4997ad1, type: 3}
+    - name: Layered
+      dyes: 768
+      layers:
+      - {fileID: 4900000, guid: 3073d44271c3f6641a20e9916d297405, type: 3}
+    - name: Shirt
+      dyes: 512
+      layers:
+      - {fileID: 4900000, guid: f1510fca79e4ef84ca8431b1dd38a7ea, type: 3}
+    - name: Long tunic
+      dyes: 768
+      layers:
+      - {fileID: 4900000, guid: 5760a6ae46861b04581db319f65abf2f, type: 3}
+  - slot: 3
+    variesWith: -1
+    options:
+    - name: None
+      dyes: 0
+      layers:
+      - {fileID: 0}
+    - name: Cape
+      dyes: 786432
+      layers:
+      - {fileID: 4900000, guid: eb5eebaa35acb1941b7de93e658a2507, type: 3}
+    - name: Unlined
+      dyes: 262144
+      layers:
+      - {fileID: 4900000, guid: 44cb790f8b32ac543b29c9c13d363a8c, type: 3}
+    - name: Long
+      dyes: 786432
+      layers:
+      - {fileID: 4900000, guid: 2df6eeff4e9b5d84dbdffd1cb54e8184, type: 3}
+  - slot: 4
+    variesWith: -1
+    options:
+    - name: Trousers
+      dyes: 1024
+      layers:
+      - {fileID: 4900000, guid: d10dca0f8aec6634a814087008239b27, type: 3}
+    - name: Shorts
+      dyes: 1026
+      layers:
+      - {fileID: 4900000, guid: 3146ce05ca348404b81e916cd7159984, type: 3}
+  - slot: 5
+    variesWith: -1
+    options:
+    - name: Tall
+      dyes: 2048
+      layers:
+      - {fileID: 4900000, guid: 35079fdf6da9a054ba32f42e2f0749db, type: 3}
+    - name: Short
+      dyes: 2048
+      layers:
+      - {fileID: 4900000, guid: a44fe71faed4da640a2baa6f9cd32f04, type: 3}
+  - slot: 6
+    variesWith: -1
+    options:
+    - name: Bare
+      dyes: 2
+      layers:
+      - {fileID: 4900000, guid: 1f48a8325988e2148a0f0752e33a5457, type: 3}
+    - name: Gloves
+      dyes: 16384
+      layers:
+      - {fileID: 4900000, guid: 892f2f03abb27e0478416fcfe67a5d74, type: 3}
+  - slot: 7
+    variesWith: -1
+    options:
+    - name: None
+      dyes: 0
+      layers:
+      - {fileID: 0}
+    - name: Satchel
+      dyes: 98304
+      layers:
+      - {fileID: 4900000, guid: c68ae9f21617d2a4d94e03b81cc68329, type: 3}
+  - slot: 8
+    variesWith: 3
+    options:
+    - name: Sword
+      dyes: 12288
+      layers:
+      - {fileID: 4900000, guid: f6a86e3899e162648992fe26f2addf4d, type: 3}
+      - {fileID: 4900000, guid: f6a86e3899e162648992fe26f2addf4d, type: 3}
+      - {fileID: 4900000, guid: f6a86e3899e162648992fe26f2addf4d, type: 3}
+      - {fileID: 4900000, guid: f6a86e3899e162648992fe26f2addf4d, type: 3}
+    - name: Greatsword
+      dyes: 32768
+      layers:
+      - {fileID: 4900000, guid: 330b61a13b1face42a2247e3a3420994, type: 3}
+      - {fileID: 4900000, guid: d5f2479c776392d4983ca12c1021edbf, type: 3}
+      - {fileID: 4900000, guid: d5f2479c776392d4983ca12c1021edbf, type: 3}
+      - {fileID: 4900000, guid: d5f2479c776392d4983ca12c1021edbf, type: 3}
+    - name: Longbow
+      dyes: 45056
+      layers:
+      - {fileID: 4900000, guid: 406dd9b7d82981b488d11cbdf74f34fd, type: 3}
+      - {fileID: 4900000, guid: eb8cb6db8c28e5f4a8ea58dcbe910c3f, type: 3}
+      - {fileID: 4900000, guid: eb8cb6db8c28e5f4a8ea58dcbe910c3f, type: 3}
+      - {fileID: 4900000, guid: eb8cb6db8c28e5f4a8ea58dcbe910c3f, type: 3}
+    - name: None
+      dyes: 0
+      layers:
+      - {fileID: 0}
+      - {fileID: 0}
+      - {fileID: 0}
+      - {fileID: 0}

@@ -153,6 +153,19 @@ public sealed class CharacterLocomotionLayer
     }
 
     /// <summary>
+    /// Goes on with <paramref name="to"/>'s clips where it played <paramref name="from"/>'s, a set of the same clips
+    /// drawn by other sprites (a composed outfit of the same look, Docs/PlayerCharacter.md, Phase 7), changing nothing
+    /// else.
+    /// </summary>
+    public void Rebind(CharacterAnimationSet from, CharacterAnimationSet to)
+    {
+        for (int level = 0; level < Levels; level++)
+        {
+            clips[level] = from.Matching(clips[level], to) ?? clips[level];
+        }
+    }
+
+    /// <summary>
     /// Gives every level without a clip of its own the nearest slower level's, or else the nearest faster one's.
     /// </summary>
     private void FillMissingLevels()

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Unity.Netcode;
 using Unity.Netcode.Components;
@@ -10,7 +11,8 @@ using VContainer;
 /// PlayMode tests for networked players between a host and an in-process client: spawning on readiness,
 /// owner-driven movement under host statuses and how copies animate it (a late joiner included), attacks on their
 /// timeline (the copy's windup and contact, the host resolving the hit once around the owner, a cancelled windup),
-/// disconnects and late-arriving dead players.
+/// idle animations (a client's copy of a standing player playing the same ones, cut when it moves), disconnects and
+/// late-arriving dead players.
 /// </summary>
 public class NetworkPlayersPlayModeTests
 {
@@ -315,6 +317,85 @@ public class NetworkPlayersPlayModeTests
         yield return SceneBootTestHelper.WaitUntil(() => copyAnimation.Gait == CharacterGait.Idle, "the client's copy to stand when the host stops");
         Assert.That(hostAnimation.Gait, Is.EqualTo(CharacterGait.Idle));
         Assert.That(copyAnimation.Direction, Is.EqualTo(hostAnimation.Direction), "The copy stands facing the host's way.");
+    }
+
+    /// <summary>
+    /// The host's player standing still plays idle animations, and the client's copy of it, seeded by its network id as
+    /// the host's is, plays the same ones from the standing it sees, with nothing sent for them; moving cuts them on
+    /// both. Both sides wait half a second instead of the player's settings' seconds (Docs/PlayerCharacter.md, Phase 3).
+    /// </summary>
+    [UnityTest]
+    public IEnumerator AStandingPlayersIdleAnimations_PlayTheSameOnAClientsCopy()
+    {
+        yield return SceneBootTestHelper.BootIntoMainMenu();
+
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        Object.FindAnyObjectByType<MainMenuController>().HostGame();
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+        foreach (MobController mob in Object.FindObjectsByType<MobController>())
+        {
+            mob.gameObject.SetActive(false);
+        }
+
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerRegistry hostPlayers = gameplay.Resolve<PlayerRegistry>();
+        PlayerController hostPlayer = gameplay.Resolve<LocalPlayerTracker>().Current.Controller;
+        client = InProcessClient.Start(session, gameplay.Resolve<PlayerSpawner>().PlayerNetworkPrefab);
+        yield return SceneBootTestHelper.WaitUntil(() => client.Manager.IsConnectedClient, "the in-process client to connect");
+        client.SendReady();
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostPlayers.Players.Count == 2 && InProcessClient.FindCopyOwnedBy(client.Players, NetworkManager.ServerClientId) != null,
+            "the client to get a copy of the host's player");
+        PlayerController copy = InProcessClient.FindCopyOwnedBy(client.Players, NetworkManager.ServerClientId);
+
+        CharacterVisuals hostVisuals = hostPlayer.GetComponentInChildren<CharacterVisuals>();
+        CharacterVisuals copyVisuals = copy.GetComponentInChildren<CharacterVisuals>();
+        CharacterLocomotionSettings real = hostVisuals.Locomotion;
+        CharacterLocomotionSettings quick = CharacterLocomotionSettings.Create(real.WalkFrom, real.RunFrom, real.SprintFrom, real.GaitHysteresis, real.MinRate, real.MaxRate, real.DirectionMargin, real.ContactWaitSeconds, 0.5f, 0.6f, 0.6f);
+        try
+        {
+            hostVisuals.SetLook(hostVisuals.AnimationSet, quick);
+            copyVisuals.SetLook(copyVisuals.AnimationSet, quick);
+            List<string> hostPlayed = new();
+            List<string> copyPlayed = new();
+            float until = Time.time + 6f;
+            while (Time.time < until && (hostPlayed.Count < 2 || copyPlayed.Count < 2))
+            {
+                Note(hostVisuals.Animator, hostPlayed);
+                Note(copyVisuals.Animator, copyPlayed);
+                yield return null;
+            }
+
+            Assert.That(hostPlayed.Count, Is.GreaterThanOrEqualTo(2), "The standing host's player plays idle animations.");
+            Assert.That(copyPlayed.Count, Is.GreaterThanOrEqualTo(2), "The client's copy plays them too.");
+            Assert.That(copyPlayed.GetRange(0, 2), Is.EqualTo(hostPlayed.GetRange(0, 2)), "The copy plays the same ones as the host.");
+            Assert.That(hostPlayed[1], Is.Not.EqualTo(hostPlayed[0]), "Never the same one twice in a row.");
+
+            ScriptedCommands hostCommands = new();
+            hostPlayer.SetCommandSource(hostCommands);
+            hostCommands.Click((Vector2)hostPlayer.transform.position + Vector2.up * 50f);
+            yield return SceneBootTestHelper.WaitUntil(() => copyVisuals.Animator.Gait == CharacterGait.Run, "the client's copy to run when the host moves");
+            Assert.That(hostVisuals.Animator.ShowsIdleAnimation, Is.False);
+            Assert.That(copyVisuals.Animator.ShowsIdleAnimation, Is.False, "Moving cuts the idle animations on the copy too.");
+            hostCommands.Stop();
+        }
+        finally
+        {
+            Object.Destroy(quick);
+        }
+    }
+
+    /// <summary>
+    /// Adds the idle animation <paramref name="animator"/> shows to <paramref name="played"/> when it starts one other
+    /// than the last noted.
+    /// </summary>
+    private static void Note(CharacterAnimator animator, List<string> played)
+    {
+        if (animator != null && animator.ShowsIdleAnimation && (played.Count == 0 || played[played.Count - 1] != animator.Clip.Name))
+        {
+            played.Add(animator.Clip.Name);
+        }
     }
 
     /// <summary>

@@ -1,0 +1,2446 @@
+fileFormatVersion: 2
+guid: da9c7d0c25fbe6a4c90991aa7a2f537f
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -7822241011278418743
+    second: Adventurer_IdleTapFoot_0
+  - first:
+      213: 1381048967244635713
+    second: Adventurer_IdleTapFoot_1
+  - first:
+      213: -3513601781278050335
+    second: Adventurer_IdleTapFoot_2
+  - first:
+      213: 1074195500930421472
+    second: Adventurer_IdleTapFoot_3
+  - first:
+      213: -8462256967719736320
+    second: Adventurer_IdleTapFoot_4
+  - first:
+      213: -2952305501667454439
+    second: Adventurer_IdleTapFoot_5
+  - first:
+      213: -1712489449194279934
+    second: Adventurer_IdleTapFoot_6
+  - first:
+      213: -1408142232817082962
+    second: Adventurer_IdleTapFoot_7
+  - first:
+      213: 4388503550527137463
+    second: Adventurer_IdleTapFoot_8
+  - first:
+      213: -5108448274279221652
+    second: Adventurer_IdleTapFoot_9
+  - first:
+      213: -8603370819559434099
+    second: Adventurer_IdleTapFoot_10
+  - first:
+      213: -2336343070739527056
+    second: Adventurer_IdleTapFoot_11
+  - first:
+      213: -6491341949277093999
+    second: Adventurer_IdleTapFoot_12
+  - first:
+      213: -3940042324304130298
+    second: Adventurer_IdleTapFoot_13
+  - first:
+      213: 7643760338592795048
+    second: Adventurer_IdleTapFoot_14
+  - first:
+      213: -2403351097688686467
+    second: Adventurer_IdleTapFoot_15
+  - first:
+      213: -5600332942609222834
+    second: Adventurer_IdleTapFoot_16
+  - first:
+      213: -4890892662203200129
+    second: Adventurer_IdleTapFoot_17
+  - first:
+      213: -2773423349277233457
+    second: Adventurer_IdleTapFoot_18
+  - first:
+      213: 5480600444071287104
+    second: Adventurer_IdleTapFoot_19
+  - first:
+      213: 8854485625381416263
+    second: Adventurer_IdleTapFoot_20
+  - first:
+      213: 1082507443872238250
+    second: Adventurer_IdleTapFoot_21
+  - first:
+      213: -8700967111630189857
+    second: Adventurer_IdleTapFoot_22
+  - first:
+      213: -1782350024985088479
+    second: Adventurer_IdleTapFoot_23
+  - first:
+      213: -675255137451756843
+    second: Adventurer_IdleTapFoot_24
+  - first:
+      213: 2365738854477151475
+    second: Adventurer_IdleTapFoot_25
+  - first:
+      213: 3805650979916856306
+    second: Adventurer_IdleTapFoot_26
+  - first:
+      213: 7300569123661455084
+    second: Adventurer_IdleTapFoot_27
+  - first:
+      213: -9197070518453362102
+    second: Adventurer_IdleTapFoot_28
+  - first:
+      213: 5885898675881647208
+    second: Adventurer_IdleTapFoot_29
+  - first:
+      213: 5988233308953087827
+    second: Adventurer_IdleTapFoot_30
+  - first:
+      213: 388337794735382844
+    second: Adventurer_IdleTapFoot_31
+  - first:
+      213: 5578676152312862135
+    second: Adventurer_IdleTapFoot_32
+  - first:
+      213: -5176121033968689305
+    second: Adventurer_IdleTapFoot_33
+  - first:
+      213: -8841441249300012973
+    second: Adventurer_IdleTapFoot_34
+  - first:
+      213: -7174428569180100138
+    second: Adventurer_IdleTapFoot_35
+  - first:
+      213: 4466901793699677353
+    second: Adventurer_IdleTapFoot_36
+  - first:
+      213: -7324725798201016233
+    second: Adventurer_IdleTapFoot_37
+  - first:
+      213: 4890153446531627586
+    second: Adventurer_IdleTapFoot_38
+  - first:
+      213: -8397726266670780197
+    second: Adventurer_IdleTapFoot_39
+  - first:
+      213: 8270600546245585262
+    second: Adventurer_IdleTapFoot_40
+  - first:
+      213: 3236911611916148793
+    second: Adventurer_IdleTapFoot_41
+  - first:
+      213: 8386125108435680042
+    second: Adventurer_IdleTapFoot_42
+  - first:
+      213: 1561653080985636947
+    second: Adventurer_IdleTapFoot_43
+  - first:
+      213: -2383076144279538517
+    second: Adventurer_IdleTapFoot_44
+  - first:
+      213: -8007610912742963934
+    second: Adventurer_IdleTapFoot_45
+  - first:
+      213: 3226878362236628132
+    second: Adventurer_IdleTapFoot_46
+  - first:
+      213: 8363916727568525914
+    second: Adventurer_IdleTapFoot_47
+  - first:
+      213: -7667979498381549430
+    second: Adventurer_IdleTapFoot_48
+  - first:
+      213: -5617044068022599535
+    second: Adventurer_IdleTapFoot_49
+  - first:
+      213: -2536669052184900551
+    second: Adventurer_IdleTapFoot_50
+  - first:
+      213: 4515783037832655445
+    second: Adventurer_IdleTapFoot_51
+  - first:
+      213: 799911625567731047
+    second: Adventurer_IdleTapFoot_52
+  - first:
+      213: 6046332936017384837
+    second: Adventurer_IdleTapFoot_53
+  - first:
+      213: -1482246392921681147
+    second: Adventurer_IdleTapFoot_54
+  - first:
+      213: 1913857858944613094
+    second: Adventurer_IdleTapFoot_55
+  - first:
+      213: 4160227336778399797
+    second: Adventurer_IdleTapFoot_56
+  - first:
+      213: 2631426804127718039
+    second: Adventurer_IdleTapFoot_57
+  - first:
+      213: 2488082982031144434
+    second: Adventurer_IdleTapFoot_58
+  - first:
+      213: -2113590157573571183
+    second: Adventurer_IdleTapFoot_59
+  - first:
+      213: -7802176269548090009
+    second: Adventurer_IdleTapFoot_60
+  - first:
+      213: -154679101940511104
+    second: Adventurer_IdleTapFoot_61
+  - first:
+      213: -9002976989128061595
+    second: Adventurer_IdleTapFoot_62
+  - first:
+      213: -3915907231585560463
+    second: Adventurer_IdleTapFoot_63
+  - first:
+      213: 7190812151498566723
+    second: Adventurer_IdleTapFoot_64
+  - first:
+      213: 7143684984761641468
+    second: Adventurer_IdleTapFoot_65
+  - first:
+      213: -6522714462712630188
+    second: Adventurer_IdleTapFoot_66
+  - first:
+      213: -8291864175635889029
+    second: Adventurer_IdleTapFoot_67
+  - first:
+      213: -8004700940383807863
+    second: Adventurer_IdleTapFoot_68
+  - first:
+      213: -5786243797020586737
+    second: Adventurer_IdleTapFoot_69
+  - first:
+      213: 8999094790831133665
+    second: Adventurer_IdleTapFoot_70
+  - first:
+      213: 6989038601268771963
+    second: Adventurer_IdleTapFoot_71
+  - first:
+      213: -3795071544413974475
+    second: Adventurer_IdleTapFoot_72
+  - first:
+      213: 1014837216191050028
+    second: Adventurer_IdleTapFoot_73
+  - first:
+      213: -5041433326843967866
+    second: Adventurer_IdleTapFoot_74
+  - first:
+      213: 6679132183029744605
+    second: Adventurer_IdleTapFoot_75
+  - first:
+      213: 5485849158451899130
+    second: Adventurer_IdleTapFoot_76
+  - first:
+      213: 1199485473039354791
+    second: Adventurer_IdleTapFoot_77
+  - first:
+      213: 2798591873367561555
+    second: Adventurer_IdleTapFoot_78
+  - first:
+      213: 6108166595670502009
+    second: Adventurer_IdleTapFoot_79
+  - first:
+      213: -2390315660114701447
+    second: Adventurer_IdleTapFoot_80
+  - first:
+      213: -3744285409159423261
+    second: Adventurer_IdleTapFoot_81
+  - first:
+      213: -2817511525046633673
+    second: Adventurer_IdleTapFoot_82
+  - first:
+      213: 1428288050745250462
+    second: Adventurer_IdleTapFoot_83
+  - first:
+      213: -4008675014414495370
+    second: Adventurer_IdleTapFoot_84
+  - first:
+      213: 7285084221818098504
+    second: Adventurer_IdleTapFoot_85
+  - first:
+      213: -3740646462294137386
+    second: Adventurer_IdleTapFoot_86
+  - first:
+      213: 6016248131791424316
+    second: Adventurer_IdleTapFoot_87
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 32
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: iOS
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: 4
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 1
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a87928cd535973a4bb90877f3951ecc8
+      internalID: 1520505251
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ae3eff6947390e847829ac4ba6881756
+      internalID: -1269244241
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4dbc9e229a84ad1498aec1b8eaa71cdc
+      internalID: 1573494318
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6386a1ba51eed0949ba051f54251a5c9
+      internalID: -998666822
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5628164cf0031c04f849b27f20b6e2a8
+      internalID: 1999037959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f411ecd92fa7e7a47a8109ff9cc6b67f
+      internalID: 185410075
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ad7f6c674f5f4cd4f8eb1319dca8ca77
+      internalID: -11413536
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8aac0a8587b1a8c48b36ea604f55f0bf
+      internalID: 168566044
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 517ab8d5c28c8834cb9324ac499fca26
+      internalID: -164013707
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ee1b1539ab8ec4f4eabfe3913583a49b
+      internalID: 1821301433
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_E_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 448
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0cdf97691ebe8f244aac65d9c5d78c20
+      internalID: 1750127401
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a0af6d1102f3b0d4cb20ccd8cb8e845c
+      internalID: -112705934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f92fd62eb3fb8fd4db1ddb413893195a
+      internalID: 227342770
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 775476c26569a5d418a001e0e4c12a11
+      internalID: -692096618
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: df9a00c3860f0ea449d5053a9f45ae2e
+      internalID: 869843756
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6c2bc445a15f87e4eb2153a16118d973
+      internalID: 186085476
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 23ba78b658d20a046942d66ac19646be
+      internalID: 1613296461
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7abbea924ac34c3408e59816efb017c9
+      internalID: 513678025
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 259a02bd81a9e5c449227b1b752459a0
+      internalID: -999482927
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9cd86973d62b4f94d8e78416e5a5ba94
+      internalID: -1361290961
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b7ae8319770c0484e9993ef9b48c9b12
+      internalID: 127735157
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NE_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 384
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 203a99ea90e96e645ae04e49385506c5
+      internalID: -1097712343
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 48389503e5122a349a78b30b85c61869
+      internalID: 730269463
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 25f3cec6d265e9f4bae07be3bb0f713b
+      internalID: 738364683
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4f472557b3c9b4540959a5ee9f746465
+      internalID: 1152811422
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b57b66570ad84ac45a7bdb2e14eee3da
+      internalID: -1890406177
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4ccf1e782b97c324881f39d4eefdeba9
+      internalID: 1121110944
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ed47519f06bb62f4bbb5612a77298baa
+      internalID: -1501402202
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 480e6cd0d7d6f36478c999c6cc55c329
+      internalID: -1006743482
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4663ccbcb8d50d54284002365c0b3e51
+      internalID: -1677606760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 42675d5c8221bcc458fee1aa970c19f6
+      internalID: 954287948
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 10e6bcc66536cd747b82e1be1add20ef
+      internalID: -2024665943
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_N_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 320
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 535a7ea4de5037247a6de3fc2e02db31
+      internalID: 522483821
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: feb481c64bbe7ba4f83c22b066556271
+      internalID: -395620174
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d14b70ec42d6d69418f2a4496bb62617
+      internalID: 1373666670
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0b5d60327d26dca43872c2a9e36ffc71
+      internalID: -863337818
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 41818e9c0e27e9e448a58df3ae03b27b
+      internalID: -838082502
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: efb6584658ca45041b89ed8d2a255d73
+      internalID: -678066660
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8be609b25c85ead4a957c7c8a10ede43
+      internalID: 1922231069
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b51e81a53b1a3244b94fde45ff553118
+      internalID: -577757052
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 22a5b8974b66e7947b895d8c77cf42a2
+      internalID: 330675962
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 89ba70a270e303845af11fef77007756
+      internalID: 688910313
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 11116115af9300f49bc29fa1b05b2b6e
+      internalID: -1738301615
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_NW_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 256
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6e1863fcc82ef09408b0a369226fa7e1
+      internalID: -1630203952
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c219cee668a56454abb6f933b97bbb91
+      internalID: 1805577651
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2781ecb53c8c0f349b781115b3898942
+      internalID: -425324569
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 6416429ed4e313048a8126f371d817ab
+      internalID: -1338641644
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0a30b94565bf11845ad11eb88e6d3082
+      internalID: -841666825
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b7889220f52af9642b1e6d1c0d900a8e
+      internalID: -1170222470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 21b8bf050a7c4614f8170a30db99a0b2
+      internalID: 1900830932
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: caf2960c55cdbef40a50d12ecb81f106
+      internalID: -1459807667
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9b14a0a5d7b99954db49122619522506
+      internalID: 605712208
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 744954dcd5282a744a629d2bbd09676c
+      internalID: -84958215
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 58859c949982cf84bb3cd3ae6cd5d7bb
+      internalID: -1964392671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_W_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 192
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 287f042a70f255040bf65ccff86aa06f
+      internalID: -187640262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9be0302ddc71ff042b1ef04baaf3fdf6
+      internalID: -384128040
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 008ab627a9a3d014da3b8aa63f631c94
+      internalID: 1096688896
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a0ed4f0009bba13498f90a06ef15cbcb
+      internalID: -2067972487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: fa4705f46686fe147a17c83ce2840cdf
+      internalID: -1034223360
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d91020a1ffea8b54f88a3c9440f11947
+      internalID: -1681976631
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 33c360503cd64bb4881a3e25107e18c8
+      internalID: 1997772765
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 55ba1a02f9a77c24d8ad0534194bf5c8
+      internalID: 710624302
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 434728a94389a6f40841fed79aaedcd2
+      internalID: 411234105
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2cb934d15f35b2347b71fbaee53e6052
+      internalID: 382373402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: c7269d5c8c286f043a661410511597c5
+      internalID: 1644080318
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SW_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 128
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 833007b84a5462445a252058477c0b5c
+      internalID: -104403935
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b1c2fead9e816e143b035242e704f116
+      internalID: -23936937
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 4c828c88210094244b7776084b87aed4
+      internalID: -554411802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5c95eb538bf2b134080a03799982f069
+      internalID: 298079416
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 05f3e16444552ea44aceb0d069107d16
+      internalID: 435868406
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ddf27b7429ee14e4899c37013c453de0
+      internalID: 969293192
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 09da12cc2e992eb4186e0ebfe4fb4e5c
+      internalID: -1261642303
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 305bb2d5621b25a4cb71e025b84d3f9d
+      internalID: -356428298
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 0a9f1c0eb674ac64ca4934a6829c1538
+      internalID: 1997341487
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2bc95851761cd2a4784e05ea36a61a8a
+      internalID: -1684165547
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 47b1bed238e94a84aa6cbcfa5b15b6ed
+      internalID: -2027412760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_S_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 64
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f822864211f75e54883374585ce7b04e
+      internalID: 1921328255
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f1d4dea70d50f1e41a255a086797a6c3
+      internalID: 2052956792
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_1
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 7a67ef2db6aaf99488954d17246aef37
+      internalID: 2078531770
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_2
+      rect:
+        serializedVersion: 2
+        x: 128
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f0319c4286cfd3c45930ea34caa28af9
+      internalID: -211700130
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_3
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 259be0024bedd33489ef3f95c7173226
+      internalID: 1264798586
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_4
+      rect:
+        serializedVersion: 2
+        x: 256
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 69e39da14f97ee840a1a1d945186d2e5
+      internalID: -1121973553
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_5
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 8484e2476ba17d74aa84519419e42953
+      internalID: 1540757933
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_6
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: ed2884e4e572de748abce61cf59977be
+      internalID: -590651121
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_7
+      rect:
+        serializedVersion: 2
+        x: 448
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d1640985178dc9247adf17f9914bb24f
+      internalID: -374684774
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_8
+      rect:
+        serializedVersion: 2
+        x: 512
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: f908ab532c2ce434b9c200c0d89724d4
+      internalID: 56019907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_9
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 895607b4102e06d44a43059f832fd08e
+      internalID: -745072907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Adventurer_IdleTapFoot_SE_10
+      rect:
+        serializedVersion: 2
+        x: 640
+        y: 0
+        width: 64
+        height: 64
+      alignment: 9
+      pivot: {x: 0.5, y: 0.1875}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 888b8ba70a6f3b04fa52b3b85bffe790
+      internalID: -321826962
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 25b79a9f38232d34e8474e2582e1c924
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures:
+    - texture: {fileID: 2800000, guid: 58e8d78bf8b0cc84f84bbc1ec5bf548b, type: 3}
+      name: _PaletteMap
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Adventurer_IdleTapFoot_E_0: 1520505251
+      Adventurer_IdleTapFoot_E_1: -1269244241
+      Adventurer_IdleTapFoot_E_10: 1750127401
+      Adventurer_IdleTapFoot_E_2: 1573494318
+      Adventurer_IdleTapFoot_E_3: -998666822
+      Adventurer_IdleTapFoot_E_4: 1999037959
+      Adventurer_IdleTapFoot_E_5: 185410075
+      Adventurer_IdleTapFoot_E_6: -11413536
+      Adventurer_IdleTapFoot_E_7: 168566044
+      Adventurer_IdleTapFoot_E_8: -164013707
+      Adventurer_IdleTapFoot_E_9: 1821301433
+      Adventurer_IdleTapFoot_NE_0: -112705934
+      Adventurer_IdleTapFoot_NE_1: 227342770
+      Adventurer_IdleTapFoot_NE_10: -1097712343
+      Adventurer_IdleTapFoot_NE_2: -692096618
+      Adventurer_IdleTapFoot_NE_3: 869843756
+      Adventurer_IdleTapFoot_NE_4: 186085476
+      Adventurer_IdleTapFoot_NE_5: 1613296461
+      Adventurer_IdleTapFoot_NE_6: 513678025
+      Adventurer_IdleTapFoot_NE_7: -999482927
+      Adventurer_IdleTapFoot_NE_8: -1361290961
+      Adventurer_IdleTapFoot_NE_9: 127735157
+      Adventurer_IdleTapFoot_NW_0: -395620174
+      Adventurer_IdleTapFoot_NW_1: 1373666670
+      Adventurer_IdleTapFoot_NW_10: -1630203952
+      Adventurer_IdleTapFoot_NW_2: -863337818
+      Adventurer_IdleTapFoot_NW_3: -838082502
+      Adventurer_IdleTapFoot_NW_4: -678066660
+      Adventurer_IdleTapFoot_NW_5: 1922231069
+      Adventurer_IdleTapFoot_NW_6: -577757052
+      Adventurer_IdleTapFoot_NW_7: 330675962
+      Adventurer_IdleTapFoot_NW_8: 688910313
+      Adventurer_IdleTapFoot_NW_9: -1738301615
+      Adventurer_IdleTapFoot_N_0: 730269463
+      Adventurer_IdleTapFoot_N_1: 738364683
+      Adventurer_IdleTapFoot_N_10: 522483821
+      Adventurer_IdleTapFoot_N_2: 1152811422
+      Adventurer_IdleTapFoot_N_3: -1890406177
+      Adventurer_IdleTapFoot_N_4: 1121110944
+      Adventurer_IdleTapFoot_N_5: -1501402202
+      Adventurer_IdleTapFoot_N_6: -1006743482
+      Adventurer_IdleTapFoot_N_7: -1677606760
+      Adventurer_IdleTapFoot_N_8: 954287948
+      Adventurer_IdleTapFoot_N_9: -2024665943
+      Adventurer_IdleTapFoot_SE_0: 2052956792
+      Adventurer_IdleTapFoot_SE_1: 2078531770
+      Adventurer_IdleTapFoot_SE_10: -321826962
+      Adventurer_IdleTapFoot_SE_2: -211700130
+      Adventurer_IdleTapFoot_SE_3: 1264798586
+      Adventurer_IdleTapFoot_SE_4: -1121973553
+      Adventurer_IdleTapFoot_SE_5: 1540757933
+      Adventurer_IdleTapFoot_SE_6: -590651121
+      Adventurer_IdleTapFoot_SE_7: -374684774
+      Adventurer_IdleTapFoot_SE_8: 56019907
+      Adventurer_IdleTapFoot_SE_9: -745072907
+      Adventurer_IdleTapFoot_SW_0: -384128040
+      Adventurer_IdleTapFoot_SW_1: 1096688896
+      Adventurer_IdleTapFoot_SW_10: -104403935
+      Adventurer_IdleTapFoot_SW_2: -2067972487
+      Adventurer_IdleTapFoot_SW_3: -1034223360
+      Adventurer_IdleTapFoot_SW_4: -1681976631
+      Adventurer_IdleTapFoot_SW_5: 1997772765
+      Adventurer_IdleTapFoot_SW_6: 710624302
+      Adventurer_IdleTapFoot_SW_7: 411234105
+      Adventurer_IdleTapFoot_SW_8: 382373402
+      Adventurer_IdleTapFoot_SW_9: 1644080318
+      Adventurer_IdleTapFoot_S_0: -23936937
+      Adventurer_IdleTapFoot_S_1: -554411802
+      Adventurer_IdleTapFoot_S_10: 1921328255
+      Adventurer_IdleTapFoot_S_2: 298079416
+      Adventurer_IdleTapFoot_S_3: 435868406
+      Adventurer_IdleTapFoot_S_4: 969293192
+      Adventurer_IdleTapFoot_S_5: -1261642303
+      Adventurer_IdleTapFoot_S_6: -356428298
+      Adventurer_IdleTapFoot_S_7: 1997341487
+      Adventurer_IdleTapFoot_S_8: -1684165547
+      Adventurer_IdleTapFoot_S_9: -2027412760
+      Adventurer_IdleTapFoot_W_0: 1805577651
+      Adventurer_IdleTapFoot_W_1: -425324569
+      Adventurer_IdleTapFoot_W_10: -187640262
+      Adventurer_IdleTapFoot_W_2: -1338641644
+      Adventurer_IdleTapFoot_W_3: -841666825
+      Adventurer_IdleTapFoot_W_4: -1170222470
+      Adventurer_IdleTapFoot_W_5: 1900830932
+      Adventurer_IdleTapFoot_W_6: -1459807667
+      Adventurer_IdleTapFoot_W_7: 605712208
+      Adventurer_IdleTapFoot_W_8: -84958215
+      Adventurer_IdleTapFoot_W_9: -1964392671
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

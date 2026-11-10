@@ -21,18 +21,23 @@ Two words have one meaning each in this file:
 
 The project already has most of the mechanics part, without the name:
 
-- **Content is data.** Weapons, abilities, classes, statuses, combat profiles and mob configs are read-only ScriptableObject definitions with `Create` factories for tests. Looks are entries of `CharacterLookCatalog`. Mob configs are in `Assets/Settings/AI`; the others are in `Assets/Data`.
-- **Networked content has stable ids.** It is listed in append-only catalogs (`WeaponCatalog`, `StatusEffectCatalog`, `CharacterLookCatalog`) whose index is its id on the wire. Saves name assets by GUID.
+- **Content is data.** Weapons, abilities, classes, statuses, combat profiles, mob configs, locomotion settings and the character colours (`CharacterColours`: swatch lists and the choices they colour) are read-only ScriptableObject definitions with `Create` factories for tests. Looks are entries of `CharacterLookCatalog`, and a look's swappable parts (`CharacterParts`) are written by the baker beside its sprites. Mob configs are in `Assets/Settings/AI`; the others are in `Assets/Data`.
+- **Networked content has ids.**
+  - Weapons, statuses and looks are listed in catalogs (`WeaponCatalog`, `StatusEffectCatalog`, `CharacterLookCatalog`) whose index is their id on the wire. A player's colour and part picks are indexes into `CharacterColours`' and `CharacterParts`' lists.
+  - Only `WeaponCatalog` says it is append-only: the adventurer took the rogue's place in the look catalog.
+  - Join approval no longer compares builds while the build version stays fixed (Architecture.md's Known gaps), so these ids only hold between machines on the same build.
+  - Saves name assets by GUID, and the settings file names looks, swatches and parts by name.
 - **Mechanics share building blocks.** They are composed from hits, damage types, statuses, timelines, areas and targeting, specified in [DamageAndStatusEffects.md](DamageAndStatusEffects.md), [PlayerControls.md](PlayerControls.md) and [Animation.md](Animation.md).
 - **Specs share a shape, roughly.** Where we start, Goals, Non-goals, Decisions, Phases, Testing and Open questions recur. Some specs add Terms, Behaviour, Architecture or Later. Architecture.md and DamageAndStatusEffects.md draw diagrams in Mermaid.
 - **Content tests exist for some kinds**:
   - `StatusEffectTests.Content_*`, `AbilityEffectTests.Content_*`, `DamageResolutionTests.Content_*` and `StatusFeedbackTests.Content_*`;
   - `WeaponCatalogTests`, `CharacterPrefabTests`, `CharacterLookTests`, `PropPrefabTests` and `WorldValidationTests`;
-  - the input content tests.
+  - the input content tests;
+  - since PlayerCharacter.md and KnownGaps.md: `AdventurerRecipeTests`, `CharacterColoursTests`, `CharacterPaletteTests`, `CharacterOutfitsTests`, `WorldMarkersTests` and `OptionsMenuControllerTests` read project assets too.
   Some of them pin asset values (the sword's 20, Blank Bolt's 12 Frost, the resistance cap's 80).
-- **Asset values are restated by hand.** Architecture.md restates each weapon's damage and timings, each status's effect and each blank ability's numbers. Every tuning change therefore needs a doc edit.
+- **Asset values are restated by hand.** Architecture.md restates each weapon's damage and timings, the `CombatSettings` values, each status's effect, each blank ability's numbers and the Weasel's health. Every tuning change therefore needs a doc edit.
 
-The UI has no system yet. The table below is what it looked like on 2026-11-03.
+The UI has no system yet. The table below is what it looked like on 2026-11-03, checked again on 2026-11-10 after KnownGaps.md and PlayerCharacter.md merged.
 
 | Area | Today |
 |---|---|
@@ -40,10 +45,10 @@ The UI has no system yet. The table below is what it looked like on 2026-11-03.
 | Text | **Sizes:** ten font sizes, from 11 to 40.<br>**HUD:** 28 of its 35 texts are 12 or 14 px at 1080p, and the six ability names auto-size down to 8 px. All of these are under the minimum in the Xbox Accessibility Guidelines (XAG) for PC: a body height (ascender to descender) of 18 px.<br>**Menus:** text is 27 to 120 px at 1080p. The key-binding rows auto-size down to 9 UI px, the notice is 12 and the section headers 13.<br>**Popups:** damage popups are 32 px on any display, so they shrink at 4K. |
 | Font | TextMesh Pro's LiberationSans SDF everywhere (SIL OFL 1.1). Its atlas padding allows an outline of only about 0.4 UI px. Fonts licensed for use in a game are exempt from the art rule. |
 | Colour | **In view fields:** raw colours in `AbilitySlotView` (frames, failure flash), `MoveMarker` (move, attack move) and `PlayerHudView` (weapon icon tints).<br>**In component data:** most colours are serialized on Image and TMP components, button colour blocks and SpriteRenderers (the hover ring, the Weasel's bar).<br>**On gameplay assets:** damage-type, heal and immune colours on `CombatSettings`; a colour on each status definition; the waystone popup's colour on `GameplaySettings`.<br>Three reds mean danger and two mean health. Nothing checks contrast: the Physical popup red is 3.1:1 against black, and the join field's placeholder about 2.9:1. |
-| UI art | Most of the HUD's frames and fills are tinted copies of `Assets/Sprites/UI/Square.png`. The health fill is `HealthBarFill.png`, and the weapon slot has a ring and a mask of its own. The menus are plain rectangles. The world health bar is a smooth rounded sprite (`Assets/Textures/UI/RoundedBar.png`). There is no button or panel art. |
-| Components | The key-binding row, section header, damage popup and move marker are prefabs. Buttons, panels and confirmations are built in place in each menu. There are no tooltips: a status shows two letters, and its description is in the data but shown nowhere. |
-| Colour alone | **Markers:** the move and attack-move markers differ only by colour. The hover ring stays under the hovered enemy and comes with the attack cursor.<br>**Statuses:** on the HUD a status pairs its colour with a two-letter abbreviation; no status has an icon yet. Over mobs, the world status icons and the status auras show colour alone.<br>**Popups:** they are coloured by damage type. Heal has its "+", Immune its text, and periodic ticks are smaller. |
-| Preferences | `settings.json` holds the bindings, the player id and the look. There are no display or accessibility options. |
+| UI art | Most of the HUD's frames and fills are tinted copies of `Assets/Sprites/UI/Square.png`. The health fill is `HealthBarFill.png`, and the weapon slot has a ring and a mask of its own and shows the weapon's generated icon. The menus are plain rectangles. The world health bar is a smooth rounded sprite (`Assets/Textures/UI/RoundedBar.png`). There is no button or panel art. |
+| Components | The key-binding row, section header, damage popup and move marker are prefabs. Buttons, panels and confirmations are built in place in each menu. There are no tooltips: a status shows two letters, and its description is in the data but shown nowhere.<br>**The options screen** reuses the key-binding row for its Look row, eight part rows and fifteen colour rows, which name a swatch without showing it. With the binding rows and section headers that makes 37 rows in a 240 UI px box with no scrolling, where they need about 800; how they look squeezed is unchecked. The screen is still titled "Controls". |
+| Colour alone | **Markers:** the move and attack-move markers differ only by colour. The hover ring stays under the hovered enemy and comes with the attack cursor.<br>**Statuses:** on the HUD a status pairs its colour with a two-letter abbreviation; no status has an icon yet. Over mobs, the world status icons and the status auras show colour alone.<br>**Popups:** they are coloured by damage type. Heal has its "+", Immune its text, and periodic ticks are smaller.<br>**Waystones** show their discovery by sprite and light, not colour alone. |
+| Preferences | `settings.json` holds the bindings, the player id, the look and the colour and part picks (format version 1). There are no display or accessibility options. |
 
 ## Goals
 
@@ -157,11 +162,12 @@ The test's failure message names the menu item, and says to regenerate after a m
 1. **Assets.** Every kind of content is a ScriptableObject definition, read-only at runtime, with a `Create(...)` factory for tests.
    - Definitions live under `Assets/Data/<Kind>`.
    - Mob configs stay in `Assets/Settings/AI` until they move to `Assets/Data` with their `.meta`.
+   - What a tool writes (a look's parts and animation sets) stays beside the sprites it writes.
    - Looks are entries of `CharacterLookCatalog`.
-2. **Ids.** A kind that crosses the wire has an append-only catalog, whose index is the definition's id. That is safe because join approval refuses other builds. Saves name assets by GUID.
+2. **Ids.** A kind that crosses the wire has a list whose index is the id: a catalog, or a definition's own list (the colour choices and swatches, the parts' options). Entries are appended, never reordered or replaced. The ids only hold between machines on the same build, since join approval does not compare builds while the version stays fixed. Saves name assets by GUID, and the settings file names choices by name.
 3. **Shared values.** Values shared across a system (floors, caps, layers, popup colours) live in that system's one settings asset (`CombatSettings`, `HitFeedbackSettings`), not on each definition.
 4. **Building blocks.** A definition only combines building blocks. It holds no game logic of its own (derived helpers such as `PlayerWeapon.HitCentre` are fine). A new block is added in its spec first. Then it gets a vocabulary row, a `Create` parameter, tests and a column in its generated table.
-5. **Display text.** Every definition players see has a display name unique within its kind. Every status has an abbreviation unique among statuses and a description, because the HUD and its tooltips show them.
+5. **Display text.** Every definition or option players see (a swatch, a colour choice, a part) has a display name unique within its kind or list. Every status has an abbreviation unique among statuses and a description, because the HUD and its tooltips show them.
 
 ### Adding content
 
@@ -259,7 +265,8 @@ UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with
 | Panel | Plain rectangles | Surface, Raised, Scrim, Modal scrim |
 | Dialog | The in-game menu's and the options screen's confirmations | One, with a question, a confirm label and Cancel |
 | Section header | `OptionsSectionHeader` | |
-| Row | `KeyBindingRow`, the Look row | Binding, Choice (Look, UI size), Toggle (reduce flashing, reduce motion) |
+| Row | `KeyBindingRow`, which also serves the Look, part and colour rows | Binding, Choice (Look, parts, UI size), Swatch (colours, the swatch shown beside its name), Toggle (reduce flashing, reduce motion) |
+| Scroll list | None: the options rows overflow their box | One, keeping the selected row in view |
 | Notice line | In the options screen, and the main menu's status line | |
 | Slot | `AbilitySlotView` in the HUD | |
 | Status icon | `StatusIconView` in the HUD | |
@@ -324,7 +331,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 | Preference | Phase | Values | Effect |
 |---|---|---|---|
 | UI size | 3 | Normal; Large and Larger where the display fits them | Adds 0, 1 or 2 to the UI zoom. Screen-space UI and popups grow; world-space UI does not. |
-| Reduce flashing | 6 | Off, On | `HitFeedbackPresenter` flashes at a third of the strength set in `HitFeedbackSettings` (the asset is never edited). Light props, flame pixels and flame frames stop flickering, through `PropLighting`'s flicker override. |
+| Reduce flashing | 6 | Off, On | `HitFeedbackPresenter`'s flashes (a hit's, an immunity's and a tick's) at a third of their strength, a new `HitFeedbackSettings` field (the asset is never edited at runtime). Light props, flame pixels and flame frames stop flickering, through `PropLighting`'s flicker override, which only the lighting dev panel sets today. |
 | Reduce motion | 6 | Off, On | No camera kick on hits. Popups fade in place instead of rising. |
 
 ## Architecture
@@ -338,7 +345,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
   - It exposes `Factor` and `StepsThatFit`, and raises `Changed`.
 - `UiPixelScale`: on each UI canvas.
   - At start and on `Changed` it sets its scaler to a constant pixel size with `Factor` and 32 reference pixels per unit.
-  - The canvases are listed in their scopes' auto-inject objects: `PlayerHudCanvas`, `DamagePopupCanvas` and `GameMenuCanvas` in the Gameplay scope, and the main menu's canvas in the Menu scope.
+  - The canvases are listed in their scopes' auto-inject objects, which are empty today: `PlayerHudCanvas`, `DamagePopupCanvas` and `GameMenuCanvas` in the Gameplay scope, and `MainMenuCanvas` in the Menu scope.
 
 ### Gameplay (`Assets/Scripts/UI`)
 
@@ -372,11 +379,12 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
 ## Removals and migrations
 
 - **View colour fields.** The colour fields of `AbilitySlotView`, `MoveMarker` and `PlayerHudView` are removed, and their values move to the theme's roles. The serialized data is dropped on purpose.
-- **Canvases** move to `UiPixelScale`: `PlayerHudCanvas` (1920 x 1080), `GameMenuCanvas` and the MainMenu canvas (640 x 360), and `DamagePopupCanvas` (constant pixel size).
+- **Canvases** move to `UiPixelScale`: `PlayerHudCanvas` (1920 x 1080), `GameMenuCanvas` and `MainMenuCanvas` (640 x 360), and `DamagePopupCanvas` (constant pixel size).
   - In Phase 3 the HUD is converted mechanically: sizes and positions divided by three, fonts moved to the nearest type size at or above `Caption`.
   - It is redesigned once, from the components, in Phase 5.
-  - The fader keeps its own canvas. It has no text or art to scale.
-- **Scenes.** `MainMenu.unity` and `Gameplay.unity` are edited through the editor, and the diff is checked for save churn before committing.
+  - The fader keeps its own canvas (`TransitionCanvas`). It has no text or art to scale.
+- **The options screen** is titled "Options" and its rows move into a scroll list (Phase 3).
+- **Scenes.** `Main.unity`, `MainMenu.unity` and `Gameplay.unity` are edited through the editor, and the diff is checked for save churn before committing.
 - **`Square.png`** is removed with its `.meta` once nothing references it.
 - **Architecture.md:**
   - The asset values it restates (the weapons' numbers, the status table, the blank abilities' table) become links to `Docs/Generated` in Phase 1.
@@ -386,51 +394,79 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
 
 ## Phases
 
+Each phase ships on its own, keeps the game playable offline and hosted, and comes with tests. A phase whose look can change settles it on previews first, signed off before its tests and docs. An open question is settled with the user at the start of the phase named for it. Each phase updates Architecture.md and Roadmap.md as it lands.
+
 ### Phase 1: generated design tables
 
-- [ ] `DesignTables` and its menu item: `DamageTypes.md`, `Weapons.md`, `Abilities.md`, `StatusEffects.md` and `Units.md` in `Docs/Generated`, with the derived columns.
-- [ ] `DesignTablesTests`: the committed files match `Build()`.
-- [ ] Architecture.md's restated asset values replaced with links.
+- [ ] The principles confirmed or rewritten with the user (Open questions).
+- [ ] `DesignTables` in `Assets/Editor/Design`: `Build()` and `Write()`, and the menu item `Tools/TopDownRPG/Design/Write Design Tables`. Markdown in the invariant culture, rows sorted by catalog index or by name.
+- [ ] `DamageTypes.md`, `Weapons.md`, `Abilities.md`, `StatusEffects.md` and `Units.md` written into `Docs/Generated`, with the derived columns resolved through `DamageMath`.
+- [ ] Architecture.md's restated values (the weapons' numbers, the `CombatSettings` values, the status table, the blank abilities' table, the Weasel's health) replaced with links to the tables. The plans keep theirs, as the record of what each phase chose.
+- [ ] Tests: `DesignTablesTests`:
+  - the committed files equal `Build()` after normalising line endings, and a mismatch names the menu item;
+  - the derived columns on definitions from `Create`: a recovery longer than the cooldown setting the period, the time to kill, a periodic total with its tick on expiry.
 
 ### Phase 2: content checks and tuning views
 
-- [ ] `ContentTests`: every definition of each kind, found under `Assets/Data` and `Assets/Settings/AI`, checked against the content rules on its serialized values:
+- [ ] Balance targets settled with the user (Open questions), and with them what becomes of the tests that pin asset values.
+- [ ] `ContentTests`: one case per kind (weapons, abilities, classes, statuses, combat profiles, mob configs, looks, character colours), every definition found under `Assets/Data` and `Assets/Settings/AI`, checked on its serialized values:
   - listed exactly once in its catalog;
-  - references set;
-  - ranges valid;
-  - display names unique;
+  - required references set;
+  - ranges valid (cooldowns, contacts, durations and tick intervals above 0; at least one max stack);
+  - display names unique within the kind, swatch and choice names within their lists;
   - status abbreviations unique and descriptions present;
   - colours opaque.
-- [ ] Saved Unity Search table views per kind.
+- [ ] The tests that pin asset values turned into relations or target checks, as the balance targets settle.
+- [ ] Saved Unity Search table views under `Assets/Editor/Design/Searches`: weapons, abilities, statuses, mob configs.
+- [ ] Tests: `ContentTests` passes on the project's assets, and each rule fails on a definition from `Create` that breaks it.
 
-### Phase 3: one UI scale and the UI size setting
+### Phase 3: one UI scale, the UI size setting and the options screen
 
-- [ ] `UiScaleSettings`, `UiScale` and `UiPixelScale`; every UI canvas on them, registered in its scope.
-- [ ] The HUD converted to UI px; every text at `Caption` or above.
-- [ ] `uiSizeStep` in `settings.json`, and the UI size row in a new Display section of the options screen.
-- [ ] Previews at the displays in the Scale table, signed off before tests and docs. They are captured with the canvases drawn through a camera, because overlay canvases do not render into a texture.
+- [ ] Control size settled with the user on the previews (Open questions).
+- [ ] `UiScaleSettings` (`Assets/Data/UI/UiScale.asset`, on `MainLifetimeScope`), `UiScale` and `UiPixelScale` on `PlayerHudCanvas`, `DamagePopupCanvas`, `GameMenuCanvas` and `MainMenuCanvas`, each injected through its scope's auto-inject list.
+- [ ] The HUD converted to UI px: sizes and positions divided by three. Every text on the HUD, the menus and the popups moved to the nearest type size at or above `Caption`, none auto-sizing below it.
+- [ ] The options screen titled "Options", its rows in a scroll list that keeps the selected row in view, and a Display section with the UI size row.
+- [ ] `uiSizeStep` in `settings.json`; KeyBindings.md's options screen updated.
+- [ ] Previews of the HUD, the menus and the options screen at the displays in the Scale table and at each size step that fits, signed off before the tests and docs. They are captured with the canvases drawn through a camera, because overlay canvases do not render into a texture.
+- [ ] Tests:
+  - `UiScaleTests`;
+  - settings: a file without `uiSizeStep` reads Normal, and changing it writes the file;
+  - `OptionsMenuControllerTests` and `OptionsMenuPlayModeTests`: the UI size row, and the list scrolling the selected row into view;
+  - PlayMode: changing the UI size sends nothing.
 
 ### Phase 4: the theme
 
-- [ ] The project font asset with outline padding.
-- [ ] `UiTheme` with the roles, the type scale and the font. The merged roles, the Physical popup red and the placeholder are settled on previews.
-- [ ] `ThemedText`, `ThemedGraphic` and `ThemedSelectable` on every UI text, image, sprite and control. The views keep roles instead of colours.
-- [ ] Outlined popups and world text.
-- [ ] `UiTheme.md` generated.
-- [ ] `UiThemeTests` and `UiContentTests`.
+- [ ] The font settled with the user on previews (Open questions).
+- [ ] The project font asset in `Assets/Fonts`, with the atlas padding a 1 UI px outline at `Caption` needs and the static atlas's character set (Architecture.md's Known gaps: TMP's fallback font).
+- [ ] `UiTheme` (`Assets/Data/UI/UiTheme.asset`) with the `UiColour` roles, the `UiTextSize` scale and the font. The merged roles, the Physical popup red and the placeholder settled on previews.
+- [ ] `ThemedText`, `ThemedGraphic` and `ThemedSelectable` on every UI text, image, sprite and control: the move marker, the hover ring, the world bar and the world status icons included. `AbilitySlotView`, `MoveMarker` and `PlayerHudView` keep roles instead of colours.
+- [ ] Damage popups, the waystone popup and other text over the world outlined in `Outline`.
+- [ ] `UiTheme.md` added to `DesignTables`.
+- [ ] Tests: `UiThemeTests`, `UiContentTests`, `DesignTablesTests` with `UiTheme.md`, and the views' tests on a theme from `Create`.
 
 ### Phase 5: skin and components
 
-- [ ] `UiSkinRecipe`, settled on previews.
-- [ ] The component prefabs and variants, the tooltip included. The HUD and the menus are rebuilt from them.
-- [ ] Distinct marker shapes.
+- [ ] Damage types on popups settled with the user on previews (Open questions).
+- [ ] `UiSkinRecipe` and its writer, the skin settled on previews: a panel, a raised panel, a slot frame, a bar frame and fill, and the marker shapes, in `Assets/Sprites/UI/Skin`.
+- [ ] The component prefabs and variants in `Assets/Prefabs/UI/Components` (Components table), the scroll list, the swatch row and the tooltip included.
+- [ ] The HUD, the main menu, the in-game menu and the options screen rebuilt from them. `Square.png` removed with its `.meta`.
+- [ ] Distinct marker shapes for a move, an attack move and the hover ring.
+- [ ] Tooltips for statuses and abilities.
+- [ ] Tests:
+  - `UiContentTests` on the rebuilt prefabs;
+  - the tooltip shows a status's or an ability's name and description on hover and on selection, and the status row blocks clicks while it shows;
+  - the marker kinds have different sprites.
 
 ### Phase 6: reduce flashing and reduce motion
 
 - [ ] `reduceFlashing` and `reduceMotion` in `settings.json`, and their rows in the Display section.
-- [ ] The weaker hit flash, no camera kick, and popups that fade in place.
-- [ ] Stilled light flicker, once Lighting is on `main`.
-- [ ] The flicker measured on previews against WCAG's flash threshold, and the result written here.
+- [ ] Reduce flashing: `HitFeedbackPresenter`'s flashes scaled by the new `HitFeedbackSettings` field; light props, flame pixels and flame frames stilled through `PropLighting`'s flicker override.
+- [ ] Reduce motion: no camera kick on hits, and popups that fade in place.
+- [ ] The flicker measured on previews against WCAG's flash threshold, and the result written under Accessibility.
+- [ ] Tests:
+  - settings: a file without the fields reads them off;
+  - the presenter's flash amounts and camera kick with each preference on and off;
+  - PlayMode in Testlands, with the in-process host and client: changing the preferences sends nothing, and the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
 
 ### Later
 
@@ -439,7 +475,7 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
 - Status icon art, for the HUD and the world status icons.
 - Colour-vision options for damage-type and status colours.
 - Co-op identity:
-  - player identity colours and markers, which need a player slot the host assigns so every machine agrees;
+  - player identity colours and markers (not the colours a player picks for its character), which need a player slot the host assigns so every machine agrees;
   - players' world bars and status icons.
 - World-space UI and the attack cursor sized by the UI zoom. Today the cursor is a fixed 32 px hardware cursor.
 - A component gallery scene, if the component set grows past what the screens themselves show.
@@ -475,17 +511,20 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
   - every Selectable has a `ThemedSelectable`, is at least 12 UI px each way, and has navigation on.
 - **EditMode, settings.** A file without the new fields reads their defaults; changing one writes the file.
 - **PlayMode.** In Testlands, with the in-process host and client:
-  - changing the preferences sends nothing;
+  - changing the preferences sends nothing (the UI size from Phase 3, the others from Phase 6);
   - the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
 - **Manual.** The Phase 3 and 4 previews at each display in the Scale table, and the Phase 5 skin previews.
+- **Before merging into `main`:** the full EditMode and PlayMode suites.
 
 ## Open questions
 
-- **Principles.** Confirm or rewrite them. They are drawn from the specs, not stated anywhere yet.
-- **Font.** Keep LiberationSans (smooth text over pixel art), or move to a pixel font under OFL, which would make body heights exact and its outline drawn in? Decide on the Phase 4 previews.
-- **Damage types on popups.** Should popups show the hit's type, or its `Resisted` and `Weakness` flags (shown nowhere today), with a cue other than colour?
-- **Balance targets.** Should specs carry numeric targets ("three to five sword hits per Weasel") that a test checks against the derived columns? If so, the tests that pin asset values today (`DamageResolutionTests`, `AbilityEffectTests`) become those checks instead of restating the assets.
-- **Control size.** Is 12 UI px (36 px at 1080p) the right minimum for buttons, rows and slots?
+Each is settled with the user at the start of the phase named.
+
+- **Principles** (Phase 1). Confirm or rewrite them. They are drawn from the specs, not stated anywhere yet.
+- **Balance targets** (Phase 2). Should specs carry numeric targets ("three to five sword hits per Weasel") that a test checks against the derived columns? If so, the tests that pin asset values today (`DamageResolutionTests`, `AbilityEffectTests`) become those checks instead of restating the assets.
+- **Control size** (Phase 3). Is 12 UI px (36 px at 1080p) the right minimum for buttons, rows and slots?
+- **Font** (Phase 4). Keep LiberationSans (smooth text over pixel art), or move to a pixel font under OFL, which would make body heights exact and its outline drawn in? Decide on the previews.
+- **Damage types on popups** (Phase 5). Should popups show the hit's type, or its `Resisted` and `Weakness` flags (shown nowhere today), with a cue other than colour?
 
 ## Tools considered
 

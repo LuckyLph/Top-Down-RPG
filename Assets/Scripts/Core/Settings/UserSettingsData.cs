@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// The local machine's preferences as written to disk: a format version, the key binding overrides, this install's
 /// player id, the name of the look its player is drawn with, the swatch it picked for each of its colour choices
-/// (Docs/PlayerCharacter.md, Phase 5) and the option it picked for each of its part slots (Phase 6), by name. A file
-/// without a player id, a look, colours or parts (written before there was one) reads with an empty one.
+/// (Docs/PlayerCharacter.md, Phase 5), the option it picked for each of its part slots (Phase 6), by name, and the UI
+/// size step (Docs/DesignSystem.md, Phase 3). A file without a player id, a look, colours, parts or a UI size step
+/// (written before there was one) reads with an empty one, the step at Normal (0).
 /// </summary>
 [Serializable]
 public sealed class UserSettingsData
@@ -19,13 +20,14 @@ public sealed class UserSettingsData
     [SerializeField] private string characterLook;
     [SerializeField] private List<UserColourPick> characterColours = new();
     [SerializeField] private List<UserPartPick> characterParts = new();
+    [SerializeField] private int uiSizeStep;
 
     /// <summary>
     /// Creates settings data in the current format holding <paramref name="inputBindingOverrides"/>,
-    /// <paramref name="playerId"/>, <paramref name="characterLook"/>, <paramref name="colours"/> and
-    /// <paramref name="parts"/>.
+    /// <paramref name="playerId"/>, <paramref name="characterLook"/>, <paramref name="colours"/>,
+    /// <paramref name="parts"/> and <paramref name="sizeStep"/>.
     /// </summary>
-    public UserSettingsData(string inputBindingOverrides, string playerId, string characterLook, IEnumerable<UserColourPick> colours = null, IEnumerable<UserPartPick> parts = null)
+    public UserSettingsData(string inputBindingOverrides, string playerId, string characterLook, IEnumerable<UserColourPick> colours = null, IEnumerable<UserPartPick> parts = null, int sizeStep = 0)
     {
         version = CurrentVersion;
         this.inputBindingOverrides = inputBindingOverrides;
@@ -33,6 +35,7 @@ public sealed class UserSettingsData
         this.characterLook = characterLook;
         characterColours = colours != null ? new List<UserColourPick>(colours) : new List<UserColourPick>();
         characterParts = parts != null ? new List<UserPartPick>(parts) : new List<UserPartPick>();
+        uiSizeStep = sizeStep;
     }
 
     /// <summary>
@@ -48,6 +51,7 @@ public sealed class UserSettingsData
     public string CharacterLook => characterLook ?? string.Empty;
     public IReadOnlyList<UserColourPick> CharacterColours => characterColours ?? new List<UserColourPick>();
     public IReadOnlyList<UserPartPick> CharacterParts => characterParts ?? new List<UserPartPick>();
+    public int UiSizeStep => Mathf.Max(0, uiSizeStep);
 
     /// <summary>
     /// The data as pretty-printed JSON.

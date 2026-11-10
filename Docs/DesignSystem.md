@@ -217,7 +217,7 @@ At 720p, 1080p, 1440p and 4K this equals the Pixel Perfect Camera's zoom, so a U
 |---|---|---|---|
 | `Caption` | 7 | 19.5 px | Key labels, cooldown seconds, stack counts, periodic popups |
 | `Body` | 9 | 25 px | Menu rows, buttons, notices, ability names |
-| `Heading` | 11 | 31 px | Section headers, damage popups |
+| `Heading` | 11 | 31 px | Section headers, damage popups, the main menu's buttons |
 | `Title` | 14 | 39 px | Screen titles |
 | `Display` | 20 | 56 px | The game's name on the main menu |
 
@@ -267,7 +267,7 @@ UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with
 | Dialog | The in-game menu's and the options screen's confirmations | One, with a question, a confirm label and Cancel |
 | Section header | `OptionsSectionHeader` | |
 | Row | `KeyBindingRow`, which also serves the Look, part and colour rows | Binding, Choice (Look, parts, UI size), Swatch (colours, the swatch shown beside its name), Toggle (reduce flashing, reduce motion) |
-| Scroll list | None: the options rows overflow their box | One, keeping the selected row in view |
+| Scroll list | The options screen's list (Phase 3): a `ScrollRect`, its rows' buttons with `ScrollIntoView` | One, keeping the selected row in view |
 | Notice line | In the options screen, and the main menu's status line | |
 | Slot | `AbilitySlotView` in the HUD | |
 | Status icon | `StatusIconView` in the HUD | |
@@ -323,7 +323,7 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
 | Reachable UI | Menus work with keyboard and gamepad alone | `UiContentTests`: no menu Selectable has navigation off |
 | Remapping | Every gameplay control can be rebound | KeyBindings.md, done |
 | Settings remembered | Every preference is saved | `settings.json`, done |
-| Larger UI | One larger step where the display fits it. This is not XAG's text scaling to 200%, which is Later. | `UiScale` |
+| Larger UI | Up to two larger steps (Large, Larger) where the display fits them. This is not XAG's text scaling to 200%, which is Later. | `UiScale` |
 
 ### Preferences
 
@@ -339,14 +339,14 @@ There are new rows in a Display section of the options screen. Each is saved at 
 
 ### Core (`Assets/Scripts/Core/UI`)
 
-- `UiScaleSettings`: a ScriptableObject (`Assets/Data/UI/UiScale.asset`) assigned on `MainLifetimeScope`. It holds the reference size (640 x 360), the layout's minimum (480 x 270) and the display lines per zoom step (390).
+- `UiScaleSettings`: a ScriptableObject (`Assets/Data/UI/UiScale.asset`) assigned on `MainLifetimeScope`. It holds the layout's minimum (480 x 270), the display lines per zoom step (390) and the most size steps (2). `UiScaleTests` checks the zoom against the Main scene's Pixel Perfect Camera instead of keeping its reference size here.
 - `UiScale`:
-  - `ZoomFor(width, height, step)`: plain and static, so EditMode can test it.
-  - A Main-scope entry point (`ITickable`) that compares the display size and the size step from `UserSettings` each tick (two integer compares, no allocation).
-  - It exposes `Factor` and `StepsThatFit`, and raises `Changed`.
+  - `ReadableZoom`, `FittingZoom`, `StepsFor` and `ZoomFor(width, height, step, settings)`: plain and static, so EditMode can test them.
+  - A Main-scope entry point (`ITickable`) that compares the display size and the size step from `UserSettings` each tick (three integer compares, no allocation).
+  - It exposes `Factor` and `StepsThatFit`, and raises `Changed` when either changes.
 - `UiPixelScale`: on each UI canvas.
-  - At start and on `Changed` it sets its scaler to a constant pixel size with `Factor` and 32 reference pixels per unit.
-  - The canvases are listed in their scopes' auto-inject objects, which are empty today: `PlayerHudCanvas`, `DamagePopupCanvas` and `GameMenuCanvas` in the Gameplay scope, and `MainMenuCanvas` in the Menu scope.
+  - Once injected, and on `Changed`, it sets its scaler to a constant pixel size with `Factor` and 32 reference pixels per unit.
+  - The canvases are listed in their scopes' auto-inject objects: `PlayerHudCanvas`, `DamagePopupCanvas` and `GameMenuCanvas` in the Gameplay scope, and `MainMenuCanvas` in the Menu scope.
 
 ### Gameplay (`Assets/Scripts/UI`)
 
@@ -382,7 +382,7 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
 
 - **View colour fields.** The colour fields of `AbilitySlotView`, `MoveMarker` and `PlayerHudView` are removed, and their values move to the theme's roles. The serialized data is dropped on purpose.
 - **Canvases** move to `UiPixelScale`: `PlayerHudCanvas` (1920 x 1080), `GameMenuCanvas` and `MainMenuCanvas` (640 x 360), and `DamagePopupCanvas` (constant pixel size).
-  - In Phase 3 the HUD is converted mechanically: sizes and positions divided by three, fonts moved to the nearest type size at or above `Caption`.
+  - In Phase 3 the HUD was converted to UI px, with its slots grown so `Caption` text fits (Phase 3 notes).
   - It is redesigned once, from the components, in Phase 5.
   - The fader keeps its own canvas (`TransitionCanvas`). It has no text or art to scale.
 - **The options screen** is titled "Options" and its rows move into a scroll list (Phase 3).
@@ -446,17 +446,28 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 3: one UI scale, the UI size setting and the options screen
 
-- [ ] Control size settled with the user on the previews (Open questions).
-- [ ] `UiScaleSettings` (`Assets/Data/UI/UiScale.asset`, on `MainLifetimeScope`), `UiScale` and `UiPixelScale` on `PlayerHudCanvas`, `DamagePopupCanvas`, `GameMenuCanvas` and `MainMenuCanvas`, each injected through its scope's auto-inject list.
-- [ ] The HUD converted to UI px: sizes and positions divided by three. Every text on the HUD, the menus and the popups moved to the nearest type size at or above `Caption`, none auto-sizing below it.
-- [ ] The options screen titled "Options", its rows in a scroll list that keeps the selected row in view, and a Display section with the UI size row.
-- [ ] `uiSizeStep` in `settings.json`; KeyBindings.md's options screen updated.
-- [ ] Previews of the HUD, the menus and the options screen at the displays in the Scale table and at each size step that fits, signed off before the tests and docs. They are captured with the canvases drawn through a camera, because overlay canvases do not render into a texture.
-- [ ] Tests:
+- [x] Control size settled with the user on the previews (Open questions).
+- [x] `UiScaleSettings` (`Assets/Data/UI/UiScale.asset`, on `MainLifetimeScope`), `UiScale` and `UiPixelScale` on `PlayerHudCanvas`, `DamagePopupCanvas`, `GameMenuCanvas` and `MainMenuCanvas`, each injected through its scope's auto-inject list.
+- [x] The HUD converted to UI px: sizes and positions divided by three. Every text on the HUD, the menus and the popups moved to the nearest type size at or above `Caption`, none auto-sizing below it.
+- [x] The options screen titled "Options", its rows in a scroll list that keeps the selected row in view, and a Display section with the UI size row.
+- [x] `uiSizeStep` in `settings.json`; KeyBindings.md's options screen updated.
+- [x] Previews of the HUD, the menus and the options screen at the displays in the Scale table and at each size step that fits, signed off before the tests and docs. They are captured with the canvases drawn through a camera, because overlay canvases do not render into a texture.
+- [x] Tests:
   - `UiScaleTests`;
   - settings: a file without `uiSizeStep` reads Normal, and changing it writes the file;
   - `OptionsMenuControllerTests` and `OptionsMenuPlayModeTests`: the UI size row, and the list scrolling the selected row into view;
   - PlayMode: changing the UI size sends nothing.
+
+#### Phase 3 notes
+
+- **Settled with the user on 2026-11-10**, on previews of every display in the Scale table: the look as previewed; the main menu's buttons at `Heading` rather than `Body` (option B; at `Body` the title screen came out half its old size); and the control minimum kept at 12 UI px, every control now being 16 UI px tall or more.
+- **The previews.** Written to the gitignored `Recordings/DesignSystem/Phase3` (before, after, the main menu's two options, and side-by-side sheets at 1080p) by a temporary tool, since removed: the HUD and in-game menu prefabs and copies of the main menu's and the popups' canvases in an empty scene, each canvas switched to the camera's space and rendered through a render request into a texture of the display's size. The before set showed the options screen's 37 rows squeezed into a third of their height.
+- **The HUD.** Not divided by three throughout: its slots grew so `Caption` text fits them. A 140 x 22 health panel and a 34 UI px weapon slot 10 UI px from the corners; 24 UI px ability slots 2 apart, the key at the top right and the name at the bottom (they overlapped once the text grew), with a 6 UI px gap before the weapon's; 14 UI px status icons, the letters at the top left and the stacks at the bottom right. It comes out a little larger than before at 1080p (slots 72 px, were 56), and its smallest text grew from 12 to 21 px.
+- **The text sizes, by role.** `Caption`: the HUD's ability names, keys, status letters and stacks. `Body`: the HP and the cooldown seconds, menu rows and buttons, notices, prompts and confirmations, and the binding buttons auto-sizing from `Caption`. `Heading`: section headers, damage popups and the main menu's buttons. `Title`: "Menu" and "Options". `Display`: the game's name.
+- **The menus.** The in-game menu's box is 160 x 128 UI px and the confirmations 240 x 64. The main menu's buttons are a 160 x 188 column with the title just above it. The options screen's list is 346 UI px wide between the title and the footer, rows 16 tall, with a 4 UI px scrollbar shown when they overflow.
+- **The UI size row** sits in a Display section between the Character section and the controls. On a display that fits no larger size its button keeps Normal. Opening the screen selects its first row, the Look row, rather than the first binding, so the list opens at its top.
+- **Tests.** `UiScaleTests` (the Scale table, the project's settings against the camera, `Caption`'s body height from the font's glyphs, which this phase's 390 relies on, so it moved here from Phase 4's `UiThemeTests`, the zoom following the step, a canvas following the zoom); `ScrollIntoViewTests`; `UserSettingsTests`, `OptionsMenuControllerTests` and `OptionsMenuPlayModeTests` for the step, the row, the 39 rows and the first row selected; `UiScalePlayModeTests`. Nothing counts the bytes a session sends, so the PlayMode test checks what a client would see instead: with the host on Large, the host's three Gameplay canvases at zoom 4, and the client still connected, at Normal, its copy of the host's player unchanged.
+- **Left for later phases.** The join field's placeholder is still italic (Phase 4's `UiContentTests`), and the binding buttons still auto-size their text.
 
 ### Phase 4: the theme
 
@@ -522,12 +533,13 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - unique display names;
   - unique status abbreviations and present descriptions;
   - opaque colours.
-- **EditMode, `UiScaleTests`.** `ZoomFor` at every display in the Scale table, windowed sizes included, for each size step, and which steps fit. `UiScaleSettings`' reference size equals the Main scene's Pixel Perfect Camera's.
+- **EditMode, `UiScaleTests`.** `ZoomFor` at every display in the Scale table, windowed sizes included, for each size step, and which steps fit. The zoom equals the Main scene's Pixel Perfect Camera's at 720p, 1080p, 1440p and 4K. `Caption`'s body height, from the font asset's glyph metrics, is at least 18 px per 1080 display lines at the zoom `UiScale` picks, which ties the 390 to the font.
+- **EditMode, `ScrollIntoViewTests`.** A selected row scrolls into view by the least.
 - **EditMode, `UiThemeTests`**, on a theme from `Create`, then on the project's theme:
   - the contrast ratio formula against known pairs;
   - every text-and-background role pair a `ThemedText` uses, against its threshold by size;
   - the gameplay colours against `Outline`;
-  - `Caption`'s body height, from the font asset's glyph metrics, at least 18 px per 1080 display lines at the zoom `UiScale` picks, which ties the 390 to the font.
+  - `Caption`'s body height in the theme's font, once the font is settled, as `UiScaleTests` checks it for LiberationSans.
 - **EditMode, `UiContentTests`**, on the project's UI prefabs and menu scenes (only read):
   - every text has a `ThemedText`;
   - sizes and auto-size minimums are at `Caption` or above;
@@ -536,16 +548,15 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - every Selectable has a `ThemedSelectable`, is at least 12 UI px each way, and has navigation on.
 - **EditMode, settings.** A file without the new fields reads their defaults; changing one writes the file.
 - **PlayMode.** In Testlands, with the in-process host and client:
-  - changing the preferences sends nothing (the UI size from Phase 3, the others from Phase 6);
+  - changing the preferences sends nothing (the UI size from Phase 3, checked by what the client shows; the others from Phase 6);
   - the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
 - **Manual.** The Phase 3 and 4 previews at each display in the Scale table, and the Phase 5 skin previews.
 - **Before merging into `main`:** the full EditMode and PlayMode suites.
 
 ## Open questions
 
-Each is settled with the user at the start of the phase named. The principles were settled in Phase 1, and the balance targets in Phase 2.
+Each is settled with the user at the start of the phase named. The principles were settled in Phase 1, the balance targets in Phase 2 and the control size in Phase 3 (12 UI px kept).
 
-- **Control size** (Phase 3). Is 12 UI px (36 px at 1080p) the right minimum for buttons, rows and slots?
 - **Font** (Phase 4). Keep LiberationSans (smooth text over pixel art), or move to a pixel font under OFL, which would make body heights exact and its outline drawn in? Decide on the previews.
 - **Damage types on popups** (Phase 5). Should popups show the hit's type, or its `Resisted` and `Weakness` flags (shown nowhere today), with a cue other than colour?
 

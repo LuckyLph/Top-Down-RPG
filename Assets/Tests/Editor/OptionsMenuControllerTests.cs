@@ -26,6 +26,8 @@ public class OptionsMenuControllerTests : InputTestFixture
     private MenuStack menus;
     private OptionsMenuController controller;
     private UserSettings settings;
+    private UiScaleSettings scaleSettings;
+    private UiScale uiScale;
     private Keyboard keyboard;
     private int closedCount;
 
@@ -44,7 +46,10 @@ public class OptionsMenuControllerTests : InputTestFixture
         menuInput = new FakeMenuInput();
         menus = new MenuStack(menuInput);
         settings = new UserSettings(new MemorySaveStore());
-        controller = new OptionsMenuController(view, bindings, menus, new UISelection(null), settings);
+        scaleSettings = UiScaleSettings.Create();
+        uiScale = new UiScale(scaleSettings, settings);
+        uiScale.Apply(1920, 1080, 0);
+        controller = new OptionsMenuController(view, bindings, menus, new UISelection(null), settings, uiScale);
         controller.Start();
         closedCount = 0;
     }
@@ -58,14 +63,16 @@ public class OptionsMenuControllerTests : InputTestFixture
         bindings.Dispose();
         Object.DestroyImmediate(view.gameObject);
         Object.DestroyImmediate(actions);
+        Object.DestroyImmediate(scaleSettings);
         base.TearDown();
     }
 
     /// <summary>
     /// Starting builds the Character section's Look row, a part row for each of the adventurer's eight part slots its
     /// player picks (not the weapon's, which shows the equipped weapon's gear) and a colour row for each of the fifteen
-    /// colour choices its sheets or parts carry, then nine binding rows under three section headers, labelled
-    /// with each action and its current binding, and leaves the screen hidden.
+    /// colour choices its sheets or parts carry, then the Display section's UI size row (Docs/DesignSystem.md, Phase 3),
+    /// then nine binding rows under three section headers, labelled with each action and its current binding, and leaves
+    /// the screen hidden.
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
@@ -74,18 +81,55 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(controller.RowCount, Is.EqualTo(9));
         Assert.That(controller.PartRowCount, Is.EqualTo(8));
         Assert.That(controller.ColourRowCount, Is.EqualTo(15));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(37), "The Character header, its Look row, eight part rows and fifteen colour rows, three section headers and nine rows.");
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(39), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header and its UI size row, three section headers and nine rows.");
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
         Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
         Assert.That(view.RowsContainer.GetChild(2).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetPartRow(0)));
         Assert.That(view.RowsContainer.GetChild(10).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetColourRow(0)));
-        Assert.That(view.RowsContainer.GetChild(25).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.GetChild(25).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.DisplaySection));
+        Assert.That(view.RowsContainer.GetChild(26).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.UiSizeRow));
+        Assert.That(view.RowsContainer.GetChild(27).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
         Assert.That(controller.GetRow(AttackMoveRow).Label.text, Is.EqualTo("Attack move"));
         Assert.That(controller.GetRow(AttackMoveRow).BindingText.text, Is.EqualTo("A"));
         Assert.That(controller.GetRow(StopRow).BindingText.text, Is.EqualTo("S"));
         Assert.That(controller.GetRow(8).Label.text, Is.EqualTo("Weapon ability 2"));
+    }
+
+    /// <summary>
+    /// The UI size row shows the size the display shows: Normal by default; its button keeps the next size that fits
+    /// (at 1080p Large, then Normal again), its reset goes back to Normal, a step that no longer fits shows the largest
+    /// that does, and on a display that fits none the button keeps Normal.
+    /// </summary>
+    [Test]
+    public void TheUiSizeRow_CyclesTheSizesThatFit()
+    {
+        KeyBindingRowView row = controller.UiSizeRow;
+        Assert.That(row.Label.text, Is.EqualTo(OptionsMenuController.UiSizeLabel));
+        Assert.That(row.BindingText.text, Is.EqualTo("Normal"));
+
+        controller.Open(null);
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.UiSizeStep, Is.EqualTo(1));
+        Assert.That(row.BindingText.text, Is.EqualTo("Large"));
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.UiSizeStep, Is.Zero, "1080p fits Large only, so Normal comes after it.");
+        Assert.That(row.BindingText.text, Is.EqualTo("Normal"));
+
+        settings.SetUiSizeStep(2);
+        uiScale.Apply(3840, 2160, settings.UiSizeStep);
+        Assert.That(row.BindingText.text, Is.EqualTo("Larger"));
+        uiScale.Apply(1920, 1080, settings.UiSizeStep);
+        Assert.That(row.BindingText.text, Is.EqualTo("Large"), "Larger no longer fits.");
+        row.ResetButton.onClick.Invoke();
+        Assert.That(settings.UiSizeStep, Is.Zero);
+        Assert.That(row.BindingText.text, Is.EqualTo("Normal"));
+
+        uiScale.Apply(1280, 720, settings.UiSizeStep);
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.UiSizeStep, Is.Zero, "720p fits no larger size.");
+        Assert.That(row.BindingText.text, Is.EqualTo("Normal"));
     }
 
     /// <summary>

@@ -741,6 +741,7 @@ MonoBehaviour:
   mainCamera: {fileID: 519420031}
   networkManagerPrefab: {fileID: 1162906624957890571, guid: 368c5096882177743a6bbeda842552f4, type: 3}
   networkSettings: {fileID: 11400000, guid: 87e3dc4248c0c414fa24201e74005182, type: 2}
+  uiScaleSettings: {fileID: 11400000, guid: 52cb8f0a72075b5498795e7003341fa0, type: 2}
 --- !u!4 &1615192112
 Transform:
   m_ObjectHideFlags: 0

@@ -144,6 +144,33 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The UI size step (Docs/DesignSystem.md, Phase 3) is Normal by default and in a file from before it, kept in the
+    /// file once set, raises its change once per change, and is never below Normal.
+    /// </summary>
+    [Test]
+    public void TheUiSizeStep_IsKeptInTheFile()
+    {
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        int changes = 0;
+        settings.UiSizeStepChanged += () => changes++;
+        Assert.That(settings.UiSizeStep, Is.Zero);
+
+        Assert.That(settings.SetUiSizeStep(2), Is.True);
+        Assert.That(settings.SetUiSizeStep(2), Is.False);
+        Assert.That(changes, Is.EqualTo(1));
+        Assert.That(new UserSettings(store).UiSizeStep, Is.EqualTo(2));
+
+        Assert.That(settings.SetUiSizeStep(-3), Is.True);
+        Assert.That(settings.UiSizeStep, Is.Zero);
+        Assert.That(new UserSettings(store).UiSizeStep, Is.Zero);
+
+        Assert.That(UserSettingsData.TryParse("{\"version\":1,\"characterLook\":\"Bandit\"}", out UserSettingsData old), Is.True);
+        Assert.That(old.UiSizeStep, Is.Zero);
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"characterLook\":\"Bandit\"}" }).UiSizeStep, Is.Zero);
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

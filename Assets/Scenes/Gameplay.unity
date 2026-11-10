@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 11293223}
   - component: {fileID: 11293222}
   - component: {fileID: 11293221}
+  - component: {fileID: 11293225}
   m_Layer: 5
   m_Name: DamagePopupCanvas
   m_TagString: Untagged
@@ -165,8 +166,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.CanvasScaler
   m_UiScaleMode: 0
-  m_ReferencePixelsPerUnit: 100
-  m_ScaleFactor: 1
+  m_ReferencePixelsPerUnit: 32
+  m_ScaleFactor: 3
   m_ReferenceResolution: {x: 800, y: 600}
   m_ScreenMatchMode: 0
   m_MatchWidthOrHeight: 0
@@ -218,6 +219,18 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &11293225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 11293220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c209ff38780999549a45ea88efebb31f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Core::UiPixelScale
 --- !u!1001 &772853683
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -315,6 +328,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 619e9fcab11d9cc4781e89a0c2ffb1b5, type: 3}
+--- !u!1 &772853684 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8721519400146283016, guid: 619e9fcab11d9cc4781e89a0c2ffb1b5, type: 3}
+  m_PrefabInstance: {fileID: 772853683}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1350234812
 GameObject:
   m_ObjectHideFlags: 0
@@ -347,7 +365,10 @@ MonoBehaviour:
   parentReference:
     TypeName: 
   autoRun: 1
-  autoInjectGameObjects: []
+  autoInjectGameObjects:
+  - {fileID: 8726797449520402204}
+  - {fileID: 11293220}
+  - {fileID: 772853684}
   playerPrefab: {fileID: 1451667930681185956, guid: 98634c8fe8b1e2d4eb7405d93135d8d7, type: 3}
   damagePopupLayer: {fileID: 11293221}
   pointerFeedbackLayer: {fileID: 1598283671}
@@ -610,6 +631,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: e60b9e4b981cbdb4fa4aca68cc9cbd8c, type: 3}
+--- !u!1 &8726797449520402204 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 520015278397498376, guid: e60b9e4b981cbdb4fa4aca68cc9cbd8c, type: 3}
+  m_PrefabInstance: {fileID: 8726797449520402203}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

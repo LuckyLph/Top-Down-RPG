@@ -18,6 +18,7 @@ public enum UiSkinPiece
     MarkerAttackMove,
     MarkerHover,
     Pip,
+    Check,
 }
 
 /// <summary>
@@ -25,7 +26,8 @@ public enum UiSkinPiece
 /// recipes: greyscale sprites that images and sprite renderers tint by colour role, at one pixel per UI px (or per art
 /// px in the world). The panels, frames and bars are 9-sliced with corners cut along a diagonal: a panel's fill, the
 /// 1 px frame around it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
-/// bar's frame (the track its fill sits in) and its fill, and a pip, a small mark shown whole. The markers are drawn around a ground ellipse twice as wide as tall, each a different
+/// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, and a check mark, a toggle's
+/// mark while it is on. The markers are drawn around a ground ellipse twice as wide as tall, each a different
 /// shape so colour is never the only cue: four chevrons pointing in for a move, the ring crossed by four ticks for an
 /// attack move, and four brackets on the ring's diagonals under a hovered enemy, each line outlined in translucent
 /// black. <see cref="Generate(UiSkinPiece)"/> draws a piece without touching an asset, the same settings always giving
@@ -108,6 +110,8 @@ public sealed class UiSkinRecipe : ScriptableObject
                 return Fill();
             case UiSkinPiece.Pip:
                 return Pip();
+            case UiSkinPiece.Check:
+                return Check();
             default:
                 return Marker(piece);
         }
@@ -202,6 +206,32 @@ public sealed class UiSkinRecipe : ScriptableObject
     private SkinSprite Pip()
     {
         return new SkinSprite(UiSkinPiece.Pip, 5, 5, Paint(Shape(5, 5), Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A toggle's mark while it is on, shown whole: a check mark 8 px wide and 5 tall in strokes 2 px across at 45
+    /// degrees, its short arm three rows tall and its long arm five, meeting in the bottom row.
+    /// </summary>
+    private static SkinSprite Check()
+    {
+        const int width = 8;
+        const int height = 5;
+        bool[] drawn = new bool[width * height];
+        for (int row = 0; row < height; row++)
+        {
+            int y = height - 1 - row;
+            int longArm = width - 2 - row;
+            drawn[y * width + longArm] = true;
+            drawn[y * width + longArm + 1] = true;
+            int shortArm = row - 2;
+            if (shortArm >= 0)
+            {
+                drawn[y * width + shortArm] = true;
+                drawn[y * width + shortArm + 1] = true;
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.Check, width, height, Paint(drawn, Grey(1f)), Vector4.zero);
     }
 
     /// <summary>

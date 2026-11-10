@@ -14,8 +14,10 @@ using VContainer.Unity;
 /// attacker or caster stood; Docs/KnownGaps.md, Phase 4), the same on every machine, to where this machine shows the
 /// target; a hit without one comes from where this machine shows its source. A client's own melee hit it predicts
 /// (<see cref="CombatEvents.HitPredicted"/>) holds its attacker's contact frame at once, the rest of the hit waiting for
-/// the host's. Visual only: nothing here changes gameplay or goes over the network. Allocates nothing once its effects
-/// are warm.
+/// the host's. This machine's preferences (Docs/DesignSystem.md, Phase 6) shape what it shows: with Reduce flashing on,
+/// every flash shows at the settings' reduced share of its strength, and with Reduce motion on the camera does not
+/// kick. Visual only: nothing here changes gameplay or goes over the network. Allocates nothing once its effects are
+/// warm.
 /// </summary>
 public sealed class HitFeedbackPresenter : IStartable, IDisposable
 {
@@ -25,10 +27,11 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
     private readonly LocalPlayerTracker localPlayer;
     private readonly ICameraKick cameraKick;
     private readonly EffectPool effects;
+    private readonly UserSettings preferences;
 
     /// <summary>
-    /// Captures the hits to react to, how they look, the local player whose camera kicks, the camera and the pool
-    /// impacts play from.
+    /// Captures the hits to react to, how they look, the local player whose camera kicks, the camera, the pool impacts
+    /// play from and this machine's <paramref name="preferences"/>.
     /// </summary>
     public HitFeedbackPresenter(
         CombatEvents combatEvents,
@@ -36,7 +39,8 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         CombatSettings combatSettings,
         LocalPlayerTracker localPlayer,
         ICameraKick cameraKick,
-        EffectPool effects)
+        EffectPool effects,
+        UserSettings preferences)
     {
         this.combatEvents = combatEvents;
         this.settings = settings;
@@ -44,6 +48,7 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         this.localPlayer = localPlayer;
         this.cameraKick = cameraKick;
         this.effects = effects;
+        this.preferences = preferences;
     }
 
     /// <summary>
@@ -77,11 +82,12 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         }
 
         HitFeedback struck = target.TryGetComponent(out HitFeedback found) ? found : null;
+        float strength = preferences.ReduceFlashing ? settings.ReducedFlashShare : 1f;
         if (report.IsImmune)
         {
             if (struck != null)
             {
-                struck.Flash(combatSettings.ImmuneColor, 1f, settings.ImmuneFlashSeconds);
+                struck.Flash(combatSettings.ImmuneColor, strength, settings.ImmuneFlashSeconds);
             }
 
             return;
@@ -91,7 +97,7 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         {
             if (struck != null)
             {
-                struck.Flash(combatSettings.GetColor(report.Type), settings.PeriodicFlashAmount, settings.PeriodicFlashSeconds);
+                struck.Flash(combatSettings.GetColor(report.Type), settings.PeriodicFlashAmount * strength, settings.PeriodicFlashSeconds);
             }
 
             return;
@@ -105,7 +111,7 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
         direction = hasSource && direction.sqrMagnitude > 1e-8f ? direction.normalized : Vector2.zero;
         if (struck != null)
         {
-            struck.Flash(settings.HitFlashColor, 1f, settings.HitFlashSeconds);
+            struck.Flash(settings.HitFlashColor, strength, settings.HitFlashSeconds);
             struck.Hold(settings.HoldSeconds);
             struck.Nudge(direction, settings.NudgePixels, settings.NudgeStepSeconds, settings.PixelsPerUnit);
         }
@@ -155,12 +161,12 @@ public sealed class HitFeedbackPresenter : IStartable, IDisposable
 
     /// <summary>
     /// Kicks the camera along <paramref name="direction"/> when the local player took the hit or its source is the
-    /// local player; nothing without a direction.
+    /// local player; nothing without a direction, or while this machine reduces motion.
     /// </summary>
     private void Kick(Health target, Transform source, Vector2 direction)
     {
         LocalPlayer local = localPlayer.Current;
-        if (local == null || cameraKick == null || direction == Vector2.zero)
+        if (local == null || cameraKick == null || direction == Vector2.zero || preferences.ReduceMotion)
         {
             return;
         }

@@ -8,8 +8,9 @@ using UnityEngine;
 /// <summary>
 /// Tests for <see cref="UiSkinRecipe"/> and <see cref="UiSkinWriter"/> (Docs/DesignSystem.md, Phase 5): every piece is
 /// greyscale, sized to slice around its corners with the border the writer sets, panels and bars have their corners
-/// cut and a raised panel its darker lip; the three markers are different shapes on one canvas; and the project's
-/// sprites are what its recipe draws, imported at 32 pixels per unit with point filtering and their borders.
+/// cut and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
+/// shows while on (Phase 6) is two arms meeting at the bottom; and the project's sprites are what its recipe draws,
+/// imported at 32 pixels per unit with point filtering and their borders.
 /// </summary>
 public class UiSkinWriterTests
 {
@@ -38,8 +39,8 @@ public class UiSkinWriterTests
 
     /// <summary>
     /// Every piece is greyscale (red, green and blue equal, so a tint gives it its role's colour), as many pixels as
-    /// its size, and either sliced with at least 1 px left to stretch between its borders or, a marker or a pip, not
-    /// sliced at all.
+    /// its size, and either sliced with at least 1 px left to stretch between its borders or, a marker, a pip or the
+    /// check mark, not sliced at all.
     /// </summary>
     [Test]
     public void EveryPiece_IsGreyscale_AndSlicesAroundItsCorners()
@@ -108,6 +109,28 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
+    /// The check mark is 8 x 5 px: its long arm rises from the bottom row to the top right corner and its short arm
+    /// from the bottom to the left edge, two pixels across in every row, with clear pixels between them, so a toggle
+    /// that is on shows a mark rather than a filled chip like a swatch row's.
+    /// </summary>
+    [Test]
+    public void TheCheck_IsTwoArmsMeetingAtTheBottom()
+    {
+        SkinSprite check = recipe.Generate(UiSkinPiece.Check);
+        Assert.That(check.Width, Is.EqualTo(8));
+        Assert.That(check.Height, Is.EqualTo(5));
+        string[] rows = { "......##", ".....##.", "##..##..", ".####...", "..##...." };
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < check.Width; x++)
+            {
+                bool drawn = rows[row][x] == '#';
+                Assert.That(At(check, x, check.Height - 1 - row).a, Is.EqualTo(drawn ? 255 : 0), $"Pixel ({x}, {row}) from the top left.");
+            }
+        }
+    }
+
+    /// <summary>
     /// The project's skin sprites hold exactly what its recipe draws, imported as single sprites at 32 pixels per unit
     /// with point filtering, a centred pivot and the piece's 9-slice border, so one sprite pixel is one UI px.
     /// </summary>
@@ -153,7 +176,8 @@ public class UiSkinWriterTests
     /// </summary>
     private static bool IsWhole(UiSkinPiece piece)
     {
-        return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip;
+        return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip
+            || piece == UiSkinPiece.Check;
     }
 
     /// <summary>

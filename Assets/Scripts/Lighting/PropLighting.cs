@@ -17,7 +17,9 @@ using VContainer.Unity;
 /// keeps awake the casters within its reach in any loaded chunk, letting them sleep again as it goes out, so a caster
 /// runs only near a burning light. It writes only when the share has moved by a step too small to see or a flicker step
 /// has passed, allocating nothing. The lighting dev panel may force the prop lights and the ground's glow on or off,
-/// still the flicker, turn the glowing pixels off and keep the lights' shadows off, on this machine alone.
+/// still the flicker, turn the glowing pixels off and keep the lights' shadows off, on this machine alone. The player's
+/// Reduce flashing (Docs/DesignSystem.md, Phase 6) stills the flicker too, as the panel's flicker override does: the
+/// override stays the panel's, the preference never writes it, and the flicker stands still while either asks.
 /// Presentation each machine draws on its own: nothing is sent, and nothing in the game reads it.
 /// </summary>
 public sealed class PropLighting : IStartable, ITickable, IDisposable
@@ -29,11 +31,13 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     private readonly DayClock dayClock;
     private readonly IClock clock;
     private readonly Worlds worlds;
+    private readonly UserSettings preferences;
     private readonly List<Group> groups = new();
     private float shown;
     private int shownStep;
     private bool applied;
     private bool forced;
+    private bool reducedFlashing;
     private int awakeCasters;
     private LightingOverride propLights;
     private LightingOverride groundGlow;
@@ -42,14 +46,16 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     private LightingOverride lightShadows;
 
     /// <summary>
-    /// Creates the lighting of the night's lights by <paramref name="day"/>, flickering on <paramref name="time"/>,
-    /// over <paramref name="loadedWorlds"/>; without a day clock they burn at full and do not flicker.
+    /// Creates the lighting of the night's lights by <paramref name="day"/>, flickering on <paramref name="time"/>
+    /// unless this machine's <paramref name="userSettings"/> reduce flashing, over <paramref name="loadedWorlds"/>;
+    /// without a day clock they burn at full and do not flicker.
     /// </summary>
-    public PropLighting(DayClock day, IClock time, Worlds loadedWorlds)
+    public PropLighting(DayClock day, IClock time, Worlds loadedWorlds, UserSettings userSettings)
     {
         dayClock = day;
         clock = time;
         worlds = loadedWorlds;
+        preferences = userSettings;
     }
 
     /// <summary>
@@ -93,6 +99,12 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
         get => flicker;
         set => Force(ref flicker, value);
     }
+
+    /// <summary>
+    /// Whether the prop lights, the glowing pixels and the moving flames flicker now: not while the flicker override is
+    /// off or this machine reduces flashing, as last read.
+    /// </summary>
+    public bool Flickers => flicker != LightingOverride.Off && !reducedFlashing;
 
     /// <summary>
     /// Whether glowing pixels glow, or, off, draw lit like any other (the lighting dev panel).
@@ -190,13 +202,19 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Writes every light once the night's lights' share has moved by a step, a flicker step has passed or an override
-    /// changed, and the flicker's step to the shaders.
+    /// Writes every light once the night's lights' share has moved by a step, a flicker step has passed, an override
+    /// changed or this machine's Reduce flashing did, and the flicker's step to the shaders.
     /// </summary>
     public void Tick()
     {
+        if (preferences.ReduceFlashing != reducedFlashing)
+        {
+            reducedFlashing = preferences.ReduceFlashing;
+            forced = true;
+        }
+
         float share = dayClock != null ? dayClock.Light.NightLights : 1f;
-        bool flickers = dayClock != null && flicker != LightingOverride.Off;
+        bool flickers = dayClock != null && Flickers;
         int step = flickers ? Mathf.FloorToInt(clock.Time * dayClock.Settings.FlickerSteps) : 0;
         if (applied && !forced && Mathf.Abs(share - shown) < Step && step == shownStep)
         {
@@ -264,7 +282,7 @@ public sealed class PropLighting : IStartable, ITickable, IDisposable
         if (lightsOn || group.On || force)
         {
             group.On = lightsOn;
-            bool flickers = flicker != LightingOverride.Off;
+            bool flickers = Flickers;
             for (int i = 0; i < group.Lights.Length; i++)
             {
                 Light2D light = group.Lights[i];

@@ -13,7 +13,8 @@ using VContainer;
 /// only. Under a delayed connection (Docs/KnownGaps.md, Phase 4): a client's arrow, its shooter moved off after the
 /// shot, nudging the Weasel and kicking the camera along the shot on both machines, the hit carrying where it was shot
 /// from; and a client's own sword hit holding its contact frame at its contact, a round trip before the host's hit
-/// reaches it.
+/// reaches it. The display preferences (Docs/DesignSystem.md, Phase 6): Reduce flashing and Reduce motion showing only
+/// on the machine that sets them, and changing no hit's outcome or what the client learns of it.
 /// </summary>
 public class NetworkHitFeedbackPlayModeTests
 {
@@ -176,6 +177,83 @@ public class NetworkHitFeedbackPlayModeTests
         Assert.That(holdsAtContact, Is.EqualTo(holdsBefore + 1), "The client holds its contact frame at its contact.");
         Assert.That(flashesAtContact, Is.Zero, "Before the host's hit reached it.");
         Assert.That(ownerFeedback.HoldCount, Is.EqualTo(holdsBefore + 1), "The host's hit, a round trip later, does not hold it again.");
+    }
+
+    /// <summary>
+    /// The display preferences (Docs/DesignSystem.md, Phase 6) stay on the machine that sets them and change nothing in
+    /// the game. The host hits the Weasel with a chilling Frost hit from the client's player, three times: with neither
+    /// machine reducing flashing and motion, with the host reducing them, and with the client reducing them. The flash
+    /// shows at the reduced share only where the preference is on, and the client's camera, whose player landed the hit,
+    /// kicks unless the client reduces motion; neither machine's settings follow the other's; and the Weasel's HP lost
+    /// and its statuses on the host, and the hit report the client's copy receives, are the same all three times.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator TheReducePreferences_StayOnTheirMachine_AndChangeNoHit()
+    {
+        yield return HostAndJoinWithOneMob();
+        PlayerController clientOwned = client.LocalPlayer.Current.Controller;
+        PlayerController hostCopy = InProcessClient.FindCopyOwnedBy(hostPlayers, client.Manager.LocalClientId);
+        yield return PlaceHostMob((Vector2)clientOwned.transform.position + new Vector2(0.8f, 0f));
+        UserSettings hostSettings = SceneBootTestHelper.ResolveFromMain<UserSettings>();
+        UserSettings clientSettings = client.Resolve<UserSettings>();
+        float share = gameplay.Resolve<HitFeedbackSettings>().ReducedFlashShare;
+        DamageReceiver hostTarget = hostMob.GetComponent<DamageReceiver>();
+        HitFeedback hostStruck = hostMob.GetComponent<HitFeedback>();
+        HitFeedback clientStruck = clientMob.GetComponent<HitFeedback>();
+        HitService hostHits = gameplay.Resolve<HitService>();
+        StatusEffectService hostStatuses = gameplay.Resolve<StatusEffectService>();
+        Hit hit = new(3, DamageType.Frost, new[] { SceneBootTestHelper.FindStatus("Chill") });
+        string clientReport = null;
+        System.Action<DamageReport> record = report => clientReport = $"{report.Amount} {report.Type} {report.Flags} from the client's player: {report.Source == clientOwned.gameObject}";
+        client.Resolve<CombatEvents>().DamageApplied += record;
+        string[] outcomes = new string[3];
+        try
+        {
+            for (int round = 0; round < 3; round++)
+            {
+                bool hostReduces = round == 1;
+                bool clientReduces = round == 2;
+                hostSettings.SetReduceFlashing(hostReduces);
+                hostSettings.SetReduceMotion(hostReduces);
+                clientSettings.SetReduceFlashing(clientReduces);
+                clientSettings.SetReduceMotion(clientReduces);
+                hostStatuses.ClearAll(hostTarget);
+                yield return SceneBootTestHelper.WaitUntil(() => clientMob.GetComponent<DamageReceiver>().Statuses.Count == 0, "the client's copy to lose its statuses");
+                int flashes = clientStruck.FlashCount;
+                int kicks = client.CameraKick.Count;
+                int before = hostMob.GetComponent<Health>().CurrentHealth;
+                clientReport = null;
+
+                Assert.That(hostHits.ApplyHit(hostTarget, hit, hostCopy.gameObject), Is.True);
+                Assert.That(hostStruck.FlashAmount, Is.EqualTo(hostReduces ? share : 1f).Within(1e-6f), $"Round {round}: the host's flash.");
+                yield return SceneBootTestHelper.WaitUntil(() => clientStruck.FlashCount > flashes && clientReport != null, "the hit to reach the client");
+
+                Assert.That(clientStruck.FlashAmount, Is.EqualTo(clientReduces ? share : 1f).Within(1e-6f), $"Round {round}: the client's flash.");
+                Assert.That(client.CameraKick.Count, Is.EqualTo(clientReduces ? kicks : kicks + 1), $"Round {round}: the client's camera.");
+                Assert.That(clientSettings.ReduceFlashing, Is.EqualTo(clientReduces), "The client's settings never follow the host's.");
+                Assert.That(hostSettings.ReduceMotion, Is.EqualTo(hostReduces), "Nor the host's the client's.");
+                string statuses = string.Empty;
+                for (int i = 0; i < hostTarget.Statuses.Count; i++)
+                {
+                    StatusSnapshot status = hostTarget.Statuses.GetSnapshot(i);
+                    statuses += $" {status.Definition.name} x{status.Stacks}";
+                }
+
+                outcomes[round] = $"lost {before - hostMob.GetComponent<Health>().CurrentHealth}; statuses{statuses}; client report {clientReport}";
+            }
+        }
+        finally
+        {
+            client.Resolve<CombatEvents>().DamageApplied -= record;
+            hostSettings.SetReduceFlashing(false);
+            hostSettings.SetReduceMotion(false);
+        }
+
+        Assert.That(outcomes[0], Does.Contain("Status_Chill x1"), $"The hit chilled the Weasel: {outcomes[0]}");
+        Assert.That(outcomes[0], Does.Not.StartWith("lost 0;"), outcomes[0]);
+        Assert.That(outcomes[0], Does.EndWith("True"), $"The client's report names its own player: {outcomes[0]}");
+        Assert.That(outcomes[1], Is.EqualTo(outcomes[0]), "The host reducing flashing and motion changes no hit.");
+        Assert.That(outcomes[2], Is.EqualTo(outcomes[0]), "Nor the client reducing them.");
     }
 
     /// <summary>

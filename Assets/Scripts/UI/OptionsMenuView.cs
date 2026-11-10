@@ -4,7 +4,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Passive options screen: a panel with the rows (the Character section's Look row from the catalog of looks it names
-/// and its colour rows, each with a chip showing its swatch, from the colours it names, then the Controls rows), Reset
+/// and its colour rows, each with a chip showing its swatch, from the colours it names, the Display section's rows, its
+/// on-off preferences as toggle rows, then the Controls rows), Reset
 /// all and Back, a notice line, a listening panel that blocks clicks while a rebind waits for input, and a confirmation
 /// for Reset all. The component stays on an active object and shows or hides its panel.
 /// </summary>
@@ -17,6 +18,8 @@ public class OptionsMenuView : MonoBehaviour
     [SerializeField] private KeyBindingRowView rowPrefab;
     [SerializeField, Tooltip("The row a colour choice gets: the row with a chip showing the picked swatch.")]
     private KeyBindingRowView swatchRowPrefab;
+    [SerializeField, Tooltip("The row an on-off preference gets: the row with a box marked while it is on.")]
+    private KeyBindingRowView toggleRowPrefab;
     [SerializeField] private Button resetAllButton;
     [SerializeField] private Button backButton;
     [SerializeField] private TMP_Text noticeText;
@@ -48,7 +51,7 @@ public class OptionsMenuView : MonoBehaviour
     /// </summary>
     private void Awake()
     {
-        if (panel == null || rowsContainer == null || sectionHeaderPrefab == null || rowPrefab == null || swatchRowPrefab == null || resetAllButton == null
+        if (panel == null || rowsContainer == null || sectionHeaderPrefab == null || rowPrefab == null || swatchRowPrefab == null || toggleRowPrefab == null || resetAllButton == null
             || backButton == null || noticeText == null || listeningPanel == null || listeningText == null || confirmPanel == null
             || confirmYesButton == null || confirmNoButton == null)
         {
@@ -90,6 +93,14 @@ public class OptionsMenuView : MonoBehaviour
     public KeyBindingRowView AddSwatchRow()
     {
         return Instantiate(swatchRowPrefab, rowsContainer);
+    }
+
+    /// <summary>
+    /// Adds a row with a box beside its button, marked while it is on, for an on-off preference.
+    /// </summary>
+    public KeyBindingRowView AddToggleRow()
+    {
+        return Instantiate(toggleRowPrefab, rowsContainer);
     }
 
     /// <summary>

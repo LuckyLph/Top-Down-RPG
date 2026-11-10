@@ -100,7 +100,7 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
 | UI art | Generated in the editor from a recipe, like every other sprite: 9-sliced frames, bars and outlines in greyscale, tinted by role (`UiSkinRecipe`, Phase 5). |
 | Damage types on popups | A popup shows its hit's damage type by colour alone, and shows neither the type nor the `Resisted` and `Weakness` flags otherwise. Settled in Phase 5 on previews of a type icon and of arrows for the flags: left as it was. |
 | Accessibility baseline | The Game Accessibility Guidelines' basic items listed under Accessibility, plus XAG 101's text size and XAG 102's contrast. We link and paraphrase them rather than copy their text. |
-| Preferences | UI size (Phase 3); reduce flashing and reduce motion (Phase 6). They are local, saved in `settings.json`, and never replicated. |
+| Preferences | UI size (Phase 3); reduce flashing and reduce motion (Phase 6). They are local, saved in `settings.json`, and never replicated. Reduce motion covers the camera kick and the popups' rise; a hit's nudge and hit stop stay, as neither moves the screen (settled with the user in Phase 6). |
 | Diagrams | Mermaid. Use `stateDiagram-v2` for state machines and lifecycles, `sequenceDiagram` for host and client messages, and `flowchart` for flows and scope graphs. Timelines are tables. |
 
 ## Language
@@ -260,7 +260,7 @@ The Physical popup red, 3.11:1 against the outline, became `#E64040` (5.17:1). I
 **Art.** `UiSkinRecipe` is an editor recipe in the manner of the prop and terrain recipes (Phase 5).
 - It writes greyscale sprites into `Assets/Sprites/UI/Skin`, which the pixel art postprocessor imports at 32 PPU, so one sprite pixel is one UI px, or one art pixel in the world:
   - 9-sliced, their corners cut by 1 px along a diagonal: a panel, the 1 px frame around it, a raised panel whose face sits on a 2 px darker lip, a slot frame with a dark line inside it, a bar's frame (the track its fill sits in) and its fill;
-  - shown whole: the three marker shapes and a 5 px pip.
+  - shown whole: the three marker shapes, a 5 px pip and, since Phase 6, an 8 x 5 check mark, a toggle row's mark.
 - Images and SpriteRenderers tint them by role. A fill is white, so it shows its role's colour exactly and the contrast measured on a role is what shows; only edges are shaded.
 - They replaced `Square.png`, the HUD's other smooth sprites and the world bar's `RoundedBar.png`.
 - Paddings and gaps are multiples of 2 UI px. The components showed no need for spacing in the theme.
@@ -275,7 +275,7 @@ UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with
 | Panel | `Panel` (`Surface`, framed in `Border`), its variants `PanelRaised` (`SurfaceRaised`) and `Scrim` (full screen, no sprite or frame), and `ScrimModal`, a variant of `Scrim` | Menu boxes and full-screen panels are raised; the in-game menu's dimmer is a scrim; the listening panel a modal scrim |
 | Dialog | `Dialog`, a variant of `ScrimModal`: a raised box with its question, a danger confirm and a secondary Cancel | The in-game menu's and the options screen's confirmations |
 | Section header | `SectionHeader` (was `OptionsSectionHeader`) | The options screen |
-| Row | `Row` (a label, a value button and Reset; was `KeyBindingRow`) and its variant `RowSwatch` (a 12 UI px chip showing the swatch before the value) | Binding and choice rows share `Row`, since they look the same; colour rows are swatch rows. Toggle waits for Phase 6, which first uses it |
+| Row | `Row` (a label, a value button and Reset; was `KeyBindingRow`) and its variants `RowSwatch` (a 12 UI px chip showing the swatch before the value) and `RowToggle` (Phase 6: a 12 UI px box there, `Shade` framed in `Border`, holding the skin's check mark in `Accent` while on; its button reads On or Off and flips it, its Reset turns it off) | Binding and choice rows share `Row`, since they look the same; colour rows are swatch rows; the Display section's on-off preferences are toggle rows |
 | Scroll list | `ScrollList`: a `ScrollRect`, its viewport, its rows and scrollbar | The options screen |
 | Notice line | `NoticeLine` | The options screen's notice, and the main menu's status line (at `Heading`) |
 | Slot | `Slot` (frame, icon, slot frame) and its variant `SlotAbility` (`AbilitySlotView`: name, cooldown fill and seconds, key, failure flash, tooltip) | The weapon slot is a `Slot`; the six ability slots are `SlotAbility` |
@@ -327,7 +327,7 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
 | Text size | A body height (ascender to descender) of at least 18 px per 1080 display lines, by default (XAG 101's PC minimum): `Caption` at the chosen zoom | `UiScale`'s zoom rule; `UiThemeTests` (from the theme font's glyphs); `UiContentTests` (every text themed, none auto-sizing) |
 | Contrast | **Text:** 4.5:1 under `Title`, 3:1 for `Title` and above (XAG 102's large text is a 36 px body at 1080p).<br>**Shapes that carry meaning:** 4.5:1 when small, 3:1 when large.<br>**Others:** 3:1 for disabled text; 4.5:1 for placeholders.<br>Text over the world is measured against its outline. | `UiThemeTests` through `UiThemeUsage`: every pair of text role and background role that a `ThemedText` uses (a translucent background over white and over black, the lower ratio; a control in its normal, highlighted, selected and disabled states), and the damage-type, heal, immune and waystone colours against `Outline` |
 | Never colour alone | Essential information also has a shape, icon, label or size (Game Accessibility Guidelines, basic) | Patterns above; `ContentTests`: every status has a unique abbreviation and a description, and every ability a description; `UiContentTests`: the marker kinds draw different sprites |
-| Flashing | Nothing flashes more than three times a second over more than a quarter of a 10° field, about 2.8% of a 1080p display (WCAG 2.3.1; Game Accessibility Guidelines, basic) | **Hit flash:** one unit flashes, about 0.5% of the display.<br>**Light flicker:** steps 8 times a second by at most 15% of a light's strength, likely under WCAG's 10% luminance change; measured on the Phase 6 previews.<br>**Reduce flashing:** also stills it. |
+| Flashing | Nothing flashes more than three times a second over more than a quarter of a 10° field, about 2.8% of a 1080p display (WCAG 2.3.1; Game Accessibility Guidelines, basic) | **Hit flash:** one unit flashes: a Weasel covers 0.27% of a 1080p display, its luminance rising by 0.96 under a full hit flash at night.<br>**Light flicker:** measured on Phase 6's previews at night (Phase 6 notes): only the flames' own pixels change by 10% or more in a step, 450 to 729 px (0.022 to 0.035% of 1080p) for a torch, a brazier or a campfire, and 1,566 px (0.076%) for all three in one view, about 37 times under the threshold; their light pools change by under 2%.<br>**Reduce flashing:** every flash at a third (a hit at night rises by 0.32, a tick's wash by 0.044, under 10%), and the flicker still: nothing in those views changes by 5%. `HitFeedbackTests` and `PropLightingTests` check both. |
 | Controls | At least 12 UI px in each direction and 2 UI px apart. Our number; the guidelines ask "large and well spaced" without one. | `UiContentTests` on every Selectable in the UI prefabs and menu scenes, the scroll list's scrollbar excepted (it shows the list's place; the list scrolls with the selection and the wheel) |
 | Reachable UI | Menus work with keyboard and gamepad alone | `UiContentTests`: no Selectable but that scrollbar has navigation off |
 | Remapping | Every gameplay control can be rebound | KeyBindings.md, done |
@@ -341,7 +341,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 | Preference | Phase | Values | Effect |
 |---|---|---|---|
 | UI size | 3 | Normal; Large and Larger where the display fits them | Adds 0, 1 or 2 to the UI zoom. Screen-space UI and popups grow; world-space UI does not. |
-| Reduce flashing | 6 | Off, On | `HitFeedbackPresenter`'s flashes (a hit's, an immunity's and a tick's) at a third of their strength, a new `HitFeedbackSettings` field (the asset is never edited at runtime). Light props, flame pixels and flame frames stop flickering, through `PropLighting`'s flicker override, which only the lighting dev panel sets today. |
+| Reduce flashing | 6 | Off, On | `HitFeedbackPresenter`'s flashes (a hit's, an immunity's and a tick's) at a third of their strength, `HitFeedbackSettings.ReducedFlashShare` (the asset is never edited at runtime). Light props, flame pixels and flame frames stop flickering, as the lighting dev panel's flicker override stills them; the override stays the panel's, and the flicker stands still while either asks (Phase 6 notes). |
 | Reduce motion | 6 | Off, On | No camera kick on hits. Popups fade in place instead of rising. |
 
 ## Architecture
@@ -367,6 +367,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 - `AbilitySlotView`, `MoveMarker` and `PlayerHudView` swap their colour fields for roles and a theme reference. Each marker prefab names its own role (Phase 5).
 - `HudTooltip`, `TooltipTrigger` and `ITooltipSource` (Phase 5): a trigger on a slot or status icon shows the HUD's tooltip for the view on its object (`AbilitySlotView`, `StatusIconView`) while the pointer is over it or it is selected, and follows its changes. Local, never replicated.
 - `FloatingDamageText` takes a text size per popup, through its `ThemedText`, and places itself on whole UI px.
+- The display preferences (Phase 6), each read from `UserSettings` on this machine only: `HitFeedbackPresenter` shows every flash at `HitFeedbackSettings.ReducedFlashShare` of its strength with Reduce flashing on, and kicks no camera with Reduce motion on; `PropLighting` stills the flicker with Reduce flashing on, as the panel's `FlickerOverride` does, without writing it; `DamagePopupLayer` (injected through an `[Inject]` method) has a popup spawned with Reduce motion on fade in place. The options screen's two toggle rows come from `RowToggle` (`OptionsMenuView.AddToggleRow`, `KeyBindingRowView.SetToggle`).
 
 ### Editor (`Assets/Editor/Design`, `Assets/Editor/UI`)
 
@@ -374,7 +375,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 - `DesignSearches`: the tuning views, a menu item per kind under `Tools/TopDownRPG/Design/Tune/` (`ViewState(kind)`, `Table(context, kind)`).
 - `UiFonts`: `Tools/TopDownRPG/UI/Write Fonts` writes the font assets and their outlined presets (Phase 4).
 - `UiThemeUsage`: the themed texts of the prefabs and menu scenes, and the contrast of each pair of roles they use, for `DesignTables` and `UiThemeTests` (Phase 4).
-- `UiSkinRecipe`, `UiSkinWriter` and the recipe's inspector (Phase 5): `Assets/Settings/UI/Recipe_UiSkin.asset`. `Generate(piece)` draws a piece without touching an asset; Generate writes every piece and sets its 9-slice border.
+- `UiSkinRecipe`, `UiSkinWriter` and the recipe's inspector (Phase 5): `Assets/Settings/UI/Recipe_UiSkin.asset`. `Generate(piece)` draws a piece without touching an asset; Generate writes every piece and sets its 9-slice border. Phase 6 appended `Check`, the toggle row's mark.
 
 ### Font
 
@@ -562,14 +563,57 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 6: reduce flashing and reduce motion
 
-- [ ] `reduceFlashing` and `reduceMotion` in `settings.json`, and their rows in the Display section.
-- [ ] Reduce flashing: `HitFeedbackPresenter`'s flashes scaled by the new `HitFeedbackSettings` field; light props, flame pixels and flame frames stilled through `PropLighting`'s flicker override.
-- [ ] Reduce motion: no camera kick on hits, and popups that fade in place.
-- [ ] The flicker measured on previews against WCAG's flash threshold, and the result written under Accessibility.
-- [ ] Tests:
-  - settings: a file without the fields reads them off;
+- [x] The toggle row, `RowToggle`, a variant of `Row` with the skin's new check mark, settled on previews.
+- [x] `reduceFlashing` and `reduceMotion` in `settings.json`, and their rows in the Display section.
+- [x] Reduce flashing: `HitFeedbackPresenter`'s flashes scaled by the new `HitFeedbackSettings` field; light props, flame pixels and flame frames stilled as `PropLighting`'s flicker override stills them.
+- [x] Reduce motion: no camera kick on hits, and popups that fade in place.
+- [x] The flicker measured on previews against WCAG's flash threshold, and the result written under Accessibility.
+- [x] Tests:
+  - settings: a file without the fields reads them off, and changing either writes the file;
   - the presenter's flash amounts and camera kick with each preference on and off;
+  - popups rising, or fading in place, by the preference;
+  - the flicker stilled by the preference, the panel's override left alone;
+  - the toggle row in `UiContentTests`, its check mark in `UiSkinWriterTests`, and its two rows in `OptionsMenuControllerTests`;
   - PlayMode in Testlands, with the in-process host and client: changing the preferences sends nothing, and the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
+
+#### Phase 6 notes
+
+- **Settled with the user on 2026-11-10:**
+  - **The toggle row's mark:** a check mark, a new skin piece, over a filled square. The square sat in the swatch chips' column and read as a yellow swatch (`rows/compare_marks_zoom.png`).
+  - **What Reduce motion covers:** the camera kick and the popups' rise, as the spec named. A hit's nudge (the struck sprite 2 px then 1 px away) and hit stop (the 80 ms hold) stay, since neither moves the screen (Decisions).
+  - **The looks and the measurement as previewed:** the toggle rows, every flash at a third, popups fading in place, and the flicker measured below.
+- **The previews.** Written to the gitignored `Recordings/DesignSystem/Phase6` (`rows/`, `flicker/`, `flash/`, `popups/`) by a temporary tool, since removed:
+  - the options screen through the real controller on a camera's canvas, as in Phases 4 and 5, its themed components woken by reflection and its rows refreshed after them;
+  - the Overworld's chunk (1, 1) beside an untitled scene whose Global Light 2D took the night key's sky (0.88), the editor's night preview (`NightPreview`) setting the shader globals, light props and Weasels placed south of the waystone's plaza, and a real `PropLighting` over a `DayClock` on a `ManualClock`, ticked one flicker step at a time, each Light 2D's mesh built through its internal `UpdateMesh` before each render;
+  - popups placed on the canvas from the world camera's projection and laid over the world's render.
+- **The toggle row.** `RowToggle`, a variant of `Row` made by an editor script, has a 12 UI px column before the value, where the swatch row has its chip. The column holds a box (the panel sprite in `Shade`, a frame in `Border`) and the skin's `Check`, 8 x 5 px in 2 px strokes, in `Accent`, shown only while on (`KeyBindingRowView.SetToggle`). The controller writes On or Off on the button, which flips the preference; Reset turns it off, so the Display section's three rows keep the screen's columns.
+- **The settings.** `reduceFlashing` and `reduceMotion` in `UserSettingsData` read as off from a file without them, so the format version stays 1. `UserSettings` has a getter, a setter that writes at once and a change event for each, modelled on `UiSizeStep`.
+- **Reduce flashing.**
+  - `HitFeedbackSettings.ReducedFlashShare`, a third, scales every flash the presenter shows, read at each hit.
+  - **Who owns the flicker override:** the lighting dev panel keeps `PropLighting.FlickerOverride`, and the preference never writes it. `PropLighting` reads `UserSettings.ReduceFlashing` at each update, a bool and no allocation. The flicker stands still while the override is off or the preference is on (`Flickers`), and every light is written at the update either changes. So the panel's `V` still stills the flicker for a developer whose preference is off, and turning the preference off never restarts a flicker the panel stilled, nor the reverse.
+  - Stilled, the step is 0: the lights burn at their steady strength, `_GlowFlicker.y` is 0 (no pixel flickers) and every flame shows its first frame, as the override does since Lighting.md's Phase 6. No shader changed, so the `ShaderCompile` category had nothing new to check.
+- **Reduce motion.** The presenter skips the camera kick while it is on. `DamagePopupLayer` takes `UserSettings` through an `[Inject]` method (a component the Gameplay scope registers) and tells each popup whether it rises as it spawns, so a popup shown before the change still finishes its rise. In place, a popup fades where it starts, 1.1 units above a Weasel's feet, under its bar; quick hits stack there instead of spreading upward, which the previews showed.
+- **The measurement.** By WCAG 2.3.1, a flash is a pair of opposite changes of 0.1 or more in relative luminance (sRGB linearised, 0.2126 R + 0.7152 G + 0.0722 B), the darker state under 0.8. Content fails when such flashes come more than three times a second over more than a quarter of a 10° field, 2.8% of a 1080p display (about 58,000 px). Each view was rendered at 1920 x 1080 at zoom 3 (20 x 11.25 units) for 25 flicker steps, 3 s; the image changes only at a step, 8 a second. Per pixel, the tool took the change between steps, the largest area changing by 0.1 in one step, and the pixels with more than three flashes in any 8 steps:
+
+  | View | Reduce flashing | Largest change | Changing by 0.1 or more in one step | More than 3 flashes a second |
+  |---|---|---|---|---|
+  | Campfire | off | 0.76 | 729 px, 0.035% | 36 px |
+  | Torch | off | 0.75 | 450 px, 0.022% | 9 px |
+  | Brazier | off | 0.71 | 558 px, 0.027% | 36 px |
+  | All three | off | 0.76 | 1,566 px, 0.076% | 144 px |
+  | Each, and all three | on | 0.033 to 0.037 | none (none by 0.05 either) | none |
+
+  - Only the flames' own pixels change by 0.1: their frames and their flickering colours. The light pools, stepping by 10 to 15% of a dim light, change by under 0.02, and a lit tree by 0.02 to 0.05. With Reduce flashing on, what still changes is a plant swaying.
+  - The worst view is about 37 times under the threshold, and a view shows four prop lights at most (Lighting.md's Phase 6). At 720p, 1440p and 4K the zoom follows the display height, so the flames cover the same share.
+  - **The hit flash**, measured on a Weasel at night: it covers 0.27% of a 1080p display (5,616 px). Its mean luminance rises by 0.96 under a full hit flash and by 0.32 at a third, by 0.48 and 0.16 under an immune flash, and by 0.13 and 0.044 under a Fire tick's wash, which at a third no longer counts as a flash.
+- **Tests.**
+  - `UserSettingsTests`: the preferences off by default and in an older file, each change written at once and raised once.
+  - `HitFeedbackTests`: every flash at the reduced share, the rest of a hit kept; no camera kick with Reduce motion on, the rest kept.
+  - `CombatComponentTests`: a popup spawned while Reduce motion is on fading in place, one shown before still rising.
+  - `PropLightingTests`: the preference stilling the flicker without writing the override, and the flicker moving again only once neither asks.
+  - `UiContentTests`: the toggle row a variant of the row, its box, mark and roles, its contrast, and every options screen using it. `UiSkinWriterTests`: the check mark pixel by pixel.
+  - `OptionsMenuControllerTests` and `OptionsMenuPlayModeTests`: the two rows (41 in all).
+  - `NetworkHitFeedbackPlayModeTests`: the same chilling Frost hit three times, with no machine reducing flashing and motion, then the host, then the client. The flash shows at the reduced share only on the machine reducing it, the client's camera kicks unless the client reduces motion, neither machine's settings follow the other's, and the Weasel's HP lost and statuses and the client's report are the same each time.
 
 ### Later
 
@@ -617,14 +661,16 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - every image has a `ThemedGraphic`, or is a themed control's target, and so has every world UI sprite;
   - every UI canvas has a `UiPixelScale`;
   - every Selectable has a `ThemedSelectable` and, the scroll list's scrollbar excepted, is at least 12 UI px each way with navigation on;
-  - every image draws a skin sprite or none, and the marker kinds draw different sprites (Phase 5).
+  - every image draws a skin sprite or none, and the marker kinds draw different sprites (Phase 5);
+  - the toggle row shows its state as a check mark in a framed box, and every options screen makes its toggle rows from it (Phase 6).
 - **EditMode, settings.** A file without the new fields reads their defaults; changing one writes the file.
+- **EditMode, the preferences (Phase 6).** `HitFeedbackTests`: every flash at the reduced share with Reduce flashing on, no camera kick with Reduce motion on, the rest of a hit kept. `PropLightingTests`: the flicker stilled by the preference, the panel's override untouched. `CombatComponentTests`: popups fading in place. `OptionsMenuControllerTests`: the two toggle rows.
 - **PlayMode.** In Testlands, with the in-process host and client:
-  - changing the preferences sends nothing (the UI size from Phase 3, checked by what the client shows; the others from Phase 6);
+  - changing the preferences sends nothing (the UI size from Phase 3, checked by what the client shows; the others from Phase 6, checked by each machine's flash and kick and by settings that never follow the other machine's);
   - the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
-- **EditMode, `UiSkinWriterTests`.** Every skin piece greyscale and sliced around its corners, the panels' cut corners and the raised panel's lip, the markers different shapes on one canvas, and the project's sprites what its recipe draws.
+- **EditMode, `UiSkinWriterTests`.** Every skin piece greyscale and sliced around its corners, the panels' cut corners and the raised panel's lip, the markers different shapes on one canvas, the check mark's two arms, and the project's sprites what its recipe draws.
 - **EditMode, `TooltipTests`.** A slot's or a status icon's tooltip on hover and on selection, following its source and inside its canvas; a shown status icon taking the click; the HUD's one tooltip wired to every slot and icon.
-- **Manual.** The Phase 3 and 4 previews at each display in the Scale table, and the Phase 5 skin previews.
+- **Manual.** The Phase 3 and 4 previews at each display in the Scale table, the Phase 5 skin previews, and Phase 6's toggle rows, flashes, popups and flicker measurement.
 - **Before merging into `main`:** the full EditMode and PlayMode suites.
 
 ## Open questions

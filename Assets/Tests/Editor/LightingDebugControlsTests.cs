@@ -45,7 +45,7 @@ public class LightingDebugControlsTests
         clock = new DayClock(settings, session, FixedGameAuthority.Authoritative, new FakeNetworkClock());
         Worlds worlds = new();
         presenter = new DayNightPresenter(clock, worlds);
-        propLighting = new PropLighting(clock, time, worlds);
+        propLighting = new PropLighting(clock, time, worlds, new UserSettings(new MemorySaveStore()));
         world = Track(WorldDefinition.Create("Showcase", new Vector2Int(2048, 0), Vector2Int.one, new[] { Vector2Int.zero },
             new WorldDefinition.Entry("start", new Vector2(30.5f, 42f), true),
             new WorldDefinition.Entry("campsite", new Vector2(23.5f, 30.5f), false),

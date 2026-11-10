@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Pool;
+using VContainer;
 
 /// <summary>
 /// The canvas that floating combat text lives on: spawns <see cref="FloatingDamageText"/> popups from
-/// a pool, ages them and returns expired ones to it. Driven by <see cref="DamagePopupPresenter"/>.
+/// a pool, ages them and returns expired ones to it. Driven by <see cref="DamagePopupPresenter"/>. A popup rises as it
+/// fades, or fades in place while this machine's <see cref="UserSettings.ReduceMotion"/> is on when it shows
+/// (Docs/DesignSystem.md, Phase 6).
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Canvas))]
@@ -16,8 +19,19 @@ public class DamagePopupLayer : MonoBehaviour
     private readonly List<FloatingDamageText> active = new();
     private RectTransform canvasRect;
     private ObjectPool<FloatingDamageText> pool;
+    private UserSettings preferences;
 
     internal int ActiveCount => active.Count;
+
+    /// <summary>
+    /// Receives this machine's <paramref name="settings"/>, whose Reduce motion keeps new popups in place; popups rise
+    /// without them.
+    /// </summary>
+    [Inject]
+    public void Construct(UserSettings settings)
+    {
+        preferences = settings;
+    }
 
     /// <summary>
     /// Creates the pool and prewarms it with <c>prewarmCount</c> popups.
@@ -40,7 +54,8 @@ public class DamagePopupLayer : MonoBehaviour
     /// <summary>
     /// Shows <paramref name="message"/> in <paramref name="color"/> at <paramref name="worldPosition"/> as seen by
     /// <paramref name="camera"/>, at text size <paramref name="size"/> or the popup's own when null, using a pooled
-    /// popup. Logs an error and returns null when no popup prefab is assigned.
+    /// popup that rises unless this machine reduces motion. Logs an error and returns null when no popup prefab is
+    /// assigned.
     /// </summary>
     public FloatingDamageText Spawn(string message, Color color, Vector3 worldPosition, Camera camera, UiTextSize? size = null)
     {
@@ -52,7 +67,7 @@ public class DamagePopupLayer : MonoBehaviour
         }
 
         FloatingDamageText popup = pool.Get();
-        popup.Show(message, color, worldPosition, camera, canvasRect, size);
+        popup.Show(message, color, worldPosition, camera, canvasRect, size, preferences == null || !preferences.ReduceMotion);
         active.Add(popup);
         return popup;
     }

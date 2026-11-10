@@ -272,6 +272,7 @@ MonoBehaviour:
   sectionHeaderPrefab: {fileID: 4501773019080956510, guid: dde37794ff9101b40984d3878716f321, type: 3}
   rowPrefab: {fileID: 7048991377850446315, guid: 4a4db2cf11153fe49a6a1b498e1df93e, type: 3}
   swatchRowPrefab: {fileID: 3750755550167390346, guid: 980675a54d3ac7644939abdb4ffc4f2a, type: 3}
+  toggleRowPrefab: {fileID: 4728583912376485218, guid: f76e3cbf280ca6d41a922c128e88a240, type: 3}
   resetAllButton: {fileID: 9067743145156442432}
   backButton: {fileID: 480458675727960216}
   noticeText: {fileID: 6373580978283372062}

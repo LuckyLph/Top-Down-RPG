@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// One pooled combat popup on the <see cref="DamagePopupLayer"/> canvas: outlined text anchored to a world position
-/// that rises by <c>riseOffset</c> and fades out over its lifetime, placed on whole UI px so its pixel font stays crisp.
+/// that rises by <c>riseOffset</c>, or stays in place when shown without rising (Reduce motion, Docs/DesignSystem.md,
+/// Phase 6), and fades out over its lifetime, placed on whole UI px so its pixel font stays crisp.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(CanvasGroup))]
@@ -22,8 +23,10 @@ public class FloatingDamageText : MonoBehaviour
     private Camera targetCamera;
     private Vector3 worldPosition;
     private float elapsed;
+    private bool rises = true;
 
     public float Lifetime => lifetime;
+    internal bool Rises => rises;
 
     /// <summary>
     /// Caches the text, rect transform and canvas group when unassigned.
@@ -36,9 +39,10 @@ public class FloatingDamageText : MonoBehaviour
     /// <summary>
     /// Restarts the popup with <paramref name="message"/> in <paramref name="color"/> at
     /// <paramref name="startWorldPosition"/>, projected through <paramref name="camera"/> into
-    /// <paramref name="parentCanvas"/>, at text size <paramref name="size"/>, or the popup's own size when null.
+    /// <paramref name="parentCanvas"/>, at text size <paramref name="size"/>, or the popup's own size when null, rising
+    /// as it fades when <paramref name="rising"/> and fading in place otherwise.
     /// </summary>
-    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, UiTextSize? size = null)
+    public void Show(string message, Color color, Vector3 startWorldPosition, Camera camera, RectTransform parentCanvas, UiTextSize? size = null, bool rising = true)
     {
         ResolveReferences();
 
@@ -46,6 +50,7 @@ public class FloatingDamageText : MonoBehaviour
         targetCamera = camera;
         canvasRect = parentCanvas;
         elapsed = 0f;
+        rises = rising;
 
         if (size.HasValue)
         {
@@ -72,9 +77,9 @@ public class FloatingDamageText : MonoBehaviour
     }
 
     /// <summary>
-    /// Places the popup at its current risen world position projected onto the canvas, on the nearest whole UI px from
-    /// the canvas's corner, and fades it by age; hides it when that point is behind the camera. Does nothing before
-    /// <see cref="Show"/>.
+    /// Places the popup at its current world position, risen by its age when it rises, projected onto the canvas, on the
+    /// nearest whole UI px from the canvas's corner, and fades it by age; hides it when that point is behind the camera.
+    /// Does nothing before <see cref="Show"/>.
     /// </summary>
     internal void Refresh()
     {
@@ -84,7 +89,7 @@ public class FloatingDamageText : MonoBehaviour
         }
 
         float t = Mathf.Clamp01(elapsed / lifetime);
-        Vector3 currentWorldPosition = Vector3.Lerp(worldPosition, worldPosition + riseOffset, t);
+        Vector3 currentWorldPosition = rises ? Vector3.Lerp(worldPosition, worldPosition + riseOffset, t) : worldPosition;
         Vector3 screenPoint = targetCamera.WorldToScreenPoint(currentWorldPosition);
 
         if (screenPoint.z <= 0f)

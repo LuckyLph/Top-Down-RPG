@@ -17,6 +17,7 @@ MonoBehaviour:
   immuneFlashSeconds: 0.05
   periodicFlashAmount: 0.4
   periodicFlashSeconds: 0.08
+  reducedFlashShare: 0.33333334
   holdSeconds: 0.08
   holdAttacker: 1
   nudgePixels: 0200000001000000

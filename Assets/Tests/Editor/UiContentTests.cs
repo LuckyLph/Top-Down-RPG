@@ -7,11 +7,11 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Content checks for the UI (Docs/DesignSystem.md, Phases 4 and 5, and Accessibility), on the UI prefabs (the
+/// Content checks for the UI (Docs/DesignSystem.md, Phases 4 to 6, and Accessibility), on the UI prefabs (the
 /// components among them), the mobs' world UI and the menu scenes, which are only read: every text, image, world UI
 /// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
-/// enough and reachable, and the marker kinds are different shapes.
+/// enough and reachable, the marker kinds are different shapes, and the toggle row shows its state as a check mark.
 /// </summary>
 public class UiContentTests
 {
@@ -279,6 +279,58 @@ public class UiContentTests
         Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("attackMarkerPrefab").objectReferenceValue), Is.EqualTo($"{Components}MarkerAttackMove.prefab"));
         SpriteRenderer hover = (SpriteRenderer)serialized.FindProperty("hoverRing").objectReferenceValue;
         Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(hover.gameObject), Is.EqualTo($"{Components}MarkerHover.prefab"));
+    }
+
+    /// <summary>
+    /// The toggle row (Docs/DesignSystem.md, Phase 6) is a variant of the row with a 12 UI px box before its value, in
+    /// Shade framed in Border, holding the skin's check mark in Accent while it is on: its state shows as a mark and
+    /// as the On or Off its button reads, never as colour alone. The mark keeps 4.5:1 against the box on the screen's
+    /// raised panel, and the frame 3:1 against the panel. Every options screen makes its toggle rows from it.
+    /// </summary>
+    [Test]
+    public void TheToggleRow_ShowsItsStateAsACheckMark()
+    {
+        GameObject row = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}RowToggle.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(row)), Is.EqualTo($"{Components}Row.prefab"), "A variant of the row.");
+        KeyBindingRowView view = row.GetComponent<KeyBindingRowView>();
+        Image mark = view.ToggleMark;
+        Assert.That(mark, Is.Not.Null);
+        Assert.That(view.Swatch, Is.Null);
+        Assert.That(mark.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Check))));
+        Assert.That(mark.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(mark.enabled, Is.False, "Unmarked until the row shows its preference on.");
+
+        Image box = mark.transform.parent.GetComponent<Image>();
+        Assert.That(box.rectTransform.rect.size, Is.EqualTo(new Vector2(12f, 12f)));
+        Assert.That(box.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Shade));
+        ThemedGraphic frame = null;
+        foreach (ThemedGraphic graphic in box.GetComponentsInChildren<ThemedGraphic>(true))
+        {
+            if (graphic.Role == UiColour.Border)
+            {
+                frame = graphic;
+            }
+        }
+
+        Assert.That(frame, Is.Not.Null, "The box is framed in Border.");
+        Assert.That(box.transform.parent.GetSiblingIndex(), Is.LessThan(view.BindingButton.transform.GetSiblingIndex()), "The box comes before the value.");
+
+        Color panel = theme.Colour(UiColour.SurfaceRaised);
+        Color shade = theme.Colour(UiColour.Shade);
+        Color well = Color.Lerp(panel, shade, shade.a);
+        well.a = 1f;
+        Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.Accent), well), Is.GreaterThanOrEqualTo(4.5), "The mark against its box.");
+        Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.Border), panel), Is.GreaterThanOrEqualTo(3.0), "The box's frame against the panel.");
+
+        int screens = 0;
+        foreach ((string where, OptionsMenuView options) in All<OptionsMenuView>())
+        {
+            screens++;
+            Object toggleRow = new SerializedObject(options).FindProperty("toggleRowPrefab").objectReferenceValue;
+            Assert.That(AssetDatabase.GetAssetPath(toggleRow), Is.EqualTo($"{Components}RowToggle.prefab"), $"{where}'s toggle rows.");
+        }
+
+        Assert.That(screens, Is.GreaterThanOrEqualTo(2), "The options prefab and the main menu's screen.");
     }
 
     /// <summary>

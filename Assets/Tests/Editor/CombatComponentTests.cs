@@ -311,6 +311,38 @@ public class CombatComponentTests
     }
 
     /// <summary>
+    /// While this machine's Reduce motion is on (Docs/DesignSystem.md, Phase 6), a popup spawned then fades where it
+    /// showed instead of rising, while one shown before keeps rising; once it is off, new popups rise again.
+    /// </summary>
+    [Test]
+    public void DamagePopupLayer_PopupsFadeInPlace_WhileReduceMotionIsOn()
+    {
+        root = new GameObject("PopupMotionRoot");
+        Camera camera = CreateCamera();
+        DamagePopupLayer layer = CreatePopupLayer();
+        UserSettings settings = new(new MemorySaveStore());
+        layer.Construct(settings);
+
+        FloatingDamageText rising = layer.Spawn("1", Color.red, new Vector3(-2f, 2f, 0f), camera);
+        settings.SetReduceMotion(true);
+        FloatingDamageText still = layer.Spawn("2", Color.red, new Vector3(2f, 2f, 0f), camera);
+        Vector2 risingStart = rising.GetComponent<RectTransform>().anchoredPosition;
+        Vector2 stillStart = still.GetComponent<RectTransform>().anchoredPosition;
+        Assert.That(rising.Rises, Is.True);
+        Assert.That(still.Rises, Is.False);
+
+        layer.Tick(still.Lifetime * 0.5f);
+        layer.RefreshPositions();
+        Assert.That(rising.GetComponent<RectTransform>().anchoredPosition.y, Is.GreaterThan(risingStart.y), "A popup shown before keeps rising.");
+        Assert.That(still.GetComponent<RectTransform>().anchoredPosition, Is.EqualTo(stillStart), "It stays where it showed.");
+        Assert.That(still.GetComponent<CanvasGroup>().alpha, Is.LessThan(1f), "And fades as it ages.");
+
+        settings.SetReduceMotion(false);
+        layer.Tick(still.Lifetime);
+        Assert.That(layer.Spawn("3", Color.red, Vector3.zero, camera).Rises, Is.True);
+    }
+
+    /// <summary>
     /// A popup stays active within its lifetime, is deactivated and released once past it, and is reused by the
     /// next spawn.
     /// </summary>

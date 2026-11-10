@@ -273,8 +273,9 @@ public class AbilityEffectTests
     }
 
     /// <summary>
-    /// The shipped Bolt, Whirl, Smite and Mend assets carry their expected hits, heals, statuses and shapes, and
-    /// Leap and Lunge have no effect yet.
+    /// The shipped Bolt, Whirl, Smite and Mend assets carry the kinds of hits, heals, statuses and shapes their names
+    /// promise, and Leap and Lunge have no effect yet. Their numbers are in Docs/Generated, which
+    /// <c>DesignTablesTests</c> keeps current, rather than pinned here (Docs/DesignSystem.md, Phase 2).
     /// </summary>
     [Test]
     public void Content_TheAbilitiesWithEffects_AndTheMovementBlanks()
@@ -284,19 +285,20 @@ public class AbilityEffectTests
         AbilityDefinition smite = Load("Blank_Smite");
         AbilityDefinition mend = Load("Blank_Mend");
 
-        Assert.That(bolt.Hit.Amount, Is.EqualTo(12));
+        Assert.That(bolt.Hit.Amount, Is.GreaterThan(0));
         Assert.That(bolt.Hit.Type, Is.EqualTo(DamageType.Frost));
         Assert.That(bolt.Hit.GetStatus(0).DisplayName, Is.EqualTo("Chill"));
-        Assert.That(bolt.Range, Is.EqualTo(6f));
+        Assert.That(bolt.Targeting, Is.EqualTo(AbilityTargeting.Direction));
+        Assert.That(bolt.Range, Is.GreaterThan(0f));
         Assert.That(bolt.AreaRadius, Is.GreaterThan(0f));
 
-        Assert.That(whirl.Hit.Amount, Is.EqualTo(10));
+        Assert.That(whirl.Hit.Amount, Is.GreaterThan(0));
         Assert.That(whirl.Targeting, Is.EqualTo(AbilityTargeting.None));
-        Assert.That(whirl.AreaRadius, Is.EqualTo(1.5f));
+        Assert.That(whirl.AreaRadius, Is.GreaterThan(0f));
 
-        Assert.That(smite.Hit.Amount, Is.EqualTo(15));
+        Assert.That(smite.Hit.Amount, Is.GreaterThan(0));
         Assert.That(smite.Hit.GetStatus(0).Controls, Is.EqualTo(StatusControls.Stun));
-        Assert.That(mend.Heal, Is.EqualTo(25));
+        Assert.That(mend.Heal, Is.GreaterThan(0));
         Assert.That(mend.Hit.GetStatus(0).DisplayName, Is.EqualTo("Fortify"));
 
         Assert.That(Load("Blank_Leap").HasEffect, Is.False, "Leap and Lunge wait for abilities that move the caster.");

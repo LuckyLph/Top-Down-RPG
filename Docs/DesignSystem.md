@@ -90,7 +90,7 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
 | Source of truth | Assets hold the current numbers. Specs hold the intent, the rules and the reasons for chosen values. `Docs/Generated` holds the current numbers in readable form. |
 | Generated tables | Written by an editor tool from the assets and the real formulas (`DamageMath`), formatted with the invariant culture. An EditMode test fails when a committed table differs from what the tool would write. |
 | Content checks | One table-driven EditMode fixture covers every content kind. It reads serialized values, not the getters that clamp them. |
-| Balance | Derived columns in the generated tables (damage per second, hits and time to kill) instead of a simulator, until combat has random rolls or interacting procs. |
+| Balance | Derived columns in the generated tables (damage per second, hits and time to kill) instead of a simulator, until combat has random rolls or interacting procs. No test pins an asset's value: the committed tables record every value. A spec's numeric target is a range, checked against the derived columns by a case in `BalanceTargetsTests`, which the first target creates (settled in Phase 2). |
 | UI framework | uGUI with TextMesh Pro. |
 | UI scale | A UI px is drawn as a whole number of display pixels: the UI zoom. See Foundations for how it is chosen. |
 | Text | Five sizes. The smallest, `Caption`, is 7 UI px, a 19.5 px body at 1080p. Nothing is smaller, auto-sizing included. |
@@ -129,7 +129,7 @@ These are the words every spec uses with one meaning. A new building block adds 
 
 - **Sections**, in order: Where we start, Terms, Goals, Non-goals (for now), Decisions, Behaviour, Architecture, Networking, Removals and migrations, Phases (with Later), Testing, Open questions. Leave out the ones that would be empty.
 - **Decisions** says what is decided now. A changed decision says what it replaced and in which phase.
-- **Numbers.** A spec states targets and rules ("a Weasel dies in three to five sword hits"). A decision may record the value chosen and what it was compared with. Current values are in `Docs/Generated`.
+- **Numbers.** A spec states targets and rules ("a Weasel dies in three to five sword hits"). A numeric target is a range, and gets a case in `BalanceTargetsTests` that checks it against the derived columns (`DesignMath`). A decision may record the value chosen and what it was compared with. Current values are in `Docs/Generated`, and no test restates them.
 - **Diagrams** follow the Decisions table above.
 - **`Docs/Generated`** is written only by its tool. Never edit it by hand.
 
@@ -181,7 +181,7 @@ The test's failure message names the menu item, and says to regenerate after a m
 
 Unity Search's table view shows a kind's assets side by side with editable property columns. It is a spreadsheet over the assets themselves, so there is no second copy, and it exports to CSV or JSON.
 
-Phase 2 adds a saved search per kind (weapons, abilities, statuses, mob configs) under `Assets/Editor/Design/Searches`. A saved search keeps its table layout. Edits in the table skip the inspector, `[Min]`, `[Range]` and `OnValidate`, so `ContentTests` is what catches an out-of-range value.
+`Tools/TopDownRPG/Design/Tune/` (Phase 2) has a menu item per kind (weapons, abilities, statuses, mob configs) that opens the Search window's table view over every asset of the kind, a column per serialized field after the asset's name. The columns are read from the assets each time, so they follow the fields. Unity 6.4 keeps saved search assets internal, so none are committed; a view saved from the window keeps its layout. Edits in the table skip the inspector, `[Min]`, `[Range]` and `OnValidate`, so `ContentTests` is what catches an out-of-range value.
 
 ## UI and UX
 
@@ -360,6 +360,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 ### Editor (`Assets/Editor/Design`, `Assets/Editor/UI`)
 
 - `DesignTables`: `Build()` returns each file's name and Markdown, built from the assets with `DamageMath`; `Write()` writes them to `Docs/Generated`. Menu item: `Tools/TopDownRPG/Design/Write Design Tables`.
+- `DesignSearches`: the tuning views, a menu item per kind under `Tools/TopDownRPG/Design/Tune/` (`ViewState(kind)`, `Table(context, kind)`).
 - `UiSkinRecipe` and its writer: Generate writes the skin sprites.
 
 ### Font
@@ -390,7 +391,7 @@ A project font asset in `Assets/Fonts`, generated from TMP's `LiberationSans.ttf
 - **Architecture.md:**
   - The asset values it restates (the weapons' numbers, the status table, the blank abilities' table) become links to `Docs/Generated` in Phase 1.
   - The UI, configs, editor tools, settings and tests sections change with each phase, and so do the scopes' auto-inject lists.
-- **Tests that pin asset values.** They become relations or move into the generated tables (Open questions).
+- **Tests that pin asset values.** Phase 2 turned them into checks of what each asset is (its damage type, statuses, targeting, faction), leaving its numbers to the generated tables.
 - **KeyBindings.md.** The options screen gains its Display section (Phases 3 and 6).
 
 ## Phases
@@ -422,17 +423,26 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 2: content checks and tuning views
 
-- [ ] Balance targets settled with the user (Open questions), and with them what becomes of the tests that pin asset values.
-- [ ] `ContentTests`: one case per kind (weapons, abilities, classes, statuses, combat profiles, mob configs, looks, character colours), every definition found under `Assets/Data` and `Assets/Settings/AI`, checked on its serialized values:
+- [x] Balance targets settled with the user (Open questions), and with them what becomes of the tests that pin asset values.
+- [x] `ContentTests`: one case per kind (weapons, abilities, classes, statuses, combat profiles, mob configs, looks, character colours), every definition found under `Assets/Data` and `Assets/Settings/AI`, checked on its serialized values:
   - listed exactly once in its catalog;
   - required references set;
   - ranges valid (cooldowns, contacts, durations and tick intervals above 0; at least one max stack);
   - display names unique within the kind, swatch and choice names within their lists;
   - status abbreviations unique and descriptions present;
   - colours opaque.
-- [ ] The tests that pin asset values turned into relations or target checks, as the balance targets settle.
-- [ ] Saved Unity Search table views under `Assets/Editor/Design/Searches`: weapons, abilities, statuses, mob configs.
-- [ ] Tests: `ContentTests` passes on the project's assets, and each rule fails on a definition from `Create` that breaks it.
+- [x] The tests that pin asset values turned into relations or target checks, as the balance targets settle.
+- [x] Unity Search table views for weapons, abilities, statuses and mob configs: menu items rather than saved searches under `Assets/Editor/Design/Searches` (Phase 2 notes).
+- [x] Tests: `ContentTests` passes on the project's assets, and each rule fails on a definition from `Create` that breaks it.
+
+#### Phase 2 notes
+
+- **Balance targets.** Settled with the user on 2026-11-10: a spec that states a numeric target, as a range, gets a check of it against the derived columns, in a `BalanceTargetsTests` the first target creates; none is set yet. No test pins an asset's value: the committed tables record every value, and `DesignTablesTests` fails until a change is written into them, so every tuning change shows in a diff. The pinned tests now check what each asset is, not its numbers: `DamageResolutionTests`' units test (now `Content_UnitsFightForTheirFactions_WithPhysicalHits`: the factions and the physical hits, no longer the health of 100, the Sword's 20 and the Weasel's 10) and its combat settings test (the scene's reference only), and `AbilityEffectTests`' content test (Bolt's Frost and Chill along a line, Whirl around the caster, Smite's stun, Mend's heal and Fortify, without their amounts, range and radius).
+- **The checks.** `ContentRules` (in the test assembly) holds one check per kind, on serialized values, each problem a line naming the asset and the field; a field it reads that no longer exists throws, so a rename fails loudly. `ContentTests` runs it on nine kinds: the eight planned, and the combat settings, whose resolution rules and popup colours are content values too. Each kind must find at least one asset, so a moved folder cannot leave a case with nothing to read. The project's content passed every rule on the first run; nothing needed fixing.
+- **What the rules cover.** Weapons: an id, a name, a hit that is not negative, a cooldown and contact above 0, an icon and an attack clip, and an area or a projectile with its visual. Abilities: a cooldown above 0, and a range above 0 when aimed at a point or a unit (the blanks aimed along a direction keep 0 until abilities move the caster). Classes: four slots. Statuses: a description, an opaque colour, a duration above 0, at least one stack, a periodic effect with an amount and interval above 0. Profiles: a faction, resistances within ±100. Mob configs: speeds, the attack's timings, an area, a clip and an obstacle mask. Looks: a name, a set and locomotion settings. Character colours: unique list, swatch and choice names, opaque ramps, each choice's list and own swatch existing. Catalogs: no empty entry, each definition once, every definition listed. Abilities have no catalog (the wire names them by slot and weapon), and classes no display name.
+- **The tuning views.** `DesignSearches` builds a Search window state in the table view (`SearchViewState`, `SearchTable`, `SearchColumn.Enumerate`), shown with `SearchService.ShowWindow`, all public in Unity 6.4; saved searches would need `SearchQueryAsset`, which is internal there, so they are menu items under `Tools/TopDownRPG/Design/Tune/` instead. The query is `t=<Type>`: `t:PlayerWeapon` also finds the player prefab, through its `PlayerWeaponController`.
+- **Left as they are.** `StatusEffectTests`' catalog check and `CharacterColoursTests`' project test overlap `ContentTests` in part; they also check behaviour (Unstoppable clearing a stun) and the adventurer's palette, so they stay.
+- **Tests.** `ContentTests` (17 cases): the nine kinds on the project, and the rules reporting a weapon, an ability, a status (and two sharing an abbreviation), a profile, a mob config, the combat settings, a catalog, a class, a look catalog and character colours that break them. A class keeps four slots through `OnValidate`, so its case sets three by reflection. `DesignSearchesTests` (4 cases): each view is a table over every asset of its kind, the name first, a column for its tuned fields and none for the script.
 
 ### Phase 3: one UI scale, the UI size setting and the options screen
 
@@ -504,6 +514,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 ## Testing
 
 - **EditMode, `DesignTablesTests`.** `Build()` equals the committed files after normalising line endings. On a mismatch, the message names the menu item and says to regenerate after a merge.
+- **EditMode, `DesignSearchesTests`.** Each tuning view is a table over every asset of its kind, its name first and a column per tuned field.
 - **EditMode, `ContentTests`.** One case per content kind, reading the project's assets and never writing them. It checks serialized values, not the clamping getters:
   - catalog membership and uniqueness;
   - required references;
@@ -532,9 +543,8 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ## Open questions
 
-Each is settled with the user at the start of the phase named. The principles were settled in Phase 1.
+Each is settled with the user at the start of the phase named. The principles were settled in Phase 1, and the balance targets in Phase 2.
 
-- **Balance targets** (Phase 2). Should specs carry numeric targets ("three to five sword hits per Weasel") that a test checks against the derived columns? If so, the tests that pin asset values today (`DamageResolutionTests`, `AbilityEffectTests`) become those checks instead of restating the assets.
 - **Control size** (Phase 3). Is 12 UI px (36 px at 1080p) the right minimum for buttons, rows and slots?
 - **Font** (Phase 4). Keep LiberationSans (smooth text over pixel art), or move to a pixel font under OFL, which would make body heights exact and its outline drawn in? Decide on the previews.
 - **Damage types on popups** (Phase 5). Should popups show the hit's type, or its `Resisted` and `Weakness` flags (shown nowhere today), with a cue other than colour?

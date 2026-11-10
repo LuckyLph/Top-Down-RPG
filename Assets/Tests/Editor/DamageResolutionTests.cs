@@ -500,30 +500,26 @@ public class DamageResolutionTests
     }
 
     /// <summary>
-    /// The player and weasel prefabs have 100 health and their factions, and the sword and default mob config deal
-    /// their rescaled physical damage.
+    /// The player and weasel prefabs fight for their factions, and the sword and default mob config deal physical
+    /// damage. Their numbers are in Docs/Generated, which <c>DesignTablesTests</c> keeps current, rather than pinned
+    /// here (Docs/DesignSystem.md, Phase 2).
     /// </summary>
     [Test]
-    public void Content_UsesTheRescaledNumbersAndFactionProfiles()
+    public void Content_UnitsFightForTheirFactions_WithPhysicalHits()
     {
         GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Mobs/Weasel.prefab");
         PlayerWeapon sword = AssetDatabase.LoadAssetAtPath<PlayerWeapon>("Assets/Data/Weapons/Sword.asset");
         MobConfig mob = AssetDatabase.LoadAssetAtPath<MobConfig>("Assets/Settings/AI/Mob_Default.asset");
 
-        Assert.That(player.GetComponent<Health>().MaxHealth, Is.EqualTo(100));
-        Assert.That(weasel.GetComponent<Health>().MaxHealth, Is.EqualTo(100));
         Assert.That(player.GetComponent<DamageReceiver>().Faction, Is.EqualTo(Faction.Players));
         Assert.That(weasel.GetComponent<DamageReceiver>().Faction, Is.EqualTo(Faction.Mobs));
-        Assert.That(sword.Damage, Is.EqualTo(20));
         Assert.That(sword.DamageType, Is.EqualTo(DamageType.Physical));
-        Assert.That(mob.AttackDamage, Is.EqualTo(10));
         Assert.That(mob.AttackDamageType, Is.EqualTo(DamageType.Physical));
     }
 
     /// <summary>
-    /// The combat settings asset has the expected resistance cap, floor and minimum damage, and the Gameplay scene
-    /// references it.
+    /// The Gameplay scene references the project's combat settings; <c>ContentTests</c> checks their values.
     /// </summary>
     [Test]
     public void Content_GameplaySceneHasCombatSettings()
@@ -533,9 +529,6 @@ public class DamageResolutionTests
         string guid = AssetDatabase.AssetPathToGUID("Assets/Data/Combat/CombatSettings.asset");
 
         Assert.That(settings, Is.Not.Null);
-        Assert.That(settings.ResistanceCap, Is.EqualTo(80));
-        Assert.That(settings.ResistanceFloor, Is.EqualTo(-100));
-        Assert.That(settings.MinimumDamage, Is.EqualTo(1));
         Assert.That(scene, Does.Contain("combatSettings: {fileID: 11400000, guid: " + guid));
     }
 

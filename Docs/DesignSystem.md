@@ -71,7 +71,7 @@ The UI has no system yet. The table below is what it looked like on 2026-11-03, 
 
 ## Principles
 
-This is a draft drawn from the existing specs, to confirm (Open questions). A spec's decisions should follow from one of these.
+Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing specs, and a fifth from CLAUDE.md's art rule. A spec's decisions should follow from one of these.
 
 1. **Co-op first.** The host decides, and every machine shows the same outcomes, late joiners included. One player is just the smallest party.
 2. **Readable at a glance.**
@@ -81,6 +81,7 @@ This is a draft drawn from the existing specs, to confirm (Open questions). A sp
    - Information never depends on colour alone.
 3. **Direct control.** Click to move, with orders that cancel and buffer like a MOBA's. What the player sees is what the game will do.
 4. **Content is data.** Mechanics are assets composed from a small set of building blocks. A new idea first extends a block in its spec, then becomes content.
+5. **Made in the project.** Every sprite, effect and UI piece comes from a recipe in the editor or is drawn in Aseprite for the game. Fonts licensed for use in a game are the one exception, for now.
 
 ## Decisions
 
@@ -138,7 +139,7 @@ These are the words every spec uses with one meaning. A new building block adds 
 
 | File | Rows | Columns |
 |---|---|---|
-| `DamageTypes.md` | Each damage type, plus the heal and immune rows | Popup colour (hex) and its contrast against the popup outline; the resistance floor, cap and minimum damage from `CombatSettings` |
+| `DamageTypes.md` | Each damage type, plus the heal and immune rows | Popup colour (hex) and its contrast on black, the colour `Outline` starts from (against `Outline` itself from Phase 4); the resistance floor, cap, minimum damage and periodic popup scale from `CombatSettings` |
 | `Weapons.md` | `WeaponCatalog` | Index, damage and type, cooldown, windup, contact and recovery, cancel rules, attack range, delivery (area, or projectile speed, range and homing), abilities. Derived: attack period, damage per second, and hits and time to kill each mob prefab |
 | `Abilities.md` | Every `AbilityDefinition` | Used by (class slot or weapon), targeting and filter, range, cast time, cooldown, movement, bufferable, effect (damage and type, heal, statuses, area), cast clips. Derived: damage per cooldown second |
 | `StatusEffects.md` | `StatusEffectCatalog` | Index, kind, tags, abbreviation, colour, description, duration, stacking and cap, periodic amount and interval, modifiers, controls, immunities. Derived: the raw periodic total at one stack and at the cap |
@@ -398,13 +399,26 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 1: generated design tables
 
-- [ ] The principles confirmed or rewritten with the user (Open questions).
-- [ ] `DesignTables` in `Assets/Editor/Design`: `Build()` and `Write()`, and the menu item `Tools/TopDownRPG/Design/Write Design Tables`. Markdown in the invariant culture, rows sorted by catalog index or by name.
-- [ ] `DamageTypes.md`, `Weapons.md`, `Abilities.md`, `StatusEffects.md` and `Units.md` written into `Docs/Generated`, with the derived columns resolved through `DamageMath`.
-- [ ] Architecture.md's restated values (the weapons' numbers, the `CombatSettings` values, the status table, the blank abilities' table, the Weasel's health) replaced with links to the tables. The plans keep theirs, as the record of what each phase chose.
-- [ ] Tests: `DesignTablesTests`:
+- [x] The principles confirmed or rewritten with the user (Open questions).
+- [x] `DesignTables` in `Assets/Editor/Design`: `Build()` and `Write()`, and the menu item `Tools/TopDownRPG/Design/Write Design Tables`. Markdown in the invariant culture, rows sorted by catalog index or by name.
+- [x] `DamageTypes.md`, `Weapons.md`, `Abilities.md`, `StatusEffects.md` and `Units.md` written into `Docs/Generated`, with the derived columns resolved through `DamageMath`.
+- [x] Architecture.md's restated values (the weapons' numbers, the `CombatSettings` values, the status table, the blank abilities' table, the Weasel's health) replaced with links to the tables. The plans keep theirs, as the record of what each phase chose.
+- [x] Tests: `DesignTablesTests`:
   - the committed files equal `Build()` after normalising line endings, and a mismatch names the menu item;
   - the derived columns on definitions from `Create`: a recovery longer than the cooldown setting the period, the time to kill, a periodic total with its tick on expiry.
+
+#### Phase 1 notes
+
+- **Principles.** Settled with the user on 2026-11-10: the four as drafted, and a fifth, Made in the project, from CLAUDE.md's art rule.
+- **What it is.** `DesignTables` builds the five files from `DesignContent` (the project's combat settings and status catalog, the weapon catalog, every ability and class under `Assets/Data`, and a `DesignUnit` per unit prefab in `Assets/Prefabs/Player` and `Assets/Prefabs/Mobs`); `DesignMath` holds the derived columns. Tests build their content from `Create`.
+- **Choices.**
+  - The tables show the values the game uses, through the definitions' getters, which clamp. Phase 2's `ContentTests` reads the serialized values instead.
+  - The contrast column is measured on black, the colour `Outline` starts from, until Phase 4's theme names it.
+  - A mob's attack period counts its whole timeline, since its recovery always plays out (`MeleeDamageDealer` starts its attacks with the recovery not cancellable).
+  - Slots are named by their default keys (Q, W, E, R for a class, 1 and 2 for a weapon), and classes by their asset name, since `PlayerClass` has had no display name since KnownGaps.md's Phase 1.
+  - A status's abbreviation is the first two letters of its display name, so Phase 2's unique abbreviations come down to names that differ in their first two letters.
+- **What the tables show today.** Every weapon's period and the Weasel's is its cooldown. A Sword kills a Weasel in 5 hits (1.55 s), a Greatsword in 3 (2.2 s) and a Longbow in 5 (3.55 s, plus the arrows' flight); a Weasel kills a player in 10 (7.2 s). The Physical popup red, at 3.11:1 on black, is the only popup colour under 4.5:1.
+- **Tests.** `DesignTablesTests` (9 tests): the committed tables against `Build()`, with no other file in the folder, its message naming the menu item (a table edited by hand fails it); the attack period with and without a recovery orders may end; hits and time to kill; the periodic tick count against the ticks `StatusEffectSet` deals; known contrast ratios; tables built from `Create` content.
 
 ### Phase 2: content checks and tuning views
 
@@ -441,7 +455,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - [ ] `UiTheme` (`Assets/Data/UI/UiTheme.asset`) with the `UiColour` roles, the `UiTextSize` scale and the font. The merged roles, the Physical popup red and the placeholder settled on previews.
 - [ ] `ThemedText`, `ThemedGraphic` and `ThemedSelectable` on every UI text, image, sprite and control: the move marker, the hover ring, the world bar and the world status icons included. `AbilitySlotView`, `MoveMarker` and `PlayerHudView` keep roles instead of colours.
 - [ ] Damage popups, the waystone popup and other text over the world outlined in `Outline`.
-- [ ] `UiTheme.md` added to `DesignTables`.
+- [ ] `UiTheme.md` added to `DesignTables`, and `DamageTypes.md`'s contrast measured against `Outline`.
 - [ ] Tests: `UiThemeTests`, `UiContentTests`, `DesignTablesTests` with `UiTheme.md`, and the views' tests on a theme from `Create`.
 
 ### Phase 5: skin and components
@@ -518,9 +532,8 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ## Open questions
 
-Each is settled with the user at the start of the phase named.
+Each is settled with the user at the start of the phase named. The principles were settled in Phase 1.
 
-- **Principles** (Phase 1). Confirm or rewrite them. They are drawn from the specs, not stated anywhere yet.
 - **Balance targets** (Phase 2). Should specs carry numeric targets ("three to five sword hits per Weasel") that a test checks against the derived columns? If so, the tests that pin asset values today (`DamageResolutionTests`, `AbilityEffectTests`) become those checks instead of restating the assets.
 - **Control size** (Phase 3). Is 12 UI px (36 px at 1080p) the right minimum for buttons, rows and slots?
 - **Font** (Phase 4). Keep LiberationSans (smooth text over pixel art), or move to a pixel font under OFL, which would make body heights exact and its outline drawn in? Decide on the previews.

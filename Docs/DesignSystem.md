@@ -1,6 +1,6 @@
 # Design system
 
-**Proposal (2026-11-03), not adopted yet.** It was revised after an independent review the same day (see Tools considered). [Roadmap.md](Roadmap.md) lists it as a proposal. Once adopted, add it to CLAUDE.md's list of specs, tick off the phase checklist as steps land, and move each settled behaviour into [Architecture.md](Architecture.md) as its code arrives.
+Plan for the game's design system, adopted on 2026-11-10. It was proposed on 2026-11-03 and revised after an independent review the same day (see Tools considered). Tick off the phase checklist as steps land, and move each settled behaviour into [Architecture.md](Architecture.md) as its code arrives.
 
 The game's design system has three parts:
 

@@ -13,11 +13,14 @@ public class KeyBindingRowView : MonoBehaviour
     [SerializeField] private Button bindingButton;
     [SerializeField] private TMP_Text bindingText;
     [SerializeField] private Button resetButton;
+    [SerializeField, Tooltip("The chip a swatch row shows its swatch in, beside its button; none on other rows.")]
+    private Image swatch;
 
     public Button BindingButton => bindingButton;
     public Button ResetButton => resetButton;
     internal TMP_Text Label => label;
     internal TMP_Text BindingText => bindingText;
+    internal Image Swatch => swatch;
 
     /// <summary>
     /// Logs an error when the label, binding button, binding text or reset button is missing.
@@ -49,6 +52,17 @@ public class KeyBindingRowView : MonoBehaviour
         if (bindingText != null)
         {
             bindingText.text = text;
+        }
+    }
+
+    /// <summary>
+    /// Shows <paramref name="colour"/> in the row's swatch chip, when it has one.
+    /// </summary>
+    public void SetSwatch(Color colour)
+    {
+        if (swatch != null)
+        {
+            swatch.color = colour;
         }
     }
 }

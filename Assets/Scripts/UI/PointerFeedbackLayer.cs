@@ -4,42 +4,46 @@ using UnityEngine.Pool;
 
 /// <summary>
 /// Local-only pointer feedback in the Gameplay scene: a pooled <see cref="MoveMarker"/> per move click or attack move,
-/// a ring under the hovered enemy and the attack cursor. Passive: <see cref="PointerFeedbackPresenter"/> decides what to show.
+/// each from its own prefab and pool (a move's chevrons, an attack move's crossed ring), the hover marker under the
+/// hovered enemy and the attack cursor. Passive: <see cref="PointerFeedbackPresenter"/> decides what to show.
 /// </summary>
 [DisallowMultipleComponent]
 public class PointerFeedbackLayer : MonoBehaviour
 {
-    [SerializeField] private MoveMarker markerPrefab;
-    [SerializeField, Min(0)] private int prewarmCount = 4;
-    [SerializeField, Tooltip("Ring placed under the hovered enemy; hidden otherwise.")]
+    [SerializeField, Tooltip("The marker a move order drops.")] private MoveMarker markerPrefab;
+    [SerializeField, Tooltip("The marker an attack move order drops.")] private MoveMarker attackMarkerPrefab;
+    [SerializeField, Min(0), Tooltip("How many markers of each kind the pools hold from the start.")] private int prewarmCount = 4;
+    [SerializeField, Tooltip("The hover marker placed under the hovered enemy; hidden otherwise.")]
     private SpriteRenderer hoverRing;
     [SerializeField] private Texture2D attackCursor;
     [SerializeField] private Vector2 attackCursorHotspot = new(16f, 16f);
 
-    private readonly List<MoveMarker> active = new();
+    private readonly List<(MoveMarker marker, bool attack)> active = new();
     private ObjectPool<MoveMarker> pool;
+    private ObjectPool<MoveMarker> attackPool;
     private Transform hovered;
     private bool attackCursorShown;
 
     internal int ActiveMarkerCount => active.Count;
-    internal int PooledMarkerCount => pool != null ? pool.CountInactive : 0;
+    internal int PooledMarkerCount => (pool != null ? pool.CountInactive : 0) + (attackPool != null ? attackPool.CountInactive : 0);
     internal Transform Hovered => hovered;
     internal bool AttackCursorShown => attackCursorShown;
     internal SpriteRenderer HoverRing => hoverRing;
 
     /// <summary>
-    /// Logs an error when the marker prefab, hover ring or attack cursor is missing, prewarms the marker pool and
-    /// hides the hover ring.
+    /// Logs an error when a marker prefab, the hover marker or the attack cursor is missing, prewarms the marker pools
+    /// and hides the hover marker.
     /// </summary>
     private void Awake()
     {
-        if (markerPrefab == null || hoverRing == null || attackCursor == null)
+        if (markerPrefab == null || attackMarkerPrefab == null || hoverRing == null || attackCursor == null)
         {
-            Debug.LogError($"{name} needs a marker prefab, a hover ring and an attack cursor.", this);
+            Debug.LogError($"{name} needs a move marker, an attack move marker, a hover marker and an attack cursor.", this);
         }
 
         EnsurePool();
-        Prewarm();
+        Prewarm(pool, markerPrefab);
+        Prewarm(attackPool, attackMarkerPrefab);
         SetHovered(null);
     }
 
@@ -52,29 +56,30 @@ public class PointerFeedbackLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Forgets the active markers and disposes the pool, destroying the inactive markers it holds.
+    /// Forgets the active markers and disposes the pools, destroying the inactive markers they hold.
     /// </summary>
     private void OnDestroy()
     {
         active.Clear();
         pool?.Dispose();
+        attackPool?.Dispose();
     }
 
     /// <summary>
-    /// Shows a pooled move marker at <paramref name="position"/>, in the attack move colour when
-    /// <paramref name="attackMove"/> is set. Does nothing without a marker prefab.
+    /// Shows a pooled marker at <paramref name="position"/>: the attack move marker when <paramref name="attackMove"/> is
+    /// set, the move marker otherwise. Does nothing without that marker's prefab.
     /// </summary>
     public void SpawnMarker(Vector2 position, bool attackMove = false)
     {
         EnsurePool();
-        if (markerPrefab == null)
+        if ((attackMove ? attackMarkerPrefab : markerPrefab) == null)
         {
             return;
         }
 
-        MoveMarker marker = pool.Get();
-        marker.Show(position, attackMove);
-        active.Add(marker);
+        MoveMarker marker = (attackMove ? attackPool : pool).Get();
+        marker.Show(position);
+        active.Add((marker, attackMove));
     }
 
     /// <summary>
@@ -118,7 +123,7 @@ public class PointerFeedbackLayer : MonoBehaviour
     {
         for (int i = active.Count - 1; i >= 0; i--)
         {
-            MoveMarker marker = active[i];
+            (MoveMarker marker, bool attack) = active[i];
             if (!marker.Advance(deltaTime))
             {
                 continue;
@@ -127,36 +132,39 @@ public class PointerFeedbackLayer : MonoBehaviour
             int last = active.Count - 1;
             active[i] = active[last];
             active.RemoveAt(last);
-            pool.Release(marker);
+            (attack ? attackPool : pool).Release(marker);
         }
     }
 
     /// <summary>
-    /// Assigns the marker prefab, hover ring and attack cursor in code, for tests that build the layer without a
+    /// Assigns the marker prefabs, hover marker and attack cursor in code, for tests that build the layer without a
     /// prefab.
     /// </summary>
-    internal void Configure(MoveMarker prefab, SpriteRenderer ring, Texture2D cursor)
+    internal void Configure(MoveMarker prefab, MoveMarker attackPrefab, SpriteRenderer ring, Texture2D cursor)
     {
         markerPrefab = prefab;
+        attackMarkerPrefab = attackPrefab;
         hoverRing = ring;
         attackCursor = cursor;
         EnsurePool();
     }
 
     /// <summary>
-    /// Creates the marker pool on first use; markers are activated when taken and deactivated when returned.
+    /// Creates the marker pools on first use; markers are activated when taken and deactivated when returned.
     /// </summary>
     private void EnsurePool()
     {
-        pool ??= new ObjectPool<MoveMarker>(CreateMarker, marker => marker.gameObject.SetActive(true), marker => marker.gameObject.SetActive(false), DestroyMarker);
+        pool ??= new ObjectPool<MoveMarker>(() => CreateMarker(markerPrefab), Activate, Deactivate, DestroyMarker);
+        attackPool ??= new ObjectPool<MoveMarker>(() => CreateMarker(attackMarkerPrefab), Activate, Deactivate, DestroyMarker);
     }
 
     /// <summary>
-    /// Fills the pool with the configured number of inactive markers so the first clicks do not instantiate.
+    /// Fills <paramref name="markers"/> with the configured number of inactive copies of <paramref name="prefab"/> so
+    /// the first clicks do not instantiate.
     /// </summary>
-    private void Prewarm()
+    private void Prewarm(ObjectPool<MoveMarker> markers, MoveMarker prefab)
     {
-        if (markerPrefab == null)
+        if (prefab == null)
         {
             return;
         }
@@ -164,23 +172,39 @@ public class PointerFeedbackLayer : MonoBehaviour
         List<MoveMarker> warm = new(prewarmCount);
         for (int i = 0; i < prewarmCount; i++)
         {
-            warm.Add(pool.Get());
+            warm.Add(markers.Get());
         }
 
         foreach (MoveMarker marker in warm)
         {
-            pool.Release(marker);
+            markers.Release(marker);
         }
     }
 
     /// <summary>
-    /// Pool factory: instantiates an inactive marker under this layer.
+    /// Pool factory: instantiates an inactive copy of <paramref name="prefab"/> under this layer.
     /// </summary>
-    private MoveMarker CreateMarker()
+    private MoveMarker CreateMarker(MoveMarker prefab)
     {
-        MoveMarker marker = Instantiate(markerPrefab, transform);
+        MoveMarker marker = Instantiate(prefab, transform);
         marker.gameObject.SetActive(false);
         return marker;
+    }
+
+    /// <summary>
+    /// Pool callback: shows a marker taken from its pool.
+    /// </summary>
+    private static void Activate(MoveMarker marker)
+    {
+        marker.gameObject.SetActive(true);
+    }
+
+    /// <summary>
+    /// Pool callback: hides a marker returned to its pool.
+    /// </summary>
+    private static void Deactivate(MoveMarker marker)
+    {
+        marker.gameObject.SetActive(false);
     }
 
     /// <summary>

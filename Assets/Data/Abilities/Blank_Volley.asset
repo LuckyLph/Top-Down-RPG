@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::AbilityDefinition
   displayName: Blank Volley
   icon: {fileID: 0}
+  description: Looses a volley of arrows at a point, dealing Physical damage to every
+    enemy around it.
   cooldown: 5
   castTime: 0.35
   targeting: 2

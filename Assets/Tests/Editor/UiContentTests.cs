@@ -7,14 +7,16 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Content checks for the UI (Docs/DesignSystem.md, Phase 4 and Accessibility), on the UI prefabs, the mobs' world UI
-/// and the menu scenes, which are only read: every text, image, world UI sprite and control is themed with the
-/// project's theme, no text auto-sizes, is bold, or is italic or in capitals below Title, every UI canvas keeps the UI
-/// scale, and every control is large enough and reachable.
+/// Content checks for the UI (Docs/DesignSystem.md, Phases 4 and 5, and Accessibility), on the UI prefabs (the
+/// components among them), the mobs' world UI and the menu scenes, which are only read: every text, image, world UI
+/// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
+/// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
+/// enough and reachable, and the marker kinds are different shapes.
 /// </summary>
 public class UiContentTests
 {
     private static readonly string[] PrefabFolders = { "Assets/Prefabs/UI", "Assets/Prefabs/Mobs" };
+    private const string Components = "Assets/Prefabs/UI/Components/";
 
     private readonly List<(string where, GameObject root)> roots = new();
     private readonly List<UnityEngine.SceneManagement.Scene> opened = new();
@@ -145,7 +147,7 @@ public class UiContentTests
     }
 
     /// <summary>
-    /// The world UI's sprites (the world health bar and its status icons, the move marker and the hover ring) have a
+    /// The world UI's sprites (the world health bar and its status pips, the markers and the hover marker) have a
     /// <see cref="ThemedGraphic"/> with the project's theme.
     /// </summary>
     [Test]
@@ -161,9 +163,9 @@ public class UiContentTests
                 sprites.AddRange(bar.GetComponentsInChildren<SpriteRenderer>(true));
             }
 
-            foreach (MoveMarker marker in root.GetComponentsInChildren<MoveMarker>(true))
+            if (where.StartsWith(Components))
             {
-                sprites.Add(marker.GetComponent<SpriteRenderer>());
+                sprites.AddRange(root.GetComponentsInChildren<SpriteRenderer>(true));
             }
 
             foreach (PointerFeedbackLayer layer in root.GetComponentsInChildren<PointerFeedbackLayer>(true))
@@ -182,7 +184,7 @@ public class UiContentTests
             }
         }
 
-        Assert.That(count, Is.GreaterThanOrEqualTo(8), "The Weasel's bar and four icons, the move marker and the hover ring.");
+        Assert.That(count, Is.GreaterThanOrEqualTo(10), "The Weasel's bar and four pips, the markers and the hover marker.");
         Assert.That(problems, Is.Empty, string.Join("\n", problems));
     }
 
@@ -215,6 +217,68 @@ public class UiContentTests
         }
 
         Assert.That(problems, Is.Empty, string.Join("\n", problems));
+    }
+
+    /// <summary>
+    /// Every UI image draws a sprite of the skin (Assets/Sprites/UI/Skin) or none: the views give icons at runtime.
+    /// </summary>
+    [Test]
+    public void EveryImage_DrawsTheSkinOrNothing()
+    {
+        List<string> problems = new();
+        foreach ((string where, Image image) in All<Image>())
+        {
+            string sprite = image.sprite != null ? AssetDatabase.GetAssetPath(image.sprite) : null;
+            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/"))
+            {
+                problems.Add($"{where}: {Path(image.transform)} draws {sprite}.");
+            }
+        }
+
+        Assert.That(problems, Is.Empty, string.Join("\n", problems));
+    }
+
+    /// <summary>
+    /// The move, attack move and hover markers are three prefabs, each drawing its own skin shape in its role (so
+    /// colour is never the only cue), and the Gameplay scene's pointer feedback drops the move and attack move markers
+    /// and puts a hover marker under the hovered enemy.
+    /// </summary>
+    [Test]
+    public void TheMarkerKinds_HaveDifferentSprites()
+    {
+        (string prefab, UiSkinPiece piece, UiColour role)[] kinds =
+        {
+            ("MarkerMove", UiSkinPiece.MarkerMove, UiColour.Positive),
+            ("MarkerAttackMove", UiSkinPiece.MarkerAttackMove, UiColour.Danger),
+            ("MarkerHover", UiSkinPiece.MarkerHover, UiColour.Danger),
+        };
+        HashSet<Sprite> sprites = new();
+        foreach ((string prefab, UiSkinPiece piece, UiColour role) in kinds)
+        {
+            GameObject marker = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}{prefab}.prefab");
+            SpriteRenderer renderer = marker.GetComponent<SpriteRenderer>();
+            Assert.That(renderer.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(piece))), $"{prefab} draws its shape.");
+            Assert.That(sprites.Add(renderer.sprite), Is.True, $"{prefab} has a sprite of its own.");
+            Assert.That(marker.GetComponent<ThemedGraphic>().Role, Is.EqualTo(role), $"{prefab} role.");
+            MoveMarker moving = marker.GetComponent<MoveMarker>();
+            if (moving != null)
+            {
+                Assert.That(moving.Role, Is.EqualTo(role), $"{prefab} fades in its role.");
+            }
+        }
+
+        PointerFeedbackLayer layer = null;
+        foreach ((string where, PointerFeedbackLayer found) in All<PointerFeedbackLayer>())
+        {
+            layer = found;
+        }
+
+        Assert.That(layer, Is.Not.Null, "The Gameplay scene's pointer feedback.");
+        SerializedObject serialized = new(layer);
+        Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("markerPrefab").objectReferenceValue), Is.EqualTo($"{Components}MarkerMove.prefab"));
+        Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("attackMarkerPrefab").objectReferenceValue), Is.EqualTo($"{Components}MarkerAttackMove.prefab"));
+        SpriteRenderer hover = (SpriteRenderer)serialized.FindProperty("hoverRing").objectReferenceValue;
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(hover.gameObject), Is.EqualTo($"{Components}MarkerHover.prefab"));
     }
 
     /// <summary>

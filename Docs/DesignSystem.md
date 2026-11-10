@@ -97,7 +97,8 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
 | Font | Galmuri, a pixel font (SIL OFL 1.1), in four sizes: a static SDF font asset of each in `Assets/Fonts`, with the atlas padding a 1 UI px outline needs and an outlined material preset. The theme holds a font per text size. Chosen in Phase 4 over LiberationSans, which TMP keeps as its default. |
 | Colour | UI code and prefabs name colour roles, never raw colours. Damage-type, status and waystone colours stay on their gameplay assets but follow the same contrast and never-colour-alone rules. |
 | Theme | **Asset:** a read-only `UiTheme` in Gameplay holds the colour roles, the text sizes and the font.<br>**Applying it:** themed components reference the asset and set their own instance once when they wake. Nothing reads the theme per frame, and no tool writes it into prefabs or scenes.<br>**Edit mode:** prefabs show their serialized values in the editor; Phase 4's conversion set them to the theme's once. |
-| UI art | Generated in the editor from a recipe, like every other sprite: 9-sliced frames, bars and outlines in greyscale, tinted by role. |
+| UI art | Generated in the editor from a recipe, like every other sprite: 9-sliced frames, bars and outlines in greyscale, tinted by role (`UiSkinRecipe`, Phase 5). |
+| Damage types on popups | A popup shows its hit's damage type by colour alone, and shows neither the type nor the `Resisted` and `Weakness` flags otherwise. Settled in Phase 5 on previews of a type icon and of arrows for the flags: left as it was. |
 | Accessibility baseline | The Game Accessibility Guidelines' basic items listed under Accessibility, plus XAG 101's text size and XAG 102's contrast. We link and paraphrase them rather than copy their text. |
 | Preferences | UI size (Phase 3); reduce flashing and reduce motion (Phase 6). They are local, saved in `settings.json`, and never replicated. |
 | Diagrams | Mermaid. Use `stateDiagram-v2` for state machines and lifecycles, `sequenceDiagram` for host and client messages, and `flowchart` for flows and scope graphs. Timelines are tables. |
@@ -141,7 +142,7 @@ These are the words every spec uses with one meaning. A new building block adds 
 |---|---|---|
 | `DamageTypes.md` | Each damage type, plus the heal and immune rows | Popup colour (hex) and its contrast on the theme's `Outline`; the resistance floor, cap, minimum damage and periodic popup size from `CombatSettings` |
 | `Weapons.md` | `WeaponCatalog` | Index, damage and type, cooldown, windup, contact and recovery, cancel rules, attack range, delivery (area, or projectile speed, range and homing), abilities. Derived: attack period, damage per second, and hits and time to kill each mob prefab |
-| `Abilities.md` | Every `AbilityDefinition` | Used by (class slot or weapon), targeting and filter, range, cast time, cooldown, movement, bufferable, effect (damage and type, heal, statuses, area), cast clips. Derived: damage per cooldown second |
+| `Abilities.md` | Every `AbilityDefinition` | Used by (class slot or weapon), targeting and filter, range, cast time, cooldown, movement, bufferable, effect (damage and type, heal, statuses, area), cast clips. Derived: damage per cooldown second. Then each ability's description (Phase 5) |
 | `StatusEffects.md` | `StatusEffectCatalog` | Index, kind, tags, abbreviation, colour, description, duration, stacking and cap, periodic amount and interval, modifiers, controls, immunities. Derived: the raw periodic total at one stack and at the cap |
 | `Units.md` | The player and mob prefabs | Health, combat profile (resistances and immunities), attack (damage, type, interval, timeline), move speeds. Derived: the time one mob takes to kill a player |
 | `UiTheme.md` | Each colour role and text size, then each pair of roles a themed text uses | A role's colour and opacity; a size's font, UI px and body height at 1080p; a pair's smallest size, contrast and threshold (`UiThemeUsage`) |
@@ -168,7 +169,7 @@ The test's failure message names the menu item, and says to regenerate after a m
 2. **Ids.** A kind that crosses the wire has a list whose index is the id: a catalog, or a definition's own list (the colour choices and swatches, the parts' options). Entries are appended, never reordered or replaced. The ids only hold between machines on the same build, since join approval does not compare builds while the version stays fixed. Saves name assets by GUID, and the settings file names choices by name.
 3. **Shared values.** Values shared across a system (floors, caps, layers, popup colours) live in that system's one settings asset (`CombatSettings`, `HitFeedbackSettings`), not on each definition.
 4. **Building blocks.** A definition only combines building blocks. It holds no game logic of its own (derived helpers such as `PlayerWeapon.HitCentre` are fine). A new block is added in its spec first. Then it gets a vocabulary row, a `Create` parameter, tests and a column in its generated table.
-5. **Display text.** Every definition or option players see (a swatch, a colour choice, a part) has a display name unique within its kind or list. Every status has an abbreviation unique among statuses and a description, because the HUD and its tooltips show them.
+5. **Display text.** Every definition or option players see (a swatch, a colour choice, a part) has a display name unique within its kind or list. Every status has an abbreviation unique among statuses and a description, and every ability a description, because the HUD and its tooltips show them.
 
 ### Adding content
 
@@ -236,7 +237,7 @@ Further rules:
 |---|---|---|
 | `Text` | White | Light text on dark panels, and the rows' off-white |
 | `TextOnControl` | (0.1, 0.1, 0.12) | The dark button labels |
-| `TextMuted`, `TextDisabled` | Light and mid greys, unused until Phase 5's components | Secondary and disabled text |
+| `TextMuted`, `TextDisabled` | Light and mid greys: `TextMuted` for the tooltips' descriptions (Phase 5); `TextDisabled` unused yet | Secondary and disabled text |
 | `Placeholder` | `#595959`, 4.9:1 on the field | The join field's placeholder (about 2.9:1, and italic) |
 | `Accent` | (1, 0.85, 0.4) | Section headers, the notices and the main menu's status line, the HUD's key labels (a paler yellow), the selected control |
 | `Surface`, `SurfaceEmpty` | The filled slot frame (0.12, 0.12, 0.16) at 0.85; at 0.75 when empty, where it was 0.35, so a key label reads on bright ground | HUD frames, and the health panel's grey |
@@ -245,50 +246,52 @@ Further rules:
 | `Shade` | Black at 0.65 | Cooldown and elapsed fills (0.55), the weapon icon's mask (0.42), the scroll list's track |
 | `ControlNormal`, `ControlHighlighted`, `ControlPressed` | Today's button colour block | Button states (`Selected` uses `Accent`) |
 | `ControlDisabled` | An opaque grey, `#6E6E73`, where it was a translucent tint, so a label keeps 3.4:1 | A disabled button |
-| `Danger` | `#FF4D40` | The hover ring, the attack-move marker and the failure flash (at 0.6 opacity), three reds |
+| `ControlSecondary` | `#9E9E96`, dimmer than `ControlNormal`, 6.4:1 under `TextOnControl` | A secondary button's face (new in Phase 5) |
+| `Danger` | `#FF4D40` | The hover marker, the attack-move marker and the failure flash (at 0.6 opacity), three reds; a danger button's face since Phase 5 |
 | `Positive` | The move marker's green | |
 | `Health`, `HealthTrack` | The HUD's fill and track | The world bar's brighter fill and its frame |
 | `Icon` | White | Icons and art shown in their own colours (new) |
 | `IconMissing` | White at 0.25 | The missing weapon icon |
-| `Border` | White | The weapon slot's ring (new); Phase 5's frames |
+| `Border` | `#9A9EB3`, a grey-blue, settled on Phase 5's previews (white until then) | Every frame: panels, dialogs, slots, status icons, the health bar and the tooltip (new) |
 | `Outline` | Black | The outline of text drawn over the world, and of the HUD's status letters and stacks |
 
 The Physical popup red, 3.11:1 against the outline, became `#E64040` (5.17:1). It stays on `CombatSettings` with the other damage-type colours.
 
-**Art.** `UiSkinRecipe` is an editor recipe in the manner of the prop and terrain recipes.
-- It writes greyscale 9-sliced sprites into `Assets/Sprites/UI/Skin`, which the pixel art postprocessor imports at 32 PPU: a panel with a 1 UI px border and cut corners, a raised panel, a slot frame, a bar frame and fill, and marker shapes.
-- Images and SpriteRenderers tint them by role.
-- They replace `Square.png`.
-- The look is settled on previews first, as for any art.
-- Paddings and gaps are multiples of 2 UI px. Spacing becomes theme sizes only if the components show a need.
+**Art.** `UiSkinRecipe` is an editor recipe in the manner of the prop and terrain recipes (Phase 5).
+- It writes greyscale sprites into `Assets/Sprites/UI/Skin`, which the pixel art postprocessor imports at 32 PPU, so one sprite pixel is one UI px, or one art pixel in the world:
+  - 9-sliced, their corners cut by 1 px along a diagonal: a panel, the 1 px frame around it, a raised panel whose face sits on a 2 px darker lip, a slot frame with a dark line inside it, a bar's frame (the track its fill sits in) and its fill;
+  - shown whole: the three marker shapes and a 5 px pip.
+- Images and SpriteRenderers tint them by role. A fill is white, so it shows its role's colour exactly and the contrast measured on a role is what shows; only edges are shaded.
+- They replaced `Square.png`, the HUD's other smooth sprites and the world bar's `RoundedBar.png`.
+- Paddings and gaps are multiples of 2 UI px. The components showed no need for spacing in the theme.
 
 ### Components
 
-UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with prefab variants for real variation. A component prefab carries its text size and font; a change to the Button prefab reaches every button.
+UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with prefab variants for real variation. A component prefab carries its themed components, text size and font; a change to the Button prefab reaches every button.
 
-| Component | Today | Variants |
+| Component | Prefabs | Used by |
 |---|---|---|
-| Button | Built in place in each menu | Primary, Secondary, Danger |
-| Panel | Plain rectangles | Surface, Raised, Scrim, Modal scrim |
-| Dialog | The in-game menu's and the options screen's confirmations | One, with a question, a confirm label and Cancel |
-| Section header | `OptionsSectionHeader` | |
-| Row | `KeyBindingRow`, which also serves the Look, part and colour rows | Binding, Choice (Look, parts, UI size), Swatch (colours, the swatch shown beside its name), Toggle (reduce flashing, reduce motion) |
-| Scroll list | The options screen's list (Phase 3): a `ScrollRect`, its rows' buttons with `ScrollIntoView` | One, keeping the selected row in view |
-| Notice line | In the options screen, and the main menu's status line | |
-| Slot | `AbilitySlotView` in the HUD | |
-| Status icon | `StatusIconView` in the HUD | |
-| Tooltip | None | Shows a status's or an ability's name and description while the pointer is over its icon or slot, or it is selected. The status row then blocks clicks, as the ability bar does. |
-| Bar | The HUD's health fill | Screen (HUD), World (`WorldHealthBar` takes the same roles) |
-| Popup text | `DamagePopup` | |
-| Marker | `MoveMarker`, the hover ring | Move, Attack move, Hover, each a different shape |
+| Button | `Button` (Primary: raised, `ControlNormal`), its variants `ButtonSecondary` (flat, `ControlSecondary`), `ButtonDanger` (raised, `Danger`) and `ButtonLarge` (Primary with `Heading` text, 160 x 20) | Primary: the in-game menu, Back, a row's value. Secondary: Cancel, a row's Reset, Reset all. Danger: a dialog's confirm. Large: the main menu, whose buttons are `Heading` since Phase 3 |
+| Panel | `Panel` (`Surface`, framed in `Border`), its variants `PanelRaised` (`SurfaceRaised`) and `Scrim` (full screen, no sprite or frame), and `ScrimModal`, a variant of `Scrim` | Menu boxes and full-screen panels are raised; the in-game menu's dimmer is a scrim; the listening panel a modal scrim |
+| Dialog | `Dialog`, a variant of `ScrimModal`: a raised box with its question, a danger confirm and a secondary Cancel | The in-game menu's and the options screen's confirmations |
+| Section header | `SectionHeader` (was `OptionsSectionHeader`) | The options screen |
+| Row | `Row` (a label, a value button and Reset; was `KeyBindingRow`) and its variant `RowSwatch` (a 12 UI px chip showing the swatch before the value) | Binding and choice rows share `Row`, since they look the same; colour rows are swatch rows. Toggle waits for Phase 6, which first uses it |
+| Scroll list | `ScrollList`: a `ScrollRect`, its viewport, its rows and scrollbar | The options screen |
+| Notice line | `NoticeLine` | The options screen's notice, and the main menu's status line (at `Heading`) |
+| Slot | `Slot` (frame, icon, slot frame) and its variant `SlotAbility` (`AbilitySlotView`: name, cooldown fill and seconds, key, failure flash, tooltip) | The weapon slot is a `Slot`; the six ability slots are `SlotAbility` |
+| Status icon | `StatusIcon` (`StatusIconView`, its frame taking the click, and a tooltip) | The HUD's status row |
+| Tooltip | `Tooltip` (`HudTooltip`: a raised panel with a title in `Accent` and a description in `TextMuted`, 150 UI px wide) | Shows a status's or an ability's name and description while the pointer is over its icon or slot, or it is selected. The status row blocks clicks, as the ability bar does |
+| Bar | `Bar` (screen: a frame, a fill, a frame in `Border` and the HP text) and `WorldBar` (world: `WorldHealthBar` and `WorldStatusIcons`, a 22 x 4 art px bar with its 20 x 2 fill and four pips above it) | The HUD's health bar; the Weasel's bar |
+| Popup text | `PopupText` (was `DamagePopup`) | Damage, heal and immune popups and the waystone notice |
+| Marker | `Marker` and its variants `MarkerMove` (four chevrons pointing in, `Positive`), `MarkerAttackMove` (a variant of `MarkerMove`: the ring crossed by four ticks, `Danger`) and `MarkerHover` (four brackets on the ring's diagonals, `Danger`) | Each a different shape, so colour is never the only cue |
 
 The themed components:
 
 - **`ThemedText`:** a TMP text's colour role, background role and size. It sets the font, size, colour and outline (the size's outlined material preset when the background is `Outline`) on its own instance when it wakes, and snaps its glyphs to whole UI px each time its text is built. Views that change a text's size call `SetSize` and `ResetSize`.
 - **`ThemedGraphic`:** an Image's or a SpriteRenderer's role.
-- **`ThemedSelectable`:** a Selectable's colour block, set from the control roles.
+- **`ThemedSelectable`:** a Selectable's colour block, set from the control roles: its own normal role (`ControlNormal`, `ControlSecondary` or `Danger`, since Phase 5) and the shared highlighted, pressed, selected and disabled ones.
 
-Each references the `UiTheme` asset directly, so pooled prefabs that are never injected (the move marker) work too. Views that pick colours at runtime (the failure flash, the marker kinds, the missing weapon tint) also reference the theme, and read their roles' colours once when they wake. A control's target graphic stays white, its colour block holding the roles.
+Each references the `UiTheme` asset directly, so pooled prefabs that are never injected (the markers) work too. Views that pick colours at runtime (the failure flash, the marker kinds, the missing weapon tint) also reference the theme, and read their roles' colours once when they wake. A control's target graphic stays white, its colour block holding the roles.
 
 ### Patterns
 
@@ -314,8 +317,8 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
   - The HUD shows only the local player.
   - Other players' state will show above their units in the world. Players have no world bar yet (Later).
 - **Never colour alone.** A colour that carries meaning comes with a shape, an icon, a label or a size.
-  - **Phase 5:** the move, attack-move and hover markers get different shapes, and HUD statuses get tooltips.
-  - **Known gaps:** world status icons and auras stay colour-only until statuses have icon art (Later), and a popup's damage type stays colour-only (Open questions).
+  - **Since Phase 5:** the move, attack-move and hover markers are different shapes, and the HUD's statuses and abilities have tooltips.
+  - **Known gaps:** world status icons and auras stay colour-only until statuses have icon art (Later). A popup's damage type stays colour-only, and its `Resisted` and `Weakness` flags unshown, as settled in Phase 5 (Decisions): a hit's weapon or ability tells its type.
 
 ### Accessibility
 
@@ -323,7 +326,7 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
 |---|---|---|
 | Text size | A body height (ascender to descender) of at least 18 px per 1080 display lines, by default (XAG 101's PC minimum): `Caption` at the chosen zoom | `UiScale`'s zoom rule; `UiThemeTests` (from the theme font's glyphs); `UiContentTests` (every text themed, none auto-sizing) |
 | Contrast | **Text:** 4.5:1 under `Title`, 3:1 for `Title` and above (XAG 102's large text is a 36 px body at 1080p).<br>**Shapes that carry meaning:** 4.5:1 when small, 3:1 when large.<br>**Others:** 3:1 for disabled text; 4.5:1 for placeholders.<br>Text over the world is measured against its outline. | `UiThemeTests` through `UiThemeUsage`: every pair of text role and background role that a `ThemedText` uses (a translucent background over white and over black, the lower ratio; a control in its normal, highlighted, selected and disabled states), and the damage-type, heal, immune and waystone colours against `Outline` |
-| Never colour alone | Essential information also has a shape, icon, label or size (Game Accessibility Guidelines, basic) | Patterns above; `ContentTests`: every status has a unique abbreviation and a description |
+| Never colour alone | Essential information also has a shape, icon, label or size (Game Accessibility Guidelines, basic) | Patterns above; `ContentTests`: every status has a unique abbreviation and a description, and every ability a description; `UiContentTests`: the marker kinds draw different sprites |
 | Flashing | Nothing flashes more than three times a second over more than a quarter of a 10° field, about 2.8% of a 1080p display (WCAG 2.3.1; Game Accessibility Guidelines, basic) | **Hit flash:** one unit flashes, about 0.5% of the display.<br>**Light flicker:** steps 8 times a second by at most 15% of a light's strength, likely under WCAG's 10% luminance change; measured on the Phase 6 previews.<br>**Reduce flashing:** also stills it. |
 | Controls | At least 12 UI px in each direction and 2 UI px apart. Our number; the guidelines ask "large and well spaced" without one. | `UiContentTests` on every Selectable in the UI prefabs and menu scenes, the scroll list's scrollbar excepted (it shows the list's place; the list scrolls with the selection and the wheel) |
 | Reachable UI | Menus work with keyboard and gamepad alone | `UiContentTests`: no Selectable but that scrollbar has navigation off |
@@ -361,7 +364,8 @@ There are new rows in a Display section of the options screen. Each is saved at 
   - It has getters only and a `Create(...)` factory for tests.
   - It lives in Gameplay because Core does not reference TextMesh Pro.
 - `ThemedText`, `ThemedGraphic`, `ThemedSelectable`: described under Components. They change only their own instance and have no `Update`.
-- `AbilitySlotView`, `MoveMarker` and `PlayerHudView` swap their colour fields for roles and a theme reference.
+- `AbilitySlotView`, `MoveMarker` and `PlayerHudView` swap their colour fields for roles and a theme reference. Each marker prefab names its own role (Phase 5).
+- `HudTooltip`, `TooltipTrigger` and `ITooltipSource` (Phase 5): a trigger on a slot or status icon shows the HUD's tooltip for the view on its object (`AbilitySlotView`, `StatusIconView`) while the pointer is over it or it is selected, and follows its changes. Local, never replicated.
 - `FloatingDamageText` takes a text size per popup, through its `ThemedText`, and places itself on whole UI px.
 
 ### Editor (`Assets/Editor/Design`, `Assets/Editor/UI`)
@@ -370,7 +374,7 @@ There are new rows in a Display section of the options screen. Each is saved at 
 - `DesignSearches`: the tuning views, a menu item per kind under `Tools/TopDownRPG/Design/Tune/` (`ViewState(kind)`, `Table(context, kind)`).
 - `UiFonts`: `Tools/TopDownRPG/UI/Write Fonts` writes the font assets and their outlined presets (Phase 4).
 - `UiThemeUsage`: the themed texts of the prefabs and menu scenes, and the contrast of each pair of roles they use, for `DesignTables` and `UiThemeTests` (Phase 4).
-- `UiSkinRecipe` and its writer: Generate writes the skin sprites.
+- `UiSkinRecipe`, `UiSkinWriter` and the recipe's inspector (Phase 5): `Assets/Settings/UI/Recipe_UiSkin.asset`. `Generate(piece)` draws a piece without touching an asset; Generate writes every piece and sets its 9-slice border.
 
 ### Font
 
@@ -394,11 +398,11 @@ Galmuri by Lee Minseo, under the SIL Open Font License 1.1, which allows it in a
 - **The weapon slot's transparent image**, which drew nothing, was removed in Phase 4.
 - **Canvases** move to `UiPixelScale`: `PlayerHudCanvas` (1920 x 1080), `GameMenuCanvas` and `MainMenuCanvas` (640 x 360), and `DamagePopupCanvas` (constant pixel size).
   - In Phase 3 the HUD was converted to UI px, with its slots grown so `Caption` text fits (Phase 3 notes).
-  - It is redesigned once, from the components, in Phase 5.
+  - It was redesigned once, from the components, in Phase 5.
   - The fader keeps its own canvas (`TransitionCanvas`). It has no text or art to scale.
 - **The options screen** is titled "Options" and its rows move into a scroll list (Phase 3).
 - **Scenes.** `Main.unity`, `MainMenu.unity` and `Gameplay.unity` are edited through the editor, and the diff is checked for save churn before committing.
-- **`Square.png`** is removed with its `.meta` once nothing references it.
+- **`Square.png`** was removed with its `.meta` in Phase 5, with the HUD's `HealthBarFill.png`, `WeaponSlotRing.png` and `WeaponSlotMask.png`, the world bar's `RoundedBar.png` (and its folder, `Assets/Textures/UI`) and `MoveMarker.prefab`, once nothing referenced them. `OptionsSectionHeader`, `KeyBindingRow` and `DamagePopup` moved into the components as `SectionHeader`, `Row` and `PopupText`, keeping their GUIDs.
 - **Architecture.md:**
   - The asset values it restates (the weapons' numbers, the status table, the blank abilities' table) become links to `Docs/Generated` in Phase 1.
   - The UI, configs, editor tools, settings and tests sections change with each phase, and so do the scopes' auto-inject lists.
@@ -508,16 +512,53 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 
 ### Phase 5: skin and components
 
-- [ ] Damage types on popups settled with the user on previews (Open questions).
-- [ ] `UiSkinRecipe` and its writer, the skin settled on previews: a panel, a raised panel, a slot frame, a bar frame and fill, and the marker shapes, in `Assets/Sprites/UI/Skin`.
-- [ ] The component prefabs and variants in `Assets/Prefabs/UI/Components` (Components table), the scroll list, the swatch row and the tooltip included.
-- [ ] The HUD, the main menu, the in-game menu and the options screen rebuilt from them. `Square.png` removed with its `.meta`.
-- [ ] Distinct marker shapes for a move, an attack move and the hover ring.
-- [ ] Tooltips for statuses and abilities.
-- [ ] Tests:
+- [x] Damage types on popups settled with the user on previews (Open questions).
+- [x] `UiSkinRecipe` and its writer, the skin settled on previews: a panel, a raised panel, a slot frame, a bar frame and fill, and the marker shapes, in `Assets/Sprites/UI/Skin`.
+- [x] The component prefabs and variants in `Assets/Prefabs/UI/Components` (Components table), the scroll list, the swatch row and the tooltip included.
+- [x] The HUD, the main menu, the in-game menu and the options screen rebuilt from them. `Square.png` removed with its `.meta`.
+- [x] Distinct marker shapes for a move, an attack move and the hover ring.
+- [x] Tooltips for statuses and abilities, with a description on every ability.
+- [x] Tests:
   - `UiContentTests` on the rebuilt prefabs;
   - the tooltip shows a status's or an ability's name and description on hover and on selection, and the status row blocks clicks while it shows;
-  - the marker kinds have different sprites.
+  - the marker kinds have different sprites;
+  - the skin writer's sprites;
+  - `ContentTests` and `DesignTablesTests` for the abilities' descriptions.
+
+#### Phase 5 notes
+
+- **Settled with the user on 2026-11-10:**
+  - **Damage types on popups:** left as they are. Four options were previewed over the Clearing: today's colour only; a 7 UI px generated type icon before the number; the `Resisted` and `Weakness` flags as arrows after it (↓ and ↑ from Galmuri, since its ▼▲ outweighed the digits and its small ▾▴ are missing from Galmuri7); and both.
+  - **The skin**, on mocks of the HUD, the menus and the world:
+    - 1 px cut corners;
+    - `Border` a grey-blue `#9A9EB3`, of white, that and white at 40%;
+    - the world bar on the skin's 22 x 4 bar, of that, 24 x 5 and the smooth bar;
+    - the markers 31 x 15 with 5 px arms, of that and 29 x 15 with 4;
+    - raised Primary and Danger buttons with a 2 px lip, and a flat, dimmer Secondary button on a new role, `ControlSecondary`;
+    - the cooldown seconds in a slot's top left corner, a square weapon slot, and swatch chips.
+  - **The rebuilt screens and the tooltips** as previewed, and the ten blank abilities' descriptions as drafted.
+- **The previews.** Written to the gitignored `Recordings/DesignSystem/Phase5` (`popups/`, `mock/`, `final/`) by a temporary tool, since removed, as in Phase 4:
+  - the canvases drawn through a camera over a render of the Clearing;
+  - the Weasel, the player and the markers placed in the untitled scene beside the chunk before the render;
+  - popups placed by hand on whole UI px;
+  - the arrows drawn from dynamic font assets made from Galmuri's full fonts, never written.
+- **The skin.** `Recipe_UiSkin.asset` writes ten sprites. The panel and its frame are 8 px with 3 px borders, and the raised panel 8 x 10, its lip at 0.6 grey. The slot frame has a black line at 40% inside it. The bar frame is 5 px with 2 px borders, so it slices down to the world bar's 4 px. The bar fill is 3 px of square white, so a filled image keeps its edge wherever it stops. The three markers share a 43 x 23 canvas, their 2 px lines outlined in black at 50%, and the pip is 5 px. The world status icons are pips now.
+- **The components.** Twenty-five prefabs, listed in the Components table, and the screens are instances of them:
+  - the HUD: a `Bar`, a `Slot` for the weapon, six `SlotAbility`, eight `StatusIcon` and one `Tooltip`, drawn last;
+  - the in-game menu: a `Scrim` holding a `PanelRaised` box of `Button`s and a `Dialog`;
+  - the options screen: a full-screen `PanelRaised`, a `ScrollList`, a `NoticeLine`, a secondary Reset all and a primary Back, a `ScrimModal` listening panel and a `Dialog`; its rows come from `Row` and `RowSwatch`, the colour rows' chips showing the picked swatch's first ramp's middle tone;
+  - the main menu: a `PanelRaised` background, `ButtonLarge`s and a `NoticeLine` at `Heading`; the join field keeps its own control with the panel's sprite;
+  - the Gameplay scene: a `MarkerHover`, and the two marker prefabs, each in a pool of its own;
+  - the Weasel: a `WorldBar`.
+- **The conversion.** A temporary editor script, since removed, built the components and rebuilt the screens, in their own prefabs and scenes. It kept every view's references, the buttons' clicks and navigation, and the old prefabs' GUIDs where they moved. The scenes' diffs hold only the rebuilt objects.
+- **Code.** `ThemedSelectable` names its normal role. `MoveMarker` reads its own role, and `PointerFeedbackLayer` keeps a pool per marker prefab. `AbilityDefinition` has a description, which `ContentRules` requires and `Abilities.md` lists. `KeyBindingRowView` has an optional swatch chip and `OptionsMenuView` a swatch row prefab. `PlayerHudView` exposes its health fill, text and weapon icon to tests. Selecting a slot or an icon shows its tooltip, but nothing selects one yet: the HUD has no navigation.
+- **Found on the way.** `WorldHealthBarTests` still asked for a bright red fill on the Weasel's bar, which Phase 4's theme had made `Health`; it now checks the bar's roles and skin.
+- **Left as they are.** `TextDisabled` has no text yet. The world status icons and auras stay colour-only until statuses have icon art (Later). The main menu's game name is at `Title`, although the type scale names `Display` for it; the rebuild left its text alone.
+- **Tests.**
+  - `UiSkinWriterTests` (4): every piece greyscale and sliced around its corners, the cut corners, the frame's width and the raised panel's lip, the markers' different shapes on one canvas, and the project's sprites being what its recipe draws, imported at 32 PPU with their borders.
+  - `TooltipTests` (7): a slot on hover and a status icon on selection showing their name and description, an empty slot showing none, the tooltip following its source and hiding with it, kept inside its canvas and above its target, a shown status icon taking the click and a hidden one not, and the HUD wiring every slot and icon to its one tooltip.
+  - `UiContentTests` (8): every image draws the skin or nothing, and the marker kinds' sprites and roles, with the Gameplay scene using them.
+  - The rest: `ContentTests` and `DesignTablesTests` on the abilities' descriptions; `StatusFeedbackTests` on the icons' frames taking the click; `PlayerFeedbackTests` on a marker prefab and pool per kind; `WorldHealthBarTests` on the skinned `WorldBar`; `MobPlayModeBehaviorTests` reading the HUD through its view.
 
 ### Phase 6: reduce flashing and reduce motion
 
@@ -558,7 +599,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - required references;
   - ranges (cooldowns, contacts, durations and tick intervals above 0; at least one max stack);
   - unique display names;
-  - unique status abbreviations and present descriptions;
+  - unique status abbreviations, and present status and ability descriptions;
   - opaque colours.
 - **EditMode, `UiScaleTests`.** `ZoomFor` at every display in the Scale table, windowed sizes included, for each size step, and which steps fit. The zoom equals the Main scene's Pixel Perfect Camera's at 720p, 1080p, 1440p and 4K.
 - **EditMode, `ScrollIntoViewTests`.** A selected row scrolls into view by the least.
@@ -575,18 +616,20 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
   - no italic or all-caps text below `Title`;
   - every image has a `ThemedGraphic`, or is a themed control's target, and so has every world UI sprite;
   - every UI canvas has a `UiPixelScale`;
-  - every Selectable has a `ThemedSelectable` and, the scroll list's scrollbar excepted, is at least 12 UI px each way with navigation on.
+  - every Selectable has a `ThemedSelectable` and, the scroll list's scrollbar excepted, is at least 12 UI px each way with navigation on;
+  - every image draws a skin sprite or none, and the marker kinds draw different sprites (Phase 5).
 - **EditMode, settings.** A file without the new fields reads their defaults; changing one writes the file.
 - **PlayMode.** In Testlands, with the in-process host and client:
   - changing the preferences sends nothing (the UI size from Phase 3, checked by what the client shows; the others from Phase 6);
   - the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
+- **EditMode, `UiSkinWriterTests`.** Every skin piece greyscale and sliced around its corners, the panels' cut corners and the raised panel's lip, the markers different shapes on one canvas, and the project's sprites what its recipe draws.
+- **EditMode, `TooltipTests`.** A slot's or a status icon's tooltip on hover and on selection, following its source and inside its canvas; a shown status icon taking the click; the HUD's one tooltip wired to every slot and icon.
 - **Manual.** The Phase 3 and 4 previews at each display in the Scale table, and the Phase 5 skin previews.
 - **Before merging into `main`:** the full EditMode and PlayMode suites.
 
 ## Open questions
 
-Each is settled with the user at the start of the phase named. The principles were settled in Phase 1, the balance targets in Phase 2, the control size in Phase 3 (12 UI px kept) and the font in Phase 4 (Galmuri, a pixel font).
-- **Damage types on popups** (Phase 5). Should popups show the hit's type, or its `Resisted` and `Weakness` flags (shown nowhere today), with a cue other than colour?
+None are left. Each was settled with the user at the start of the phase named: the principles in Phase 1, the balance targets in Phase 2, the control size in Phase 3 (12 UI px kept), the font in Phase 4 (Galmuri, a pixel font) and the damage types on popups in Phase 5 (left as they are; Decisions).
 
 ## Tools considered
 

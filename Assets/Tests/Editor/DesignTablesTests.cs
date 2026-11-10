@@ -115,11 +115,12 @@ public class DesignTablesTests
 
     /// <summary>
     /// The tables built from test content show each hit resolved against its target's profile, with the hits and the
-    /// time to kill, and a stacking status's periodic totals.
+    /// time to kill, a stacking status's periodic totals and an ability's description.
     /// </summary>
     [Test]
     public void Build_ResolvesEachAttackAgainstItsTarget()
     {
+        AbilityDefinition strike = Track(AbilityDefinition.Create("Test Strike", 2f, description: "Strikes hard."));
         StatusEffectDefinition burn = Track(StatusEffectDefinition.Create(
             "Test Burn", StatusKind.Debuff, 4f, StatusStacking.AddStack, 5,
             periodic: StatusPeriodic.Damage, periodicAmount: 3, periodicDamageType: DamageType.Fire, tickInterval: 1f));
@@ -132,7 +133,7 @@ public class DesignTablesTests
         DesignContent content = new(
             combat,
             Track(WeaponCatalog.Create(sword)),
-            new AbilityDefinition[0],
+            new[] { strike },
             new PlayerClass[0],
             new[]
             {
@@ -149,6 +150,7 @@ public class DesignTablesTests
         Assert.That(tables["Weapons.md"], Does.Contain("| Test Sword | Test Mob | 10 Physical (resisted) | 20 | 10 | 4.6 s |"));
         Assert.That(tables["Units.md"], Does.Contain("| Test Mob | Test Player | 30 Physical | 30 | 3 | 2.5 s |"));
         Assert.That(tables["StatusEffects.md"], Does.Contain("| 3 Fire every 1 s | 12 (60 at 5) |"));
+        Assert.That(tables["Abilities.md"], Does.Contain("| Test Strike | Strikes hard. |"));
     }
 
     /// <summary>

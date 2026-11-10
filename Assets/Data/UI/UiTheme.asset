@@ -58,9 +58,11 @@ MonoBehaviour:
   - role: 21
     colour: {r: 1, g: 1, b: 1, a: 0.25}
   - role: 22
-    colour: {r: 1, g: 1, b: 1, a: 1}
+    colour: {r: 0.6039216, g: 0.61960787, b: 0.7019608, a: 1}
   - role: 23
     colour: {r: 0, g: 0, b: 0, a: 1}
+  - role: 24
+    colour: {r: 0.61960787, g: 0.61960787, b: 0.5882353, a: 1}
   textSizes:
   - size: 0
     font: {fileID: 11400000, guid: ef5bb0bf2cf2d5548b6e81d67a1c141c, type: 2}

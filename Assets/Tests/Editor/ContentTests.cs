@@ -65,17 +65,17 @@ public class ContentTests
     }
 
     /// <summary>
-    /// An ability from <c>Create</c> follows the rules; one with no cooldown, aimed at a point with no range, is
-    /// reported for both.
+    /// An ability from <c>Create</c> with a description follows the rules; one with no cooldown, aimed at a point with
+    /// no range and with no description, is reported for each.
     /// </summary>
     [Test]
     public void AnAbility_BreakingTheRules_IsReported()
     {
-        AbilityDefinition good = Track(AbilityDefinition.Create("Good", 2f, targeting: AbilityTargeting.Point, range: 4f));
+        AbilityDefinition good = Track(AbilityDefinition.Create("Good", 2f, targeting: AbilityTargeting.Point, range: 4f, description: "Does good."));
         AbilityDefinition bad = Track(AbilityDefinition.Create("Bad", 0f, targeting: AbilityTargeting.Point, range: 0f));
 
         Assert.That(ContentRules.Ability(good), Is.Empty);
-        AssertReports(ContentRules.Ability(bad), "cooldown", "range");
+        AssertReports(ContentRules.Ability(bad), "cooldown", "range", "description");
     }
 
     /// <summary>

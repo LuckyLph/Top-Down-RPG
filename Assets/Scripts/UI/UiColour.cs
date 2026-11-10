@@ -28,4 +28,5 @@ public enum UiColour
     IconMissing,
     Border,
     Outline,
+    ControlSecondary,
 }

@@ -400,22 +400,19 @@ public class PlayerFeedbackTests
     }
 
     /// <summary>
-    /// Builds a pointer feedback layer with a move marker template and hover ring, a local player that is alive or
-    /// dead per <paramref name="alive"/>, and a presenter whose fake pointer starts at the screen center, which the
-    /// test camera maps to (10, 20).
+    /// Builds a pointer feedback layer with move and attack move marker templates and a hover ring, a local player
+    /// that is alive or dead per <paramref name="alive"/>, and a presenter whose fake pointer starts at the screen
+    /// center, which the test camera maps to (10, 20).
     /// </summary>
     private (PointerFeedbackPresenter, PointerFeedbackLayer, FakePlayerInput) CreateFeedback(bool alive)
     {
-        GameObject markerTemplate = Track(new GameObject("MarkerTemplate"));
-        markerTemplate.SetActive(false);
-        markerTemplate.AddComponent<SpriteRenderer>();
-        MoveMarker markerPrefab = markerTemplate.AddComponent<MoveMarker>();
-        markerPrefab.ConfigureTheme(TestThemes.Shared);
+        MoveMarker markerPrefab = CreateMarkerTemplate("MoveMarkerTemplate", UiColour.Positive);
+        MoveMarker attackMarkerPrefab = CreateMarkerTemplate("AttackMarkerTemplate", UiColour.Danger);
         GameObject layerObject = Track(new GameObject("PointerFeedback"));
         SpriteRenderer ring = new GameObject("HoverRing").AddComponent<SpriteRenderer>();
         ring.transform.SetParent(layerObject.transform);
         PointerFeedbackLayer layer = layerObject.AddComponent<PointerFeedbackLayer>();
-        layer.Configure(markerPrefab, ring, AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/UI/AttackCursor.png"));
+        layer.Configure(markerPrefab, attackMarkerPrefab, ring, AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/UI/AttackCursor.png"));
 
         GameObject player = Track(new GameObject("Player"));
         player.AddComponent<PlayerController>();
@@ -430,6 +427,19 @@ public class PlayerFeedbackTests
         PointerTargetPicker picker = new(settings, new PlayerRegistry());
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f) };
         return (new PointerFeedbackPresenter(input, CreateCamera(new Vector2(10f, 20f)), picker, localPlayer, layer), layer, input);
+    }
+
+    /// <summary>
+    /// Creates an inactive marker template named <paramref name="name"/> in <paramref name="role"/> of the test theme.
+    /// </summary>
+    private MoveMarker CreateMarkerTemplate(string name, UiColour role)
+    {
+        GameObject template = Track(new GameObject(name));
+        template.SetActive(false);
+        template.AddComponent<SpriteRenderer>();
+        MoveMarker marker = template.AddComponent<MoveMarker>();
+        marker.ConfigureTheme(TestThemes.Shared, role);
+        return marker;
     }
 
     /// <summary>

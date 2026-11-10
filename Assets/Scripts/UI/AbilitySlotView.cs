@@ -1,14 +1,16 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// One passive slot of the ability bar: icon (or the ability's name when it has none, or an empty state),
-/// radial cooldown fill with whole seconds remaining, key label and a failure flash. Its frame and flash take their
-/// colours from the <see cref="UiTheme"/>'s Surface, SurfaceEmpty and Danger roles, read once when it wakes.
+/// radial cooldown fill with whole seconds remaining in its top left corner, key label in its top right and a failure
+/// flash. Its frame and flash take their colours from the <see cref="UiTheme"/>'s Surface, SurfaceEmpty and Danger
+/// roles, read once when it wakes. As an <see cref="ITooltipSource"/> it gives its ability's name and description.
 /// </summary>
 [DisallowMultipleComponent]
-public class AbilitySlotView : MonoBehaviour
+public class AbilitySlotView : MonoBehaviour, ITooltipSource
 {
     private const int MaxShownSeconds = 99;
 
@@ -28,6 +30,9 @@ public class AbilitySlotView : MonoBehaviour
     private Color filledFrameColor;
     private Color emptyFrameColor;
     private Color flashColor;
+    private AbilityDefinition shown;
+
+    public event Action TooltipChanged;
 
     internal Image Icon => icon;
     internal TextMeshProUGUI NameText => nameText;
@@ -36,6 +41,7 @@ public class AbilitySlotView : MonoBehaviour
     internal TextMeshProUGUI KeyText => keyText;
     internal Image Flash => flash;
     internal bool IsEmpty { get; private set; } = true;
+    internal AbilityDefinition Shown => shown;
 
     /// <summary>
     /// Reads the frame and flash colours from the theme. Logs an error when the theme or any required image or text
@@ -69,6 +75,7 @@ public class AbilitySlotView : MonoBehaviour
     public void SetAbility(AbilityDefinition ability)
     {
         IsEmpty = ability == null;
+        shown = ability;
         Sprite abilityIcon = ability != null ? ability.Icon : null;
         if (icon != null)
         {
@@ -88,6 +95,17 @@ public class AbilitySlotView : MonoBehaviour
 
         SetCooldown(0f, 0);
         SetFlash(0f);
+        TooltipChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// The shown ability's name and description; false for an empty slot.
+    /// </summary>
+    public bool TryGetTooltip(out string title, out string description)
+    {
+        title = shown != null ? shown.DisplayName : null;
+        description = shown != null ? shown.Description : null;
+        return shown != null;
     }
 
     /// <summary>

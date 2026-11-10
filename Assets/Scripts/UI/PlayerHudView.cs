@@ -21,6 +21,10 @@ public class PlayerHudView : MonoBehaviour
     private Color activeWeaponIconTint = Color.white;
     private Color missingWeaponIconTint = Color.clear;
 
+    internal Image HealthFill => healthFill;
+    internal TextMeshProUGUI HealthText => healthText;
+    internal Image WeaponIcon => weaponIcon;
+
     /// <summary>
     /// Reads the weapon icon's tints from the theme; logs an error without a theme.
     /// </summary>

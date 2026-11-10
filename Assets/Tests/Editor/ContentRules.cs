@@ -53,8 +53,9 @@ internal static class ContentRules
     }
 
     /// <summary>
-    /// An ability: a name, a cooldown above 0, a range above 0 when aimed at a point or a unit, a cast time, range,
-    /// area, heal and hit that are not negative, no empty status entry, and a release above 0.
+    /// An ability: a name and a description (its tooltip shows them), a cooldown above 0, a range above 0 when aimed
+    /// at a point or a unit, a cast time, range, area, heal and hit that are not negative, no empty status entry, and a
+    /// release above 0.
     /// </summary>
     public static List<string> Ability(AbilityDefinition ability)
     {
@@ -62,6 +63,7 @@ internal static class ContentRules
         SerializedObject data = new(ability);
         string owner = ability.name;
         NotEmpty(problems, data, owner, "displayName");
+        NotEmpty(problems, data, owner, "description");
         Above(problems, data, owner, "cooldown", 0);
         AtLeast(problems, data, owner, "castTime", 0);
         AbilityTargeting targeting = (AbilityTargeting)Property(data, "targeting").intValue;

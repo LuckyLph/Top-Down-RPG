@@ -28,8 +28,9 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | HealthTrack | `#141414` | 85% |
 | Icon | `#FFFFFF` | 100% |
 | IconMissing | `#FFFFFF` | 25% |
-| Border | `#FFFFFF` | 100% |
+| Border | `#9A9EB3` | 100% |
 | Outline | `#000000` | 100% |
+| ControlSecondary | `#9E9E96` | 100% |
 
 ## Text sizes
 
@@ -55,6 +56,9 @@ Each pair of text role and background role a themed text uses, at the smallest s
 | TextOnControl | ControlHighlighted | Body | 17.33:1 | 4.50:1 |
 | TextOnControl | Accent (selected) | Body | 12.68:1 | 4.50:1 |
 | TextOnControl | ControlDisabled | Body | 3.41:1 | 3.00:1 |
+| TextOnControl | Danger | Body | 5.27:1 | 4.50:1 |
+| TextOnControl | ControlSecondary | Body | 6.42:1 | 4.50:1 |
+| TextMuted | SurfaceRaised | Body | 9.80:1 | 4.50:1 |
 | Placeholder | ControlNormal | Heading | 4.91:1 | 4.50:1 |
 | Placeholder | ControlHighlighted | Heading | 7.00:1 | 4.50:1 |
 | Placeholder | Accent (selected) | Heading | 5.12:1 | 4.50:1 |

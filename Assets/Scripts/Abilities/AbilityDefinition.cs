@@ -13,6 +13,8 @@ public sealed class AbilityDefinition : ScriptableObject
     [Header("HUD")]
     [SerializeField] private string displayName = "Ability";
     [SerializeField] private Sprite icon;
+    [SerializeField, TextArea, Tooltip("What the ability does, in a sentence or two, shown in its tooltip on the HUD.")]
+    private string description;
 
     [Header("Timing")]
     [SerializeField, Min(0f), Tooltip("Seconds, starting when the cast starts.")]
@@ -65,6 +67,7 @@ public sealed class AbilityDefinition : ScriptableObject
 
     public string DisplayName => string.IsNullOrWhiteSpace(displayName) ? name : displayName;
     public Sprite Icon => icon;
+    public string Description => description;
     public float Cooldown => cooldown;
     public float CastTime => castTime;
     public AbilityTargeting Targeting => targeting;
@@ -123,7 +126,8 @@ public sealed class AbilityDefinition : ScriptableObject
         string movingCastClip = null,
         float releaseSeconds = 0.06f,
         float followThroughSeconds = 0.24f,
-        float channelBeat = 0f)
+        float channelBeat = 0f,
+        string description = null)
     {
         AbilityDefinition ability = CreateInstance<AbilityDefinition>();
         ability.name = name;
@@ -143,6 +147,7 @@ public sealed class AbilityDefinition : ScriptableObject
         ability.releaseSeconds = releaseSeconds;
         ability.followThroughSeconds = followThroughSeconds;
         ability.channelBeat = channelBeat;
+        ability.description = description;
         ability.hideFlags = HideFlags.HideAndDontSave;
         return ability;
     }

@@ -205,7 +205,8 @@ public static class DesignTables
     }
 
     /// <summary>
-    /// Every ability by name: who uses it, how it is cast, what it does and how it looks.
+    /// Every ability by name: who uses it, how it is cast, what it does and how it looks, then the description its
+    /// tooltip shows.
     /// </summary>
     private static DesignTable Abilities(DesignContent content)
     {
@@ -228,6 +229,14 @@ public static class DesignTables
                 Effect(ability),
                 ability.Hit.Amount > 0 && ability.Cooldown > 0f ? Rate(ability.Hit.Amount, ability.Cooldown) : "-",
                 CastClips(ability));
+        }
+
+        text.Append("\n## Display\n\n");
+        Row(text, "Ability", "Description");
+        Rule(text, 2);
+        foreach (AbilityDefinition ability in content.Abilities)
+        {
+            Row(text, ability.DisplayName, string.IsNullOrWhiteSpace(ability.Description) ? "-" : ability.Description);
         }
 
         return new DesignTable("Abilities.md", text.ToString());

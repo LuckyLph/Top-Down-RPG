@@ -5,18 +5,20 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="WorldHealthBar"/>: the fill tracking health, hiding while dead, and the weasel prefab's
-/// bar setup.
+/// bar, an instance of the world bar component drawn with the UI skin (Docs/DesignSystem.md, Phase 5).
 /// </summary>
 public class WorldHealthBarTests
 {
+    private const float ArtPixelsPerUnit = 32f;
+
     private readonly List<Object> createdObjects = new();
     private Health health;
     private WorldHealthBar bar;
     private SpriteRenderer fill;
 
     /// <summary>
-    /// Builds a unit with a <see cref="Health"/> and a child health bar whose sliced frame and fill use the
-    /// project's rounded bar sprite.
+    /// Builds a unit with a <see cref="Health"/> and a child health bar whose sliced frame and fill use the skin's bar
+    /// sprites, 22 x 4 and 20 x 2 art px.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -25,9 +27,8 @@ public class WorldHealthBarTests
         health = unit.AddComponent<Health>();
         GameObject barObject = new("HealthBar");
         barObject.transform.SetParent(unit.transform);
-        Sprite rounded = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Textures/UI/RoundedBar.png");
-        SpriteRenderer frame = Part(barObject, "Frame", rounded, new Vector2(0.66f, 0.075f));
-        fill = Part(barObject, "Fill", rounded, new Vector2(0.62f, 0.04f));
+        SpriteRenderer frame = Part(barObject, "Frame", Skin(UiSkinPiece.BarFrame), new Vector2(22f, 4f) / ArtPixelsPerUnit);
+        fill = Part(barObject, "Fill", Skin(UiSkinPiece.BarFill), new Vector2(20f, 2f) / ArtPixelsPerUnit);
         bar = barObject.AddComponent<WorldHealthBar>();
         bar.Configure(health, frame, fill);
     }
@@ -103,33 +104,60 @@ public class WorldHealthBarTests
     }
 
     /// <summary>
-    /// The weasel prefab's health bar reads the weasel's health and draws a thin, sliced, bright red fill over
-    /// its frame with unlit materials on the Overlay sorting layer, which sorts above units, and sits above the
-    /// weasel's head.
+    /// The weasel prefab's health bar is an instance of the world bar component and reads the weasel's health: the
+    /// skin's bar frame, 22 x 4 art px, in HealthTrack, with its bar fill, 2 px tall and 1 px inside it, in Health,
+    /// both sliced so their cut corners keep at any width, with unlit materials on the Overlay sorting layer, which
+    /// sorts above units; four status pips above it; the whole bar on whole art px above the weasel's head.
     /// </summary>
     [Test]
-    public void WeaselPrefab_HasAThinBarOnTheOverlayLayerAboveItsHead()
+    public void WeaselPrefab_HasTheSkinnedWorldBarOnTheOverlayLayerAboveItsHead()
     {
         GameObject weasel = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Mobs/Weasel.prefab");
         WorldHealthBar prefabBar = weasel.GetComponentInChildren<WorldHealthBar>(true);
         Assert.That(prefabBar, Is.Not.Null);
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(prefabBar.gameObject), Is.EqualTo("Assets/Prefabs/UI/Components/WorldBar.prefab"));
 
         SerializedObject serialized = new(prefabBar);
         Assert.That(serialized.FindProperty("health").objectReferenceValue, Is.SameAs(weasel.GetComponent<Health>()));
         SpriteRenderer prefabFrame = (SpriteRenderer)serialized.FindProperty("frame").objectReferenceValue;
         SpriteRenderer prefabFill = (SpriteRenderer)serialized.FindProperty("fill").objectReferenceValue;
+        Assert.That(prefabFrame.sprite, Is.EqualTo(Skin(UiSkinPiece.BarFrame)));
+        Assert.That(prefabFill.sprite, Is.EqualTo(Skin(UiSkinPiece.BarFill)));
+        Assert.That(prefabFrame.drawMode, Is.EqualTo(SpriteDrawMode.Sliced));
+        Assert.That(prefabFill.drawMode, Is.EqualTo(SpriteDrawMode.Sliced), "Sliced keeps the cut corners at any width.");
+        Assert.That(prefabFrame.size * ArtPixelsPerUnit, Is.EqualTo(new Vector2(22f, 4f)));
+        Assert.That(prefabFill.size * ArtPixelsPerUnit, Is.EqualTo(new Vector2(20f, 2f)));
+        Assert.That(prefabFrame.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(prefabFill.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Health));
         Assert.That(prefabFrame.sortingLayerName, Is.EqualTo("Overlay"));
         Assert.That(prefabFill.sortingLayerName, Is.EqualTo("Overlay"));
         Assert.That(prefabFill.sortingOrder, Is.GreaterThan(prefabFrame.sortingOrder));
-        Assert.That(prefabFill.drawMode, Is.EqualTo(SpriteDrawMode.Sliced), "Sliced keeps the rounded corners at any width.");
-        Assert.That(prefabFill.sprite.border.x, Is.GreaterThan(0f));
-        Assert.That(prefabFrame.size.y * prefabFrame.transform.localScale.y, Is.LessThanOrEqualTo(0.08f), "The bar is thin.");
-        Assert.That(prefabFill.size.y, Is.LessThan(prefabFrame.size.y));
-        Assert.That(prefabFill.color.r, Is.GreaterThan(0.95f), "The fill is a bright red.");
         Assert.That(prefabFill.sharedMaterial.shader.name, Does.Contain("Unlit"), "Overlay is not lit by the areas' 2D lights; a lit material would draw black.");
         Assert.That(prefabFrame.sharedMaterial.shader.name, Does.Contain("Unlit"));
-        Assert.That(prefabBar.transform.localPosition.y, Is.GreaterThan(1f), "The bar sits above the weasel's head.");
+        Vector3 position = prefabBar.transform.localPosition * ArtPixelsPerUnit;
+        Assert.That(position.y, Is.GreaterThan(ArtPixelsPerUnit), "The bar sits above the weasel's head.");
+        Assert.That(new Vector2(position.x, position.y), Is.EqualTo(new Vector2(Mathf.Round(position.x), Mathf.Round(position.y))), "The bar sits on whole art px.");
         Assert.That(SortingLayer.GetLayerValueFromName("Overlay"), Is.GreaterThan(SortingLayer.GetLayerValueFromName("Entities")), "Bars draw over every unit.");
+        int pips = 0;
+        foreach (SpriteRenderer icon in prefabBar.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (icon.name.StartsWith("StatusIcon"))
+            {
+                pips++;
+                Assert.That(icon.sprite, Is.EqualTo(Skin(UiSkinPiece.Pip)), $"{icon.name} is a pip.");
+                Assert.That(icon.transform.localPosition.y, Is.GreaterThan(prefabFrame.transform.localPosition.y + prefabFrame.size.y * 0.5f), $"{icon.name} sits above the bar.");
+            }
+        }
+
+        Assert.That(pips, Is.EqualTo(4));
+    }
+
+    /// <summary>
+    /// The skin sprite written for <paramref name="piece"/>.
+    /// </summary>
+    private static Sprite Skin(UiSkinPiece piece)
+    {
+        return AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(piece));
     }
 
     /// <summary>

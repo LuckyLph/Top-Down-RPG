@@ -58,6 +58,7 @@ internal static class TestThemes
             [UiColour.IconMissing] = new Color(1f, 1f, 1f, 0.25f),
             [UiColour.Border] = new Color(0.98f, 0.98f, 1f),
             [UiColour.Outline] = Color.black,
+            [UiColour.ControlSecondary] = new Color(0.62f, 0.62f, 0.59f),
         };
     }
 

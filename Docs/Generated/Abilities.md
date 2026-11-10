@@ -14,3 +14,18 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | Blank Sweep | Greatsword (1) | None | - | 2 around the caster | 0.4 s | 4 s | Stop | yes | 15 Physical | 3.8 | `CastSweep` |
 | Blank Volley | Longbow (1) | Point | 6 | 1.5 around the point | 0.35 s | 5 s | Stop | no | 12 Physical | 2.4 | `CastVolley` |
 | Blank Whirl | Sword (1) | None | - | 1.5 around the caster | 0.3 s | 1.5 s | Continue | yes | 10 Physical | 6.7 | `CastWhirl`, `CastWhirlRun` |
+
+## Display
+
+| Ability | Description |
+|---|---|
+| Blank Bolt | Fires a bolt of frost along a line. Every enemy in it takes Frost damage and is chilled. |
+| Blank Charge | Charge ahead. For now the cast plays without moving you. |
+| Blank Leap | Leap to a point nearby. For now the cast plays without moving you. |
+| Blank Lunge | Lunge ahead. For now the cast plays without moving you. |
+| Blank Mend | Heals an ally and fortifies them, raising their resistances for a while. |
+| Blank Roll | Roll out of the way. For now the cast plays without moving you. |
+| Blank Smite | A slow strike at one enemy that deals Physical damage and stuns it. You can keep moving while you wind it up. |
+| Blank Sweep | Sweeps the greatsword around you, dealing Physical damage to every enemy close by. |
+| Blank Volley | Looses a volley of arrows at a point, dealing Physical damage to every enemy around it. |
+| Blank Whirl | Spins with the sword, dealing Physical damage to every enemy around you. You can keep moving while you spin. |

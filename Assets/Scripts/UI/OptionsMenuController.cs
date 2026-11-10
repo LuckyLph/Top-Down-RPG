@@ -461,7 +461,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
 
         foreach (int choice in colourChoices)
         {
-            KeyBindingRowView row = view.AddRow();
+            KeyBindingRowView row = view.AddSwatchRow();
             row.SetLabel(colours.Get(choice).Name);
             row.BindingButton.onClick.AddListener(() => NextColour(choice));
             row.ResetButton.onClick.AddListener(() => ResetColour(choice));
@@ -626,7 +626,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         for (int i = 0; i < colourRows.Count; i++)
         {
             int choice = colourChoices[i];
-            colourRows[i].SetBinding(colours.Swatches(choice)[ColourIndex(choice)].Name);
+            CharacterSwatch swatch = colours.Swatches(choice)[ColourIndex(choice)];
+            colourRows[i].SetBinding(swatch.Name);
+            colourRows[i].SetSwatch(swatch.Ramps.Count > 0 ? swatch.Ramps[0].Middle : Color.clear);
         }
     }
 

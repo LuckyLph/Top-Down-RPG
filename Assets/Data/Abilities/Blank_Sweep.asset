@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::AbilityDefinition
   displayName: Blank Sweep
   icon: {fileID: 0}
+  description: Sweeps the greatsword around you, dealing Physical damage to every
+    enemy close by.
   cooldown: 4
   castTime: 0.4
   targeting: 0

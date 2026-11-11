@@ -12,7 +12,8 @@ using UnityEngine.UI;
 /// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
 /// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
-/// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1).
+/// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), and the command
+/// bar is built from its components (Phase 2).
 /// </summary>
 public class UiContentTests
 {
@@ -206,7 +207,7 @@ public class UiContentTests
             Check(themed.Theme, where, themed, problems);
         }
 
-        foreach (System.Type view in new[] { typeof(AbilitySlotView), typeof(MoveMarker), typeof(WeaponSlotView) })
+        foreach (System.Type view in new[] { typeof(AbilitySlotView), typeof(MoveMarker), typeof(WeaponSlotView), typeof(HealthBarView), typeof(StatusIconView) })
         {
             foreach ((string where, GameObject root) in roots)
             {
@@ -379,6 +380,63 @@ public class UiContentTests
         Assert.That(message.gameObject.activeSelf, Is.False, "Hidden until a failure.");
         RectTransform statusRow = (RectTransform)hud.GetComponentInChildren<StatusBarView>(true).transform;
         Assert.That(message.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(statusRow.anchoredPosition.y + statusRow.sizeDelta.y), "Above the status row.");
+    }
+
+    /// <summary>
+    /// The command bar (Docs/UiRevamp.md, Phase 2): its health bar a <c>Bar</c> whose fill is HealthPlayer over a part
+    /// just lost in HealthLost, both read against the track, with the skin's tick in HealthTrack as a hidden template,
+    /// its text outlined; the weapon slot in the ability row, after the gap; the buffs' group of six <c>StatusIcon</c>s
+    /// left of the abilities and the debuffs' of six <c>StatusIconDebuff</c>s right of them, each a 3 x 2 grid filling
+    /// from the abilities outwards, bottom row first; and the debuff icon a variant of the status icon framed in Danger
+    /// with the skin's notch in its top right corner.
+    /// </summary>
+    [Test]
+    public void TheCommandBar_IsBuiltFromItsComponents()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        HealthBarView bar = hud.GetComponent<PlayerHudView>().HealthBar;
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(bar.gameObject)), Is.EqualTo($"{Components}Bar.prefab"));
+        Assert.That(bar.Fill.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthPlayer));
+        Assert.That(bar.Lost.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthLost));
+        Assert.That(bar.Lost.transform.GetSiblingIndex(), Is.LessThan(bar.Fill.transform.GetSiblingIndex()), "The loss sits under the fill.");
+        Assert.That(bar.Lost.enabled, Is.False);
+        Assert.That(bar.Fill.GetComponent<ThemedGraphic>().Track, Is.Not.Null);
+        Assert.That(bar.Lost.GetComponent<ThemedGraphic>().Track, Is.Not.Null);
+        Image tick = (Image)new SerializedObject(bar).FindProperty("tickTemplate").objectReferenceValue;
+        Assert.That(tick.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.BarTick))));
+        Assert.That(tick.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(tick.gameObject.activeSelf, Is.False, "A template.");
+        Assert.That(bar.Text.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
+        Assert.That(((RectTransform)bar.transform).sizeDelta, Is.EqualTo(new Vector2(242f, 12f)));
+
+        AbilityBarView abilities = hud.GetComponentInChildren<AbilityBarView>(true);
+        Transform weapon = hud.GetComponent<PlayerHudView>().WeaponSlot.transform;
+        Assert.That(weapon.parent, Is.EqualTo(abilities.transform), "The weapon slot is in the ability row.");
+        Assert.That(weapon.GetSiblingIndex(), Is.EqualTo(abilities.transform.Find("Spacer").GetSiblingIndex() + 1), "After the gap, before its two abilities.");
+        Assert.That(((RectTransform)abilities.transform).sizeDelta.x, Is.EqualTo(242f));
+
+        StatusBarView statuses = hud.GetComponentInChildren<StatusBarView>(true);
+        foreach ((StatusKind kind, string prefab, GridLayoutGroup.Corner corner) in new[] { (StatusKind.Buff, "StatusIcon", GridLayoutGroup.Corner.LowerRight), (StatusKind.Debuff, "StatusIconDebuff", GridLayoutGroup.Corner.LowerLeft) })
+        {
+            Assert.That(statuses.GroupCapacity(kind), Is.EqualTo(6));
+            GridLayoutGroup grid = statuses.Icon(kind, 0).transform.parent.GetComponent<GridLayoutGroup>();
+            Assert.That(grid.startCorner, Is.EqualTo(corner), $"The {kind}s fill from the abilities outwards.");
+            Assert.That(grid.startAxis, Is.EqualTo(GridLayoutGroup.Axis.Horizontal), "Bottom row first.");
+            Assert.That(grid.constraintCount, Is.EqualTo(3));
+            for (int i = 0; i < 6; i++)
+            {
+                Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(statuses.Icon(kind, i).gameObject)), Is.EqualTo($"{Components}{prefab}.prefab"));
+            }
+        }
+
+        GameObject debuff = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}StatusIconDebuff.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(debuff)), Is.EqualTo($"{Components}StatusIcon.prefab"), "A variant of the status icon.");
+        Assert.That(debuff.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Danger));
+        Image notch = debuff.transform.Find("Notch").GetComponent<Image>();
+        Assert.That(notch.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Notch))));
+        Assert.That(notch.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Danger));
+        Assert.That(notch.raycastTarget, Is.False);
+        Assert.That(notch.rectTransform.anchorMin, Is.EqualTo(Vector2.one), "In the top right corner.");
     }
 
     /// <summary>

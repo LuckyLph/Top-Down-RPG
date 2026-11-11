@@ -12,6 +12,8 @@ using UnityEngine.EventSystems;
 public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
 {
     [SerializeField, Tooltip("The tooltip this object shows, on its canvas.")] private HudTooltip tooltip;
+    [SerializeField, Tooltip("A rect the tooltip shows above too, so it never covers it: the command bar, for its slots and status icons. Empty for none.")]
+    private RectTransform clearOf;
 
     private ITooltipSource source;
     private bool pointerOver;
@@ -99,11 +101,12 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     }
 
     /// <summary>
-    /// Sets the tooltip in code, for tests that build the trigger without a prefab.
+    /// Sets the tooltip and the rect it keeps clear in code, for tests that build the trigger without a prefab.
     /// </summary>
-    internal void Configure(HudTooltip shownTooltip)
+    internal void Configure(HudTooltip shownTooltip, RectTransform keptClear = null)
     {
         tooltip = shownTooltip;
+        clearOf = keptClear;
         ResolveSource();
     }
 
@@ -121,7 +124,7 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         RectTransform target = (RectTransform)transform;
         if ((pointerOver || selected) && source != null && source.TryGetTooltip(out string title, out string details, out string description))
         {
-            tooltip.Show(target, title, details, description);
+            tooltip.Show(target, clearOf, title, details, description);
         }
         else
         {

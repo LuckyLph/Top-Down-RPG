@@ -112,12 +112,12 @@ public class StatusFeedbackTests
     }
 
     /// <summary>
-    /// The status bar presenter shows the local player's statuses as they are bound and change, one icon per
-    /// status with buffs first, updates elapsed fills on tick, and drops the old player when the local player
-    /// is cleared.
+    /// The status bar presenter shows the local player's statuses as they are bound and change, one icon per status in
+    /// its kind's group, buffs left and debuffs right (Docs/UiRevamp.md, Phase 2), updates elapsed fills on tick, and
+    /// drops the old player when the local player is cleared.
     /// </summary>
     [Test]
-    public void StatusBar_FollowsTheLocalPlayer_BuffsFirst_OneIconPerStatus()
+    public void StatusBar_FollowsTheLocalPlayer_InAGroupPerKind_OneIconPerStatus()
     {
         StatusBarView bar = CreateBar(4);
         LocalPlayerTracker localPlayer = new();
@@ -131,54 +131,70 @@ public class StatusFeedbackTests
         statuses.Set.Apply(burn, null, 1f);
         statuses.Set.Apply(burn, null, 1f);
         localPlayer.Assign(new LocalPlayer(statuses.GetComponent<PlayerController>()));
-        Assert.That(ActiveIcons(bar), Is.EqualTo(1), "Binding shows what is already active.");
+        Assert.That(ActiveIcons(bar, StatusKind.Debuff), Is.EqualTo(1), "Binding shows what is already active.");
 
         statuses.Set.Apply(poison, null, 1f);
         statuses.Set.Apply(poison, null, 1f);
         statuses.Set.Apply(fortify, null, 1f);
 
-        Assert.That(ActiveIcons(bar), Is.EqualTo(3), "Independent doses share one icon.");
-        Assert.That(bar.Icon(0).Shown, Is.SameAs(fortify), "Buffs come first.");
-        Assert.That(bar.Icon(1).Shown, Is.SameAs(burn));
-        Assert.That(bar.Icon(1).StacksLabel.text, Is.EqualTo("2"));
-        Assert.That(bar.Icon(2).Shown, Is.SameAs(poison));
-        Assert.That(bar.Icon(2).StacksLabel.text, Is.EqualTo("2"));
+        Assert.That(ActiveIcons(bar, StatusKind.Buff), Is.EqualTo(1));
+        Assert.That(ActiveIcons(bar, StatusKind.Debuff), Is.EqualTo(2), "Independent doses share one icon.");
+        Assert.That(bar.Icon(StatusKind.Buff, 0).Shown, Is.SameAs(fortify), "Buffs in their own group.");
+        Assert.That(bar.Icon(StatusKind.Debuff, 0).Shown, Is.SameAs(burn), "The first debuff nearest the abilities.");
+        Assert.That(bar.Icon(StatusKind.Debuff, 0).StacksLabel.text, Is.EqualTo("2"));
+        Assert.That(bar.Icon(StatusKind.Debuff, 1).Shown, Is.SameAs(poison));
+        Assert.That(bar.Icon(StatusKind.Debuff, 1).StacksLabel.text, Is.EqualTo("2"));
 
         statuses.Set.Tick(2f, null);
         presenter.Tick();
-        Assert.That(bar.Icon(1).ElapsedFill.fillAmount, Is.EqualTo(0.5f).Within(0.01f), "Burn has 2 of its 4 seconds left.");
-        Assert.That(bar.Icon(0).ElapsedFill.fillAmount, Is.EqualTo(0.25f).Within(0.01f));
+        Assert.That(bar.Icon(StatusKind.Debuff, 0).ElapsedFill.fillAmount, Is.EqualTo(0.5f).Within(0.01f), "Burn has 2 of its 4 seconds left.");
+        Assert.That(bar.Icon(StatusKind.Buff, 0).ElapsedFill.fillAmount, Is.EqualTo(0.25f).Within(0.01f));
 
         statuses.Set.Remove(fortify);
-        Assert.That(ActiveIcons(bar), Is.EqualTo(2));
-        Assert.That(bar.Icon(0).Shown, Is.SameAs(burn));
+        Assert.That(ActiveIcons(bar, StatusKind.Buff), Is.Zero);
+        Assert.That(bar.Icon(StatusKind.Debuff, 0).Shown, Is.SameAs(burn));
 
         localPlayer.Assign(null);
-        Assert.That(ActiveIcons(bar), Is.Zero, "No local player, no icons.");
+        Assert.That(ActiveIcons(bar, StatusKind.Debuff), Is.Zero, "No local player, no icons.");
         statuses.Set.Apply(fortify, null, 1f);
-        Assert.That(ActiveIcons(bar), Is.Zero, "The old player is no longer followed.");
+        Assert.That(ActiveIcons(bar, StatusKind.Buff), Is.Zero, "The old player is no longer followed.");
         presenter.Dispose();
     }
 
     /// <summary>
-    /// The status bar shows no more icons than it has slots, however many statuses are active.
+    /// A group with more statuses of its kind than icons shows all but the last that fit, and on its last icon "+n"
+    /// for the rest, whose tooltip names them; the other group is untouched, and the "+n" goes once they fit again.
     /// </summary>
     [Test]
-    public void StatusBar_CapsAtItsCapacity()
+    public void StatusBar_ShowsPlusN_ForTheStatusesThatDoNotFit()
     {
-        StatusBarView bar = CreateBar(2);
+        StatusBarView bar = CreateBar(3);
         LocalPlayerTracker localPlayer = new();
         StatusBarPresenter presenter = new(localPlayer, bar);
         presenter.Start();
         StatusEffects statuses = CreatePlayer("Player");
         localPlayer.Assign(new LocalPlayer(statuses.GetComponent<PlayerController>()));
-
-        for (int i = 0; i < 4; i++)
+        StatusEffectDefinition[] debuffs = new StatusEffectDefinition[5];
+        for (int i = 0; i < debuffs.Length; i++)
         {
-            statuses.Set.Apply(Definition("Status" + i, StatusKind.Debuff, 4f), null, 1f);
+            debuffs[i] = Definition("Status" + i, StatusKind.Debuff, 4f);
+            statuses.Set.Apply(debuffs[i], null, 1f);
         }
 
-        Assert.That(ActiveIcons(bar), Is.EqualTo(2));
+        Assert.That(ActiveIcons(bar, StatusKind.Debuff), Is.EqualTo(3));
+        Assert.That(bar.Icon(StatusKind.Debuff, 1).Shown, Is.SameAs(debuffs[1]));
+        StatusIconView more = bar.Icon(StatusKind.Debuff, 2);
+        Assert.That(more.More, Is.EqualTo(3));
+        Assert.That(more.Label.text, Is.EqualTo("+3"));
+        Assert.That(more.TryGetTooltip(out string title, out _, out string description), Is.True);
+        Assert.That(title, Is.EqualTo("3 more"));
+        Assert.That(description, Is.EqualTo("Status2, Status3, Status4"));
+        Assert.That(ActiveIcons(bar, StatusKind.Buff), Is.Zero);
+
+        statuses.Set.Remove(debuffs[4]);
+        statuses.Set.Remove(debuffs[3]);
+        Assert.That(more.More, Is.Zero);
+        Assert.That(more.Shown, Is.SameAs(debuffs[2]), "Three fit in three icons.");
         presenter.Dispose();
     }
 
@@ -284,8 +300,8 @@ public class StatusFeedbackTests
     }
 
     /// <summary>
-    /// The HUD prefab has an eight-slot status bar whose icons are fully wired and block clicks with their frame
-    /// alone (so a click on a shown icon never reaches the world, Docs/DesignSystem.md's Phase 5), the player and
+    /// The HUD prefab has two six-icon status groups (Docs/UiRevamp.md, Phase 2) whose icons are fully wired and block
+    /// clicks with their frame alone (so a click on a shown icon never reaches the world, Docs/DesignSystem.md's Phase 5), the player and
     /// weasel carry status visuals, the weasel has four hidden overlay status icons with its health
     /// bar, and every catalog status has a unique colour and a visual exactly when it should.
     /// </summary>
@@ -295,10 +311,11 @@ public class StatusFeedbackTests
         GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
         StatusBarView bar = hud.GetComponentInChildren<StatusBarView>(true);
         Assert.That(bar, Is.Not.Null);
-        Assert.That(bar.Capacity, Is.EqualTo(8));
+        Assert.That(bar.GroupCapacity(StatusKind.Buff), Is.EqualTo(6));
+        Assert.That(bar.GroupCapacity(StatusKind.Debuff), Is.EqualTo(6));
         for (int i = 0; i < bar.Capacity; i++)
         {
-            StatusIconView icon = bar.Icon(i);
+            StatusIconView icon = bar.Icon(i < 6 ? StatusKind.Buff : StatusKind.Debuff, i % 6);
             Assert.That(icon, Is.Not.Null);
             Assert.That(icon.Frame, Is.Not.Null);
             Assert.That(icon.Icon, Is.Not.Null);
@@ -348,12 +365,12 @@ public class StatusFeedbackTests
     /// <summary>
     /// Counts the bar's icon slots whose game object is active.
     /// </summary>
-    private static int ActiveIcons(StatusBarView bar)
+    private static int ActiveIcons(StatusBarView bar, StatusKind kind)
     {
         int active = 0;
-        for (int i = 0; i < bar.Capacity; i++)
+        for (int i = 0; i < bar.GroupCapacity(kind); i++)
         {
-            if (bar.Icon(i).gameObject.activeSelf)
+            if (bar.Icon(kind, i).gameObject.activeSelf)
             {
                 active++;
             }
@@ -411,20 +428,24 @@ public class StatusFeedbackTests
     }
 
     /// <summary>
-    /// Creates a tracked canvas holding a <see cref="StatusBarView"/> with <paramref name="capacity"/> icon slots.
+    /// Creates a tracked canvas holding a <see cref="StatusBarView"/> with <paramref name="capacity"/> icons in each
+    /// group.
     /// </summary>
     private StatusBarView CreateBar(int capacity)
     {
         GameObject canvas = Track(new GameObject("Canvas", typeof(RectTransform), typeof(Canvas)));
-        StatusIconView[] views = new StatusIconView[capacity];
+        StatusIconView[] buffs = new StatusIconView[capacity];
+        StatusIconView[] debuffs = new StatusIconView[capacity];
         for (int i = 0; i < capacity; i++)
         {
-            views[i] = CreateIconView();
-            views[i].transform.SetParent(canvas.transform, false);
+            buffs[i] = CreateIconView();
+            buffs[i].transform.SetParent(canvas.transform, false);
+            debuffs[i] = CreateIconView();
+            debuffs[i].transform.SetParent(canvas.transform, false);
         }
 
         StatusBarView bar = canvas.AddComponent<StatusBarView>();
-        bar.ConfigureReferences(views);
+        bar.ConfigureReferences(buffs, debuffs);
         return bar;
     }
 
@@ -443,7 +464,7 @@ public class StatusFeedbackTests
         fill.transform.SetParent(slot.transform, false);
         stacks.transform.SetParent(slot.transform, false);
         StatusIconView view = slot.AddComponent<StatusIconView>();
-        view.ConfigureReferences(slot.GetComponent<Image>(), icon, label, fill, stacks);
+        view.ConfigureReferences(slot.GetComponent<Image>(), icon, label, fill, stacks, TestThemes.Shared);
         return view;
     }
 

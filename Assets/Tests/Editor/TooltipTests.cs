@@ -178,6 +178,41 @@ public class TooltipTests
     }
 
     /// <summary>
+    /// A trigger that keeps a rect clear (the command bar, Docs/UiRevamp.md's Phase 2) shows its tooltip above that rect
+    /// too, still centred over its own object.
+    /// </summary>
+    [Test]
+    public void TheTooltip_ShowsAboveTheRectItsTriggerKeepsClear()
+    {
+        RectTransform canvasRect = (RectTransform)canvas.transform;
+        RectTransform cluster = Track(new GameObject("CommandBar", typeof(RectTransform))).GetComponent<RectTransform>();
+        cluster.SetParent(canvasRect, false);
+        cluster.anchorMin = new Vector2(0.5f, 0f);
+        cluster.anchorMax = new Vector2(0.5f, 0f);
+        cluster.pivot = new Vector2(0.5f, 0f);
+        cluster.anchoredPosition = new Vector2(0f, 8f);
+        cluster.sizeDelta = new Vector2(378f, 60f);
+        AbilitySlotView slot = Spawn("SlotAbility").GetComponent<AbilitySlotView>();
+        RectTransform slotRect = (RectTransform)slot.transform;
+        slotRect.SetParent(cluster, false);
+        slotRect.anchorMin = new Vector2(0.5f, 0f);
+        slotRect.anchorMax = new Vector2(0.5f, 0f);
+        slotRect.anchoredPosition = new Vector2(-60f, 16f);
+        TooltipTrigger trigger = slot.GetComponent<TooltipTrigger>();
+        trigger.Configure(tooltip, cluster);
+        slot.SetAbility(Track(AbilityDefinition.Create("Test Bolt", description: "Fires a test bolt.")));
+        Canvas.ForceUpdateCanvases();
+
+        trigger.OnPointerEnter(null);
+
+        Rect box = Bounds((RectTransform)tooltip.transform, canvasRect);
+        Rect kept = Bounds(cluster, canvasRect);
+        Rect target = Bounds(slotRect, canvasRect);
+        Assert.That(box.yMin, Is.GreaterThanOrEqualTo(kept.yMax), "Above the command bar.");
+        Assert.That(box.center.x, Is.EqualTo(target.center.x).Within(1f), "Centred over its slot.");
+    }
+
+    /// <summary>
     /// An empty slot has nothing to show, so pointing at it shows no tooltip.
     /// </summary>
     [Test]
@@ -289,6 +324,11 @@ public class TooltipTests
         TooltipTrigger[] triggers = hud.GetComponentsInChildren<TooltipTrigger>(true);
         Assert.That(triggers.Length, Is.EqualTo(AbilitySlots.Count + 1 + hud.GetComponentInChildren<StatusBarView>(true).Capacity));
         Assert.That(hud.GetComponent<PlayerHudView>().WeaponSlot.GetComponent<TooltipTrigger>(), Is.Not.Null, "The weapon slot shows the tooltip.");
+        Transform commandBar = hud.transform.Find("CommandBar");
+        foreach (TooltipTrigger trigger in triggers)
+        {
+            Assert.That(new SerializedObject(trigger).FindProperty("clearOf").objectReferenceValue, Is.EqualTo(commandBar), $"{trigger.name}'s tooltip keeps the command bar in view.");
+        }
         foreach (TooltipTrigger trigger in triggers)
         {
             Assert.That(trigger.Tooltip, Is.EqualTo(tooltips[0]), $"{trigger.name} shows the HUD's tooltip.");

@@ -29,4 +29,6 @@ public enum UiColour
     Border,
     Outline,
     ControlSecondary,
+    HealthPlayer,
+    HealthLost,
 }

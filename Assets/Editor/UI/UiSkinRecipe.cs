@@ -21,6 +21,8 @@ public enum UiSkinPiece
     Check,
     SlotCorners,
     Hatch,
+    BarTick,
+    Notch,
 }
 
 /// <summary>
@@ -30,7 +32,9 @@ public enum UiSkinPiece
 /// 1 px frame around it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
 /// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, a check mark, a toggle's
 /// mark while it is on, a slot's corner brackets, shown around a slot whose cast waits, and a hatch of diagonal lines,
-/// tiled over a slot that cannot be cast (Docs/UiRevamp.md, Decisions: Slot states). The markers are drawn around a ground ellipse twice as wide as tall, each a different
+/// tiled over a slot that cannot be cast (Docs/UiRevamp.md, Decisions: Slot states), a bar's tick, a short line down from
+/// the top of a health bar every so many HP, and a debuff's notch, a right triangle in an icon's top right corner
+/// (Docs/UiRevamp.md, Phase 2). The markers are drawn around a ground ellipse twice as wide as tall, each a different
 /// shape so colour is never the only cue: four chevrons pointing in for a move, the ring crossed by four ticks for an
 /// attack move, and four brackets on the ring's diagonals under a hovered enemy, each line outlined in translucent
 /// black. <see cref="Generate(UiSkinPiece)"/> draws a piece without touching an asset, the same settings always giving
@@ -71,6 +75,12 @@ public sealed class UiSkinRecipe : ScriptableObject
     [SerializeField, Range(1, 2)] private int cornerLine = 1;
     [Tooltip("The px between the hatch's diagonal lines, which are 1 px wide: the size of the tile it repeats.")]
     [SerializeField, Range(2, 8)] private int hatchSpacing = 4;
+
+    [Header("Health and statuses")]
+    [Tooltip("The length in px of a health bar's tick, a 1 px line down from the top of its fill.")]
+    [SerializeField, Range(1, 8)] private int tickLength = 3;
+    [Tooltip("The legs in px of a debuff's notch, the right triangle in its top right corner.")]
+    [SerializeField, Range(2, 10)] private int notchSize = 5;
 
     public int CornerCut => cornerCut;
     public int LipHeight => lipHeight;
@@ -127,6 +137,10 @@ public sealed class UiSkinRecipe : ScriptableObject
                 return Corners();
             case UiSkinPiece.Hatch:
                 return Hatch();
+            case UiSkinPiece.BarTick:
+                return Tick();
+            case UiSkinPiece.Notch:
+                return Notch();
             default:
                 return Marker(piece);
         }
@@ -285,6 +299,35 @@ public sealed class UiSkinRecipe : ScriptableObject
         }
 
         return new SkinSprite(UiSkinPiece.Hatch, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A health bar's tick, shown whole: a 1 px line <see cref="tickLength"/> px long.
+    /// </summary>
+    private SkinSprite Tick()
+    {
+        bool[] drawn = new bool[tickLength];
+        Array.Fill(drawn, true);
+        return new SkinSprite(UiSkinPiece.BarTick, 1, tickLength, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A debuff's notch, shown whole: a right triangle with <see cref="notchSize"/> px legs along the top and right
+    /// edges, its hypotenuse a 1-1 diagonal, to sit in an icon's top right corner.
+    /// </summary>
+    private SkinSprite Notch()
+    {
+        int size = notchSize;
+        bool[] drawn = new bool[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                drawn[y * size + x] = x >= size - 1 - y;
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.Notch, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
     }
 
     /// <summary>

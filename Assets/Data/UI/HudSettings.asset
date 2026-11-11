@@ -13,3 +13,8 @@ MonoBehaviour:
   m_Name: HudSettings
   m_EditorClassIdentifier: TopDownRPG.Gameplay::HudSettings
   messageSeconds: 1.2
+  tickHealth: 10
+  recentLossSeconds: 0.4
+  lowHealthShare: 0.3
+  lowPulseSeconds: 1
+  lowPulseFloor: 0.35

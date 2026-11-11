@@ -4,9 +4,10 @@ using UnityEngine.UI;
 
 /// <summary>
 /// The HUD's tooltip (Docs/DesignSystem.md, Components: Tooltip): a raised panel with a title, a line of numbers and a
-/// description, shown by a <see cref="TooltipTrigger"/> just above the slot or icon it describes (below it where there
-/// is no room above) and kept inside its canvas, on whole UI px. The numbers and the description hide when empty. Hidden until shown, and never a raycast
-/// target, so it cannot take the pointer from what it describes. Local to this machine.
+/// description, shown by a <see cref="TooltipTrigger"/> just above the slot or icon it describes, and above the rect
+/// its trigger keeps clear (the command bar, so the health bar stays in view), or below it where there is no room
+/// above; kept inside its canvas, on whole UI px. The numbers and the description hide when empty. Hidden until shown,
+/// and never a raycast target, so it cannot take the pointer from what it describes. Local to this machine.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(RectTransform))]
@@ -20,6 +21,7 @@ public class HudTooltip : MonoBehaviour
     private float gap = 2f;
 
     private RectTransform target;
+    private RectTransform clear;
 
     public bool IsShown => gameObject.activeSelf;
     internal RectTransform Target => target;
@@ -40,11 +42,13 @@ public class HudTooltip : MonoBehaviour
 
     /// <summary>
     /// Shows <paramref name="title"/>, <paramref name="details"/> and <paramref name="description"/> above
-    /// <paramref name="over"/>, leaving out the numbers or the description when empty.
+    /// <paramref name="over"/> and above <paramref name="clearOf"/> when there is one, leaving out the numbers or the
+    /// description when empty.
     /// </summary>
-    public void Show(RectTransform over, string title, string details, string description)
+    public void Show(RectTransform over, RectTransform clearOf, string title, string details, string description)
     {
         target = over;
+        clear = clearOf;
         if (titleText != null)
         {
             titleText.text = title;
@@ -67,6 +71,7 @@ public class HudTooltip : MonoBehaviour
         }
 
         target = null;
+        clear = null;
         gameObject.SetActive(false);
     }
 
@@ -102,8 +107,8 @@ public class HudTooltip : MonoBehaviour
 
     /// <summary>
     /// Lays the tooltip out at its content's size and puts it <see cref="gap"/> above the middle of the target's top
-    /// edge, or below its bottom edge when there is no room above (the weapon slot in the top corner), moved inside its
-    /// parent where it would leave it, on whole UI px from the parent's corner.
+    /// edge, or of the kept-clear rect's when that is higher, or below the target's bottom edge when there is no room
+    /// above, moved inside its parent where it would leave it, on whole UI px from the parent's corner.
     /// </summary>
     private void Place()
     {
@@ -121,6 +126,12 @@ public class HudTooltip : MonoBehaviour
         Rect over = target.rect;
         Vector2 top = (Vector2)parent.InverseTransformPoint(target.TransformPoint(new Vector3(over.center.x, over.yMax, 0f))) - parent.rect.min;
         Vector2 bottom = (Vector2)parent.InverseTransformPoint(target.TransformPoint(new Vector3(over.center.x, over.yMin, 0f))) - parent.rect.min;
+        if (clear != null)
+        {
+            Rect kept = clear.rect;
+            top.y = Mathf.Max(top.y, parent.InverseTransformPoint(clear.TransformPoint(new Vector3(kept.center.x, kept.yMax, 0f))).y - parent.rect.min.y);
+        }
+
         Vector2 size = box.rect.size;
         Vector2 room = parent.rect.size;
         float x = Mathf.Clamp(top.x - size.x * 0.5f, 0f, Mathf.Max(0f, room.x - size.x));

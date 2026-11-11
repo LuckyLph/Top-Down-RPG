@@ -1,23 +1,29 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
-/// Passive row of <see cref="StatusIconView"/>s on the player HUD, above the ability bar.
+/// Passive status groups of the command bar (Docs/UiRevamp.md, Decisions: Statuses): the buffs' <see cref="StatusIconView"/>s
+/// to the left of the abilities and the debuffs' to the right, each a 3 x 2 grid whose first icon sits nearest the
+/// abilities, filling the bottom row outwards and then the top one.
 /// </summary>
 [DisallowMultipleComponent]
 public class StatusBarView : MonoBehaviour
 {
-    [SerializeField] private StatusIconView[] icons = new StatusIconView[0];
+    [SerializeField, FormerlySerializedAs("icons"), Tooltip("The buffs' icons, nearest the abilities first.")]
+    private StatusIconView[] buffs = new StatusIconView[0];
+    [SerializeField, Tooltip("The debuffs' icons, StatusIconDebuff, nearest the abilities first.")]
+    private StatusIconView[] debuffs = new StatusIconView[0];
 
-    public int Capacity => icons != null ? icons.Length : 0;
+    public int Capacity => GroupCapacity(StatusKind.Buff) + GroupCapacity(StatusKind.Debuff);
 
     /// <summary>
-    /// Logs an error when no icon views are assigned; otherwise hides them all.
+    /// Logs an error when either group has no icon views; otherwise hides them all.
     /// </summary>
     private void Awake()
     {
-        if (Capacity == 0)
+        if (GroupCapacity(StatusKind.Buff) == 0 || GroupCapacity(StatusKind.Debuff) == 0)
         {
-            Debug.LogError($"{name} has no status icon views.", this);
+            Debug.LogError($"{name} needs status icon views for both buffs and debuffs.", this);
             return;
         }
 
@@ -25,12 +31,21 @@ public class StatusBarView : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows <paramref name="definition"/> with <paramref name="stacks"/> on icon <paramref name="index"/>.
-    /// Out-of-range indices are ignored.
+    /// How many icons the group of <paramref name="kind"/> has.
     /// </summary>
-    public void Show(int index, StatusEffectDefinition definition, int stacks)
+    public int GroupCapacity(StatusKind kind)
     {
-        StatusIconView view = Icon(index);
+        StatusIconView[] group = Group(kind);
+        return group != null ? group.Length : 0;
+    }
+
+    /// <summary>
+    /// Shows <paramref name="definition"/> with <paramref name="stacks"/> on icon <paramref name="index"/> of its kind's
+    /// group. Out-of-range indices are ignored.
+    /// </summary>
+    public void Show(StatusKind kind, int index, StatusEffectDefinition definition, int stacks)
+    {
+        StatusIconView view = Icon(kind, index);
         if (view != null)
         {
             view.Show(definition, stacks);
@@ -38,11 +53,25 @@ public class StatusBarView : MonoBehaviour
     }
 
     /// <summary>
-    /// Sets the elapsed fill of icon <paramref name="index"/>, 0 to 1. Out-of-range indices are ignored.
+    /// Shows "+<paramref name="count"/>" on icon <paramref name="index"/> of the group of <paramref name="kind"/>, for
+    /// the statuses that do not fit, named in <paramref name="names"/>. Out-of-range indices are ignored.
     /// </summary>
-    public void SetElapsed(int index, float fraction)
+    public void ShowMore(StatusKind kind, int index, int count, string names)
     {
-        StatusIconView view = Icon(index);
+        StatusIconView view = Icon(kind, index);
+        if (view != null)
+        {
+            view.ShowMore(count, names);
+        }
+    }
+
+    /// <summary>
+    /// Sets the elapsed fill of icon <paramref name="index"/> of the group of <paramref name="kind"/>, 0 to 1.
+    /// Out-of-range indices are ignored.
+    /// </summary>
+    public void SetElapsed(StatusKind kind, int index, float fraction)
+    {
+        StatusIconView view = Icon(kind, index);
         if (view != null)
         {
             view.SetElapsed(fraction);
@@ -50,15 +79,16 @@ public class StatusBarView : MonoBehaviour
     }
 
     /// <summary>
-    /// Hides every icon from <paramref name="index"/> on.
+    /// Hides every icon of the group of <paramref name="kind"/> from <paramref name="index"/> on.
     /// </summary>
-    public void HideFrom(int index)
+    public void HideFrom(StatusKind kind, int index)
     {
-        for (int i = Mathf.Max(0, index); i < Capacity; i++)
+        StatusIconView[] group = Group(kind);
+        for (int i = Mathf.Max(0, index); group != null && i < group.Length; i++)
         {
-            if (icons[i] != null)
+            if (group[i] != null)
             {
-                icons[i].Hide();
+                group[i].Hide();
             }
         }
     }
@@ -68,22 +98,34 @@ public class StatusBarView : MonoBehaviour
     /// </summary>
     public void Clear()
     {
-        HideFrom(0);
+        HideFrom(StatusKind.Buff, 0);
+        HideFrom(StatusKind.Debuff, 0);
     }
 
     /// <summary>
-    /// The icon view at <paramref name="index"/>, or null when the index is out of range or none is assigned.
+    /// The icon view at <paramref name="index"/> of the group of <paramref name="kind"/>, or null when the index is out
+    /// of range or none is assigned.
     /// </summary>
-    internal StatusIconView Icon(int index)
+    internal StatusIconView Icon(StatusKind kind, int index)
     {
-        return icons != null && index >= 0 && index < icons.Length ? icons[index] : null;
+        StatusIconView[] group = Group(kind);
+        return group != null && index >= 0 && index < group.Length ? group[index] : null;
     }
 
     /// <summary>
-    /// Assigns the icon views in code, for tests that build the bar without a prefab.
+    /// Assigns the two groups' icon views in code, for tests that build the bar without a prefab.
     /// </summary>
-    internal void ConfigureReferences(StatusIconView[] iconViews)
+    internal void ConfigureReferences(StatusIconView[] buffViews, StatusIconView[] debuffViews)
     {
-        icons = iconViews;
+        buffs = buffViews;
+        debuffs = debuffViews;
+    }
+
+    /// <summary>
+    /// The icons of the group of <paramref name="kind"/>.
+    /// </summary>
+    private StatusIconView[] Group(StatusKind kind)
+    {
+        return kind == StatusKind.Buff ? buffs : debuffs;
     }
 }

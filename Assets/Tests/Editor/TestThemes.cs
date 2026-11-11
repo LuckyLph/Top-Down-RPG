@@ -59,6 +59,8 @@ internal static class TestThemes
             [UiColour.Border] = new Color(0.98f, 0.98f, 1f),
             [UiColour.Outline] = Color.black,
             [UiColour.ControlSecondary] = new Color(0.62f, 0.62f, 0.59f),
+            [UiColour.HealthPlayer] = new Color(0.3f, 0.76f, 0.35f),
+            [UiColour.HealthLost] = new Color(0.84f, 0.84f, 0.84f),
         };
     }
 

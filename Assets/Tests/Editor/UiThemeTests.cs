@@ -411,7 +411,8 @@ public class UiThemeTests
 
     /// <summary>
     /// Every bar fill of the project meets 3:1 on its track in the project's theme (the pairs UiTheme.md lists): the
-    /// HUD's health bar and the world bar, Health on an opaque HealthTrack (Docs/UiRevamp.md, Phase 1).
+    /// world bar's Health on an opaque HealthTrack (Docs/UiRevamp.md, Phase 1), and the command bar's HealthPlayer and
+    /// its part just lost in HealthLost (Phase 2).
     /// </summary>
     [Test]
     public void EveryFillOnItsTrack_MeetsThreeToOne()
@@ -421,7 +422,9 @@ public class UiThemeTests
 
         Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/Bar.prefab")), Is.True, "The HUD's bar.");
         Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/WorldBar.prefab")), Is.True, "The world bar.");
-        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.Health && pair.Track == UiColour.HealthTrack), Is.True);
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.Health && pair.Track == UiColour.HealthTrack), Is.True, "The mobs' world bar.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.HealthPlayer && pair.Track == UiColour.HealthTrack), Is.True, "The command bar's health.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.HealthLost && pair.Track == UiColour.HealthTrack), Is.True, "Its part just lost.");
         Assert.That(ProjectTheme().Colour(UiColour.HealthTrack).a, Is.EqualTo(1f), "The track is opaque.");
         foreach (UiThemeUsage.FillPairContrast pair in pairs)
         {

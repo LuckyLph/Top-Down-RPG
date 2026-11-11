@@ -374,20 +374,62 @@ Fixes on today's layout, before anything moves.
 
 ### Phase 2: the command bar
 
-- [ ] Previews at every display in the Scale table and at Large and Larger, signed off, settling the `HealthPlayer` green.
-- [ ] The screen regions, written into DesignSystem.md's Foundations, with a test that the HUD keeps to them at 480 x 270.
-- [ ] The command bar on `PlayerHudCanvas`:
-  - [ ] the ability row with the weapon slot;
-  - [ ] the health bar over it;
-  - [ ] the message line above.
+- [x] Previews at every display in the Scale table and at Large and Larger, signed off, settling the `HealthPlayer` green.
+- [x] The screen regions, written into DesignSystem.md's Foundations, with a test that the HUD keeps to them at 480 x 270.
+- [x] The command bar on `PlayerHudCanvas`:
+  - [x] the ability row with the weapon slot;
+  - [x] the health bar over it;
+  - [x] the message line above.
   The top-left bar and the top-right weapon slot go.
-- [ ] Health:
-  - [ ] ticks, the recent loss (`HealthLost`) and the low state, steady with Reduce flashing on;
-  - [ ] `HealthPlayer` on the local bar.
-- [ ] Status groups:
-  - [ ] buffs left, debuffs right, with "+n";
-  - [ ] `StatusIconDebuff` with its notch;
-  - [ ] skin: the tick and the notch.
+- [x] Health:
+  - [x] ticks, the recent loss (`HealthLost`) and the low state, steady with Reduce flashing on;
+  - [x] `HealthPlayer` on the local bar.
+- [x] Status groups:
+  - [x] buffs left, debuffs right, with "+n";
+  - [x] `StatusIconDebuff` with its notch;
+  - [x] skin: the tick and the notch.
+
+#### Phase 2 notes
+
+- **Settled with the user on 2026-11-10,** on previews at every UI size of the Scale table (11 sizes, from 480 x 270 to 683 x 384) and at 640 x 360 and 480 x 270 in detail:
+  - `HealthPlayer` is `#4CC25A`, the proposal's green, of three: `#38B54A`, deeper, and `#6FD36B`, lighter;
+  - `HealthLost` is `#D6D6D6`, the debuff notch 5 px, and a low frame dims to 35% at the bottom of its pulse;
+  - tooltips of the command bar show above the whole bar rather than just above their slot, which otherwise covered the health bar.
+- **The previews.** Written to the gitignored `Recordings/UiRevamp/Phase2` by a temporary tool, since removed, as in Phase 1:
+  - each size rendered at x2;
+  - the details at x3 and x4, over Phase 5's capture of the Clearing, cropped to each size.
+- **Layout.** A `CommandBar` rect, 378 x 60 UI px, 8 above the bottom edge, holds everything.
+  - The ability row (the `AbilityBar`, its spacer now 4 px, so R and the weapon slot are 8 apart) at its bottom.
+  - The health bar, a `Bar` resized to 242 x 12, 2 above the row.
+  - The `MessageLine` 2 above the health bar.
+  - The `StatusBar`, 378 x 42, holding a `Buffs` and a `Debuffs` grid at its two ends.
+  The weapon slot moved into the row and shrank from 34 to 32 UI px. The slot sizes, gaps and fonts are unchanged, so the row is 242 wide.
+- **Screen regions.** DesignSystem.md's Foundations gives each region's numbers. `HudLayoutTests` lays a copy of the HUD out at each size with every icon and the message line shown. Every graphic but the tooltip stays inside the command bar's region, 378 wide and 68 tall: the queued brackets reach 1 UI px below the row, inside it.
+- **Health.**
+  - `HealthBarView` on the `Bar` component replaces the fill and text fields of `PlayerHudView`. The HUD's previous health bar was the same `Bar`, its fill now `HealthPlayer`, so mobs keep `Health` only on the `WorldBar`.
+  - Ticks are copies of a hidden template, anchored at their share of the bar, so they need no width; a spacing that falls between pixels lands where the canvas rounds it.
+  - `PlayerHudPresenter` became an `ITickable`. Each tick it compares the health with what it showed, because a client's network sync sets health without an event (`Health.SyncTo`), as `WorldHealthBar` found. The events still update the bar at once.
+  - The loss starts from the highest health of the hits within its time; a heal past that start hides it, and a change of maximum drops it.
+  - The low state covers 0 HP too, so a dead player's frame stays `Danger` until the respawn.
+- **Statuses.**
+  - `StatusBarView` holds two arrays, `buffs` (formerly `icons`, kept with `FormerlySerializedAs`) and `debuffs`, of six each.
+  - Each group is a `GridLayoutGroup` starting at the corner nearest the abilities, filling the bottom row outwards first. Hidden icons take no cell, so the shown ones always pack from that corner.
+  - A seventh status of a kind turns the sixth icon into "+n" (n counting itself), on `Surface`, its tooltip "n more" with their names.
+  - `StatusIconView` gained a theme for that `Surface`.
+- **Theme and skin.** `UiColour` appends `HealthPlayer` and `HealthLost`, and `UiSkinPiece` appends `BarTick` (1 x 3) and `Notch` (5 px).
+  - Both new roles are fills on `HealthTrack` in `UiTheme.md`, at 8.04:1 and 12.67:1.
+  - The text on the bar is now `Text` on `Outline`, so the `Text` on `Health` pair left the table.
+- **Found on the way.** The editor script moving the bar's parts into `CommandBar` re-parented it after the tooltip, which would have drawn the tooltip under the command bar; `TooltipTests` caught it and the tooltip is last again.
+- **Tests.**
+  - `HudLayoutTests` (2, new) and `PlayerHudPresenterTests` (6, new).
+  - `StatusFeedbackTests`: the groups and "+n".
+  - `UiContentTests`: the command bar's components and the debuff icon.
+  - `UiSkinWriterTests`: the tick and the notch.
+  - `UiThemeTests`: the new fill pairs.
+  - `TooltipTests`: above the rect a trigger keeps clear, every HUD trigger keeping the command bar clear.
+  - `DesignTablesTests`, with `TestThemes` gaining the two roles.
+  - `PlayerControlsPlayModeTests`: statuses in their groups.
+  - `PlayerWeaponSystemTests`: the HUD helper building a `HealthBarView`.
 
 ### Phase 3: notices and moments
 

@@ -437,7 +437,8 @@ public class PlayerControlsPlayModeTests
     }
 
     /// <summary>
-    /// The player's statuses show on the HUD bar with buffs first and a Burn visual that follows the player; a mob's
+    /// The player's statuses show on the HUD, the buff in the buffs' group and the debuff in the debuffs' (Docs/UiRevamp.md,
+    /// Phase 2), and a Burn visual follows the player; a mob's
     /// debuff shows above its health bar; clearing the player's statuses hides the icons and pools the visual.
     /// </summary>
     [UnityTest]
@@ -453,9 +454,9 @@ public class PlayerControlsPlayModeTests
         Assert.That(statuses.Apply(player.GetComponent<DamageReceiver>(), fortify, player.gameObject), Is.EqualTo(StatusApplyOutcome.Landed));
         Assert.That(statuses.Apply(player.GetComponent<DamageReceiver>(), burn), Is.EqualTo(StatusApplyOutcome.Landed));
         yield return null;
-        Assert.That(bar.Icon(0).gameObject.activeSelf && bar.Icon(0).Shown == fortify, Is.True, "Buffs come first on the HUD.");
-        Assert.That(bar.Icon(1).gameObject.activeSelf && bar.Icon(1).Shown == burn, Is.True);
-        Assert.That(bar.Icon(2).gameObject.activeSelf, Is.False);
+        Assert.That(bar.Icon(StatusKind.Buff, 0).gameObject.activeSelf && bar.Icon(StatusKind.Buff, 0).Shown == fortify, Is.True, "The buff in the buffs' group.");
+        Assert.That(bar.Icon(StatusKind.Debuff, 0).gameObject.activeSelf && bar.Icon(StatusKind.Debuff, 0).Shown == burn, Is.True, "The debuff in the debuffs' group.");
+        Assert.That(bar.Icon(StatusKind.Buff, 1).gameObject.activeSelf || bar.Icon(StatusKind.Debuff, 1).gameObject.activeSelf, Is.False);
         Assert.That(player.GetComponent<StatusVisuals>().ShownCount, Is.EqualTo(1), "Burn has a visual, Fortify does not.");
         StatusVisual aura = player.GetComponent<StatusVisuals>().GetShown(0);
         Assert.That(Vector2.Distance(aura.transform.position, player.transform.position), Is.LessThan(0.01f), "The visual follows the player.");
@@ -467,7 +468,7 @@ public class PlayerControlsPlayModeTests
 
         statuses.ClearAll(player.GetComponent<DamageReceiver>());
         yield return null;
-        Assert.That(bar.Icon(0).gameObject.activeSelf, Is.False);
+        Assert.That(bar.Icon(StatusKind.Buff, 0).gameObject.activeSelf || bar.Icon(StatusKind.Debuff, 0).gameObject.activeSelf, Is.False);
         Assert.That(aura.gameObject.activeSelf, Is.False, "The visual returns to the pool.");
     }
 

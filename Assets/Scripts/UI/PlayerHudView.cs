@@ -3,61 +3,73 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Passive player HUD: a health fill reading "72 / 100", built only when the health shown changes, and the weapon slot
-/// (<see cref="WeaponSlotView"/>). <see cref="PlayerHudPresenter"/> decides what to show.
+/// Passive player HUD: the command bar's health bar (<see cref="HealthBarView"/>) and the weapon slot
+/// (<see cref="WeaponSlotView"/>) beside its two abilities. <see cref="PlayerHudPresenter"/> decides what to show.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerHudView : MonoBehaviour
 {
-    private const string HealthTextFormat = "{0} / {1}";
-    private const string UnknownHealthText = "-- / --";
-
-    [SerializeField] private Image healthFill;
-    [SerializeField] private TextMeshProUGUI healthText;
+    [SerializeField] private HealthBarView healthBar;
     [SerializeField] private WeaponSlotView weaponSlot;
 
-    private int shownCurrent = -1;
-    private int shownMax = -1;
-
-    internal Image HealthFill => healthFill;
-    internal TextMeshProUGUI HealthText => healthText;
+    internal HealthBarView HealthBar => healthBar;
+    internal Image HealthFill => healthBar != null ? healthBar.Fill : null;
+    internal TextMeshProUGUI HealthText => healthBar != null ? healthBar.Text : null;
     internal WeaponSlotView WeaponSlot => weaponSlot;
     internal Image WeaponIcon => weaponSlot != null ? weaponSlot.Icon : null;
 
     /// <summary>
-    /// Logs an error when the health fill, its text or the weapon slot is missing.
+    /// Logs an error when the health bar or the weapon slot is missing.
     /// </summary>
     private void Awake()
     {
-        if (healthFill == null || healthText == null || weaponSlot == null)
+        if (healthBar == null || weaponSlot == null)
         {
             Debug.LogError($"{name} is missing its health bar or weapon slot.", this);
         }
     }
 
     /// <summary>
-    /// Fills the bar to <paramref name="current"/> over <paramref name="max"/> and shows both, building the text only
-    /// when either changed. Values are clamped so the max is at least 1 and the current lies between 0 and the max.
+    /// Shows <paramref name="current"/> of <paramref name="max"/> HP with a tick every <paramref name="tickHealth"/>.
     /// </summary>
-    public void SetHealth(int current, int max)
+    public void SetHealth(int current, int max, int tickHealth)
     {
-        int clampedMax = Mathf.Max(1, max);
-        int clampedCurrent = Mathf.Clamp(current, 0, clampedMax);
-        if (clampedCurrent == shownCurrent && clampedMax == shownMax)
+        if (healthBar != null)
         {
-            return;
+            healthBar.SetHealth(current, max, tickHealth);
         }
+    }
 
-        shownCurrent = clampedCurrent;
-        shownMax = clampedMax;
-        if (healthFill != null)
+    /// <summary>
+    /// Shows the bar's part from its fill up to <paramref name="fraction"/> as just lost.
+    /// </summary>
+    public void ShowLoss(float fraction)
+    {
+        if (healthBar != null)
         {
-            healthFill.fillAmount = (float)clampedCurrent / clampedMax;
+            healthBar.ShowLoss(fraction);
         }
+    }
 
-        if (healthText != null)
+    /// <summary>
+    /// Hides the part just lost.
+    /// </summary>
+    public void HideLoss()
+    {
+        if (healthBar != null)
         {
-            healthText.text = string.Format(HealthTextFormat, clampedCurrent, clampedMax);
+            healthBar.HideLoss();
+        }
+    }
+
+    /// <summary>
+    /// Shows the bar low, its frame Danger at <paramref name="strength"/>, or not.
+    /// </summary>
+    public void SetLow(bool low, float strength)
+    {
+        if (healthBar != null)
+        {
+            healthBar.SetLow(low, strength);
         }
     }
 
@@ -66,16 +78,9 @@ public class PlayerHudView : MonoBehaviour
     /// </summary>
     public void ClearHealth()
     {
-        shownCurrent = -1;
-        shownMax = -1;
-        if (healthFill != null)
+        if (healthBar != null)
         {
-            healthFill.fillAmount = 0f;
-        }
-
-        if (healthText != null)
-        {
-            healthText.text = UnknownHealthText;
+            healthBar.Clear();
         }
     }
 
@@ -91,12 +96,11 @@ public class PlayerHudView : MonoBehaviour
     }
 
     /// <summary>
-    /// Assigns the health fill, health text and weapon slot in code, for tests that build the HUD without a prefab.
+    /// Assigns the health bar and weapon slot in code, for tests that build the HUD without a prefab.
     /// </summary>
-    internal void ConfigureReferences(Image fill, TextMeshProUGUI text, WeaponSlotView slot)
+    internal void ConfigureReferences(HealthBarView bar, WeaponSlotView slot)
     {
-        healthFill = fill;
-        healthText = text;
+        healthBar = bar;
         weaponSlot = slot;
     }
 }

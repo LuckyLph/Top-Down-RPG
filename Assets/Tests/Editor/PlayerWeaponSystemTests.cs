@@ -487,7 +487,7 @@ public class PlayerWeaponSystemTests
         HudElements hud = CreatePlayerHudCanvas(root.GetComponent<PlayerWeaponController>());
         LocalPlayerTracker localPlayer = new();
         hudPresenter.Dispose();
-        hudPresenter = new PlayerHudPresenter(localPlayer, Object.FindAnyObjectByType<PlayerHudView>());
+        hudPresenter = NewHudPresenter(localPlayer, Object.FindAnyObjectByType<PlayerHudView>());
         hudPresenter.Start();
 
         localPlayer.Assign(new LocalPlayer(secondController));
@@ -989,14 +989,33 @@ public class PlayerWeaponSystemTests
         WeaponSlotView weaponSlot = weaponSlotObject.AddComponent<WeaponSlotView>();
         weaponSlot.ConfigureReferences(weaponIcon, TestThemes.Shared);
 
+        Image lost = new GameObject("Lost", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        lost.transform.SetParent(healthPanel.transform, false);
+        Image frame = new GameObject("Frame", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        frame.transform.SetParent(healthPanel.transform, false);
+        Image tick = new GameObject("Tick", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        tick.transform.SetParent(healthPanel.transform, false);
+        tick.gameObject.SetActive(false);
+        HealthBarView bar = healthPanel.AddComponent<HealthBarView>();
+        bar.ConfigureReferences(healthFill, lost, frame, healthText, tick, TestThemes.Shared);
+
         PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
-        view.ConfigureReferences(healthFill, healthText, weaponSlot);
+        view.ConfigureReferences(bar, weaponSlot);
 
         LocalPlayerTracker localPlayer = new();
         localPlayer.Assign(new LocalPlayer(weaponController.GetComponent<PlayerController>()));
-        hudPresenter = new PlayerHudPresenter(localPlayer, view);
+        hudPresenter = NewHudPresenter(localPlayer, view);
         hudPresenter.Start();
         return new HudElements(healthFill, healthText, weaponIcon);
+    }
+
+    /// <summary>
+    /// A HUD presenter for <paramref name="view"/> following <paramref name="localPlayer"/>, on a manual clock with
+    /// the default HUD settings and in-memory preferences.
+    /// </summary>
+    private PlayerHudPresenter NewHudPresenter(LocalPlayerTracker localPlayer, PlayerHudView view)
+    {
+        return new PlayerHudPresenter(localPlayer, view, new ManualClock(), Track(HudSettings.Create()), new UserSettings(new MemorySaveStore()));
     }
 
     /// <summary>

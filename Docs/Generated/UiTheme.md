@@ -31,6 +31,8 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | Border | `#9A9EB3` | 100% |
 | Outline | `#000000` | 100% |
 | ControlSecondary | `#9E9E96` | 100% |
+| HealthPlayer | `#4CC25A` | 100% |
+| HealthLost | `#D6D6D6` | 100% |
 
 ## Text sizes
 
@@ -50,7 +52,6 @@ Each pair of text role and background role a themed text uses, at the smallest s
 |---|---|---|---|---|
 | Text | Surface | Caption | 10.16:1 | 4.50:1 |
 | Text | SurfaceRaised | Body | 17.91:1 | 4.50:1 |
-| Text | Health | Body | 5.01:1 | 4.50:1 |
 | Text | Outline | Caption | 21.00:1 | 4.50:1 |
 | TextOnControl | ControlNormal | Body | 12.17:1 | 4.50:1 |
 | TextOnControl | ControlHighlighted | Body | 17.33:1 | 4.50:1 |
@@ -72,3 +73,5 @@ Each pair of a bar's fill role and the role of the track it is read against. A b
 | Fill | Track | Contrast | Needs |
 |---|---|---|---|
 | Health | HealthTrack | 3.67:1 | 3.00:1 |
+| HealthPlayer | HealthTrack | 8.04:1 | 3.00:1 |
+| HealthLost | HealthTrack | 12.67:1 | 3.00:1 |

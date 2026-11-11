@@ -10,7 +10,7 @@ using UnityEngine;
 /// greyscale, sized to slice around its corners with the border the writer sets, panels and bars have their corners
 /// cut and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
 /// shows while on (Phase 6) is two arms meeting at the bottom; a slot's corner brackets and the hatch tile
-/// (Docs/UiRevamp.md, Phase 1) are what they say; and the project's sprites are what its recipe draws, imported at 32
+/// (Docs/UiRevamp.md, Phase 1) and a bar's tick and a debuff's notch (Phase 2) are what they say; and the project's sprites are what its recipe draws, imported at 32
 /// pixels per unit with point filtering and their borders.
 /// </summary>
 public class UiSkinWriterTests
@@ -178,6 +178,31 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
+    /// A bar's tick (Docs/UiRevamp.md, Phase 2) is a 1 x 3 px line, and a debuff's notch a 5 px right triangle filling
+    /// its top row and right column, its hypotenuse a 1-1 diagonal.
+    /// </summary>
+    [Test]
+    public void TheTickAndTheNotch_AreALineAndACornerTriangle()
+    {
+        SkinSprite tick = recipe.Generate(UiSkinPiece.BarTick);
+        Assert.That(tick.Width, Is.EqualTo(1));
+        Assert.That(tick.Height, Is.EqualTo(3));
+        Assert.That(tick.Pixels.All(p => p.a == 255), Is.True);
+
+        SkinSprite notch = recipe.Generate(UiSkinPiece.Notch);
+        string[] rows = { "#####", ".####", "..###", "...##", "....#" };
+        Assert.That(notch.Width, Is.EqualTo(5));
+        Assert.That(notch.Height, Is.EqualTo(5));
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < notch.Width; x++)
+            {
+                Assert.That(At(notch, x, notch.Height - 1 - row).a, Is.EqualTo(rows[row][x] == '#' ? 255 : 0), $"Notch pixel ({x}, {row}) from the top left.");
+            }
+        }
+    }
+
+    /// <summary>
     /// The project's skin sprites hold exactly what its recipe draws, imported as single sprites at 32 pixels per unit
     /// with point filtering, a centred pivot and the piece's 9-slice border, so one sprite pixel is one UI px.
     /// </summary>
@@ -224,7 +249,7 @@ public class UiSkinWriterTests
     private static bool IsWhole(UiSkinPiece piece)
     {
         return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip
-            || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch;
+            || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch || piece == UiSkinPiece.BarTick || piece == UiSkinPiece.Notch;
     }
 
     /// <summary>

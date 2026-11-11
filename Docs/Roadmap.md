@@ -1,6 +1,14 @@
 # Roadmap
 
-Where every plan in `Docs/` stands, what comes next, and the features planned for later that have no plan of their own yet. [Architecture.md](Architecture.md) describes what exists; each plan holds its own decisions, phases and notes. Keep this page current: update it when a plan is added, a phase lands, a branch merges into `main`, or work is moved to later.
+Where every milestone and every plan in `Docs/` stands, what comes next, and the features planned for later that have no plan of their own yet. [Architecture.md](Architecture.md) describes what exists; each plan holds its own decisions, phases and notes. Keep this page current: update it when a milestone or a plan is added, a phase lands, a branch merges into `main`, or work is moved to later.
+
+## Milestones
+
+Builds with a date that gather many plans' work, each a plan of its own under [Milestones/](Milestones), with its scope, phases, dates and cuts.
+
+| Milestone | Target | What it delivers | Where it stands |
+|---|---|---|---|
+| [PreAlpha.md](Milestones/PreAlpha.md) | 2026-12-31 | The first pre-alpha build: Story (a slice of placeholder quests) and Free play (everything unlocked), levels and skill trees in place of classes, abilities that move, the Weasel archer and brute, quests, NPCs and dialogue, sound, the release | Drafted on 2026-11-10; Phase 1, modes and a first build, is next. |
 
 ## Plans
 
@@ -32,12 +40,38 @@ Where every plan in `Docs/` stands, what comes next, and the features planned fo
 
 [KnownGaps.md](KnownGaps.md) is done, on `main`. [PlayerCharacter.md](PlayerCharacter.md) is done, on `main`. [DesignSystem.md](DesignSystem.md) is done, on `main`. [UiRevamp.md](UiRevamp.md) is next, starting with its Phase 1, the HUD saying why a press failed; the features below wait for plans of their own. The plans above leave no box unticked; `NetworkDelayPlayModeTests`, whose slow reliable round trip failed in both full PlayMode runs before WorldGeneration.md's Phase 6 merged, passed in the full PlayMode run before PlayerCharacter.md merged. Before DesignSystem.md merged, the full EditMode suite passed, and of two full PlayMode runs the first failed one waystone respawn's exact-position check, which passed alone and in the second run.
 
+[PreAlpha.md](Milestones/PreAlpha.md) plans the first pre-alpha build, playable by 2026-12-31, beside UiRevamp.md: its Phase 1, modes and a first release build, is next, on `feature/prealpha`. It needs UiRevamp.md's Phases 3, 6, 9 and 10 before its feature freeze on 2026-12-14, and should have 4, 5, 7 and 8.
+
+The features it needs that no plan covers yet, in the order of its phases. A feature marked with a plan of its own gets that plan in `Docs/` when its phase starts, and its row moves to Plans; the others are built inside their phase.
+
+| Feature | What it covers | Phase | Plan |
+|---|---|---|---|
+| Game modes | Story and Free play, chosen at New game and Host a new game, saved in the session and read by a joining client; Free play's unlocks (every ability, weapon and waystone) | 1 | In the milestone |
+| Release builds | A release Windows build from `main` with the dev tools left out, its settings and steps, the readme, the zip and how testers get it; the co-op check by hand on a virtual LAN | 1, 9 | In the milestone (its Release section) |
+| Levels and XP | XP from kills and quests, shared in co-op without a split; levels 1 to 10; health and damage growing per level alike for players and mobs; mob levels on spawn points; the XP bar and the level-up notice; balance targets | 2 | Its own, Progression, with the loadout, skill trees and owned weapons |
+| Movement abilities | Lunge, Charge, Roll and Leap moving the caster; colliders where only navigation stops a body today (the world's edge, water, the ocean, lava, cliffs; Architecture.md's Known gaps); PlayerControls.md's Later | 3 | In the milestone |
+| Ability loadout | An ability catalog for the wire; any four known abilities on Q W E R in place of `PlayerClass`; cooldowns by ability; saved and replicated (PlayerControls.md's Later) | 3 | Progression |
+| Skill trees | Trees, nodes (abilities, and passives with ranks), skill points, respec, passives as stat modifiers, the Skills screen; three placeholder trees and two new abilities | 4 | Progression; the full design is Later |
+| Owned weapons | The weapons a player owns, saved; a Swap weapon binding in place of the dev panel's F5, which a release build leaves out; weapons as quest rewards | 4 | Progression |
+| Mob variety | Ranged attacks for mobs; the Weasel archer and brute; frost and fire variants; region tables of kinds and levels in the World Generator; more spawn points, packs and a respawn delay for a grind | 5 | Its own |
+| Quests | Quest definitions, objectives (talk, reach, kill, collect, use, do), rewards and prerequisites; the host's quest service and credit shared in co-op; the tracker, the Journal, quest markers and the objective pointer; the story slice's placeholder quests | 6, 7 | Its own, with NPCs and dialogue |
+| NPCs and dialogue | NPCs made from the adventurer's body and parts, standing at camps; Interact orders on NPCs and objects; a linear dialogue panel | 6 | Quests |
+| Region names | Display names for the Overworld's regions and a notice on entering one (a WorldGeneration.md non-goal until now) | 6 | In the milestone |
+| Sound | Sounds generated from recipes in the editor; a mixer; cues for combat, abilities, mobs, levels, quests and the UI; volumes in the options screen | 8 | Its own |
+
 ## Later
 
 Features planned for later, out of scope until they get a plan of their own:
 
-- **Multiplayer testing.** Checking the game by hand with other players: Multiplayer Play Mode with 2 to 4 players in one editor, then a second machine on the network and over the internet. Until it comes, every feature is designed for multiplayer and checked by the EditMode and PlayMode tests that run in the editor (the in-process host and client), and plans carry no Multiplayer Play Mode checks (CLAUDE.md). The steps the plans kept for it: [Multiplayer.md](Multiplayer.md#running-two-players-in-the-editor) (two players, saves, runtime terrain edits, a virtual LAN, a bad connection), [WorldStreaming.md](WorldStreaming.md#checking-with-multiplayer-play-mode) (one world, different worlds, trips, saves), WorldGeneration.md's Phase 4 (players across the Overworld's regions), AsepriteCharacters.md's Phase 2 (a baked and a hand-drawn look), KeyBindings.md's Testing (rebinding and the menus), PlayerControls.md's Testing (moving, attacking and casting together).
+- **Multiplayer testing.** Checking the game by hand with other players: Multiplayer Play Mode with 2 to 4 players in one editor, then a second machine on the network and over the internet. Until it comes, every feature is designed for multiplayer and checked by the EditMode and PlayMode tests that run in the editor (the in-process host and client), and plans carry no Multiplayer Play Mode checks (CLAUDE.md). PreAlpha.md's Phase 9 pulls one check forward: two machines on a virtual LAN playing each mode together before the release. The steps the plans kept for it: [Multiplayer.md](Multiplayer.md#running-two-players-in-the-editor) (two players, saves, runtime terrain edits, a virtual LAN, a bad connection), [WorldStreaming.md](WorldStreaming.md#checking-with-multiplayer-play-mode) (one world, different worlds, trips, saves), WorldGeneration.md's Phase 4 (players across the Overworld's regions), AsepriteCharacters.md's Phase 2 (a baked and a hand-drawn look), KeyBindings.md's Testing (rebinding and the menus), PlayerControls.md's Testing (moving, attacking and casting together).
 - **A hosted relay** for internet play without a virtual LAN (Multiplayer.md's Phase 6; Steam is the likely transport if the game ships there).
-- **Lava damage**: burning a unit standing in or next to lava, with a fire damage type and a burning status (TerrainTypes.md's Phase 9, DamageAndStatusEffects.md).
+- **Lava damage**: burning a unit standing in or next to lava, with a fire damage type and a burning status (TerrainTypes.md's Phase 9, DamageAndStatusEffects.md). PreAlpha.md's Phase 5 lists it as a Could.
+- **The main story**: its premise, characters and quests, in place of the pre-alpha's placeholder slice.
+- **Skill trees designed in full**: how many, their shape, whether a tree ranks up from points or from use, weapon trees, trees opened by quests (PreAlpha.md builds the system with placeholder trees).
+- **Bosses and elites**, with the ground markers Animation.md kept for them.
+- **Buildings, interiors and towns**: building art, and doorstep exits to interior worlds (WorldGeneration.md's Later).
+- **Music.**
+- **Fast travel** between discovered waystones, **a world map and a minimap** (UiRevamp.md keeps the top right free for them).
+- **Mobs scaling with the party**, and **characters that travel between sessions** (UiRevamp.md's Later: more than one character per install).
 - **Weather**: rain, snow and fog with the light under them (Lighting.md's Later).
-- **Equipment**: an inventory and equipment that gameplay equips beyond weapons (armour, shields, accessories), drawn on the player as PlayerCharacter.md's Phase 7 draws a weapon's gear: a part slot that follows what is equipped rather than a player's pick.
+- **Equipment**: loot, an inventory and equipment that gameplay equips beyond weapons (armour, shields, accessories), drawn on the player as PlayerCharacter.md's Phase 7 draws a weapon's gear: a part slot that follows what is equipped rather than a player's pick.

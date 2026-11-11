@@ -4,12 +4,15 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Tests for <see cref="WorldHealthBar"/>: the fill tracking health, hiding while dead, and the weasel prefab's
-/// bar, an instance of the world bar component drawn with the UI skin (Docs/DesignSystem.md, Phase 5).
+/// Tests for <see cref="WorldHealthBar"/>: the fill tracking health, hiding while dead, the weasel prefab's bar, an
+/// instance of the world bar component drawn with the UI skin (Docs/DesignSystem.md, Phase 5), and the player prefab's,
+/// an instance of the world bar's player variant with its cast bar (Docs/UiRevamp.md, Phase 4).
 /// </summary>
 public class WorldHealthBarTests
 {
     private const float ArtPixelsPerUnit = 32f;
+    private const string PartsFolder = "Assets/Sprites/Characters/Adventurer/Parts";
+    private const string AdventurerSet = "Assets/Sprites/Characters/Adventurer/Adventurer_AnimationSet.asset";
 
     private readonly List<Object> createdObjects = new();
     private Health health;
@@ -107,7 +110,8 @@ public class WorldHealthBarTests
     /// The weasel prefab's health bar is an instance of the world bar component and reads the weasel's health: the
     /// skin's bar frame, 22 x 4 art px, in HealthTrack, with its bar fill, 2 px tall and 1 px inside it, in Health,
     /// both sliced so their corners keep at any width, with unlit materials on the Overlay sorting layer, which
-    /// sorts above units; four status pips above it; the whole bar on whole art px above the weasel's head.
+    /// sorts above units; four status pips above it, unscaled, so 5 art px (Docs/UiRevamp.md, Phase 4); the whole bar
+    /// on whole art px above the weasel's head.
     /// </summary>
     [Test]
     public void WeaselPrefab_HasTheSkinnedWorldBarOnTheOverlayLayerAboveItsHead()
@@ -145,11 +149,107 @@ public class WorldHealthBarTests
             {
                 pips++;
                 Assert.That(icon.sprite, Is.EqualTo(Skin(UiSkinPiece.Pip)), $"{icon.name} is a pip.");
+                Assert.That(icon.transform.localScale, Is.EqualTo(Vector3.one), $"{icon.name} draws the pip's 5 px on the art grid.");
                 Assert.That(icon.transform.localPosition.y, Is.GreaterThan(prefabFrame.transform.localPosition.y + prefabFrame.size.y * 0.5f), $"{icon.name} sits above the bar.");
             }
         }
 
         Assert.That(pips, Is.EqualTo(4));
+    }
+
+    /// <summary>
+    /// The player prefab's health bar is an instance of the world bar's player variant (Docs/UiRevamp.md, Phase 4),
+    /// reading the player's health, statuses and abilities: the world bar with its fill in HealthPlayer, and under it a
+    /// cast bar, the skin's bar frame 22 x 3 art px in HealthTrack sharing the bar's bottom border, with its bar fill
+    /// 20 x 1 inside it in Accent, read against the cast frame, both hidden until a cast, unlit on the Overlay layer
+    /// above the bar's frame; the bar is on whole art px, and the cast bar's bottom edge clears the top of every look the
+    /// adventurer's parts can make while it stands, idles, walks or runs, outline included.
+    /// </summary>
+    [Test]
+    public void PlayerPrefab_HasThePlayerWorldBar_WithACastBarAboveItsHead()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
+        WorldHealthBar prefabBar = player.GetComponentInChildren<WorldHealthBar>(true);
+        Assert.That(prefabBar, Is.Not.Null);
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(prefabBar.gameObject), Is.EqualTo("Assets/Prefabs/UI/Components/WorldBarPlayer.prefab"));
+        GameObject variant = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/Components/WorldBarPlayer.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(variant)), Is.EqualTo("Assets/Prefabs/UI/Components/WorldBar.prefab"), "A variant of the world bar.");
+
+        SerializedObject serialized = new(prefabBar);
+        Assert.That(serialized.FindProperty("health").objectReferenceValue, Is.SameAs(player.GetComponent<Health>()));
+        SpriteRenderer barFrame = (SpriteRenderer)serialized.FindProperty("frame").objectReferenceValue;
+        SpriteRenderer barFill = (SpriteRenderer)serialized.FindProperty("fill").objectReferenceValue;
+        Assert.That(barFill.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthPlayer), "Players' bars are green, mobs' red.");
+        Assert.That(new SerializedObject(prefabBar.GetComponent<WorldStatusIcons>()).FindProperty("statuses").objectReferenceValue, Is.SameAs(player.GetComponent<StatusEffects>()));
+
+        WorldCastBar castBar = prefabBar.GetComponent<WorldCastBar>();
+        Assert.That(castBar, Is.Not.Null);
+        SerializedObject cast = new(castBar);
+        Assert.That(cast.FindProperty("abilities").objectReferenceValue, Is.SameAs(player.GetComponent<PlayerAbilities>()));
+        Assert.That(cast.FindProperty("health").objectReferenceValue, Is.SameAs(player.GetComponent<Health>()));
+        SpriteRenderer castFrame = (SpriteRenderer)cast.FindProperty("frame").objectReferenceValue;
+        SpriteRenderer castFill = (SpriteRenderer)cast.FindProperty("fill").objectReferenceValue;
+        Assert.That(castFrame.sprite, Is.EqualTo(Skin(UiSkinPiece.BarFrame)));
+        Assert.That(castFill.sprite, Is.EqualTo(Skin(UiSkinPiece.BarFill)));
+        Assert.That(castFrame.drawMode, Is.EqualTo(SpriteDrawMode.Sliced));
+        Assert.That(castFill.drawMode, Is.EqualTo(SpriteDrawMode.Sliced));
+        Assert.That(castFrame.size * ArtPixelsPerUnit, Is.EqualTo(new Vector2(22f, 3f)));
+        Assert.That(castFill.size * ArtPixelsPerUnit, Is.EqualTo(new Vector2(20f, 1f)));
+        Assert.That(castFrame.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthTrack));
+        ThemedGraphic castFillTheme = castFill.GetComponent<ThemedGraphic>();
+        Assert.That(castFillTheme.Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(castFillTheme.Track, Is.SameAs(castFrame.GetComponent<ThemedGraphic>()), "The cast fill is measured against its frame.");
+        Assert.That(castFrame.enabled || castFill.enabled, Is.False, "Hidden until a cast.");
+        foreach (SpriteRenderer part in new[] { castFrame, castFill })
+        {
+            Assert.That(part.sortingLayerName, Is.EqualTo("Overlay"));
+            Assert.That(part.sharedMaterial.shader.name, Does.Contain("Unlit"));
+        }
+
+        Assert.That(castFill.sortingOrder, Is.GreaterThan(castFrame.sortingOrder));
+        float barBottom = (barFrame.transform.localPosition.y - barFrame.size.y * 0.5f) * ArtPixelsPerUnit;
+        float castTop = (castFrame.transform.localPosition.y + castFrame.size.y * 0.5f) * ArtPixelsPerUnit;
+        float castBottom = (castFrame.transform.localPosition.y - castFrame.size.y * 0.5f) * ArtPixelsPerUnit;
+        Assert.That(castTop, Is.EqualTo(barBottom + 1f).Within(1e-4f), "The cast bar shares the bar's bottom border.");
+        Assert.That(castFill.transform.localPosition.y, Is.EqualTo(castFrame.transform.localPosition.y).Within(1e-6f), "The cast fill sits inside its frame.");
+
+        Vector3 position = prefabBar.transform.localPosition * ArtPixelsPerUnit;
+        Assert.That(new Vector2(position.x, position.y), Is.EqualTo(new Vector2(Mathf.Round(position.x), Mathf.Round(position.y))), "The bar sits on whole art px.");
+        Assert.That(position.y + castBottom, Is.GreaterThanOrEqualTo(TallestStandingLook()), "The cast bar clears the tallest look.");
+    }
+
+    /// <summary>
+    /// How many art px above the feet the adventurer's tallest look reaches while it stands, idles, walks or runs: the
+    /// highest top of any part's layer in those clips, plus the 1 px outline drawn around the character.
+    /// </summary>
+    private static int TallestStandingLook()
+    {
+        CharacterAnimationSet set = AssetDatabase.LoadAssetAtPath<CharacterAnimationSet>(AdventurerSet);
+        int tallest = 0;
+        foreach (string guid in AssetDatabase.FindAssets("t:TextAsset", new[] { PartsFolder }))
+        {
+            CharacterLayer layer = CharacterLayer.Read(AssetDatabase.LoadAssetAtPath<TextAsset>(AssetDatabase.GUIDToAssetPath(guid)).bytes);
+            for (int c = 0; c < layer.Clips.Length && c < set.Clips.Count; c++)
+            {
+                string clip = set.Clips[c].Name;
+                if (!clip.StartsWith("Idle") && clip != "Walk" && clip != "Run" && clip != "Sprint")
+                {
+                    continue;
+                }
+
+                CharacterLayerClip layerClip = layer.Clips[c];
+                foreach (CharacterLayerFrame frame in layerClip.Frames)
+                {
+                    if (frame != null && frame.Box.height > 0)
+                    {
+                        tallest = Mathf.Max(tallest, frame.Box.yMax - layerClip.Feet.y + 1);
+                    }
+                }
+            }
+        }
+
+        Assert.That(tallest, Is.GreaterThan(30), "The parts' layers were read.");
+        return tallest;
     }
 
     /// <summary>

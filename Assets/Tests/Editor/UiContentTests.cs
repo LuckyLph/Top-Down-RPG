@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Content checks for the UI (Docs/DesignSystem.md, Phases 4 to 6, and Accessibility), on the UI prefabs (the
-/// components among them), the mobs' world UI and the menu scenes, which are only read: every text, image, world UI
+/// components among them), the mobs' and the player's world UI and the menu scenes, which are only read: every text, image, world UI
 /// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
 /// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
@@ -17,7 +17,7 @@ using UnityEngine.UI;
 /// </summary>
 public class UiContentTests
 {
-    private static readonly string[] PrefabFolders = { "Assets/Prefabs/UI", "Assets/Prefabs/Mobs" };
+    private static readonly string[] PrefabFolders = { "Assets/Prefabs/UI", "Assets/Prefabs/Mobs", "Assets/Prefabs/Player" };
     private const string Components = "Assets/Prefabs/UI/Components/";
 
     private readonly List<(string where, GameObject root)> roots = new();
@@ -149,8 +149,8 @@ public class UiContentTests
     }
 
     /// <summary>
-    /// The world UI's sprites (the world health bar and its status pips, the markers and the hover marker) have a
-    /// <see cref="ThemedGraphic"/> with the project's theme.
+    /// The world UI's sprites (the world health bars with their status pips and the players' cast bars, the markers
+    /// and the hover markers) have a <see cref="ThemedGraphic"/> with the project's theme.
     /// </summary>
     [Test]
     public void TheWorldUisSprites_AreThemed()
@@ -173,6 +173,7 @@ public class UiContentTests
             foreach (PointerFeedbackLayer layer in root.GetComponentsInChildren<PointerFeedbackLayer>(true))
             {
                 sprites.Add(layer.HoverRing);
+                sprites.Add(layer.AllyHoverRing);
             }
 
             foreach (SpriteRenderer sprite in sprites)
@@ -186,7 +187,7 @@ public class UiContentTests
             }
         }
 
-        Assert.That(count, Is.GreaterThanOrEqualTo(10), "The Weasel's bar and four pips, the markers and the hover marker.");
+        Assert.That(count, Is.GreaterThanOrEqualTo(18), "The Weasel's and the player's bars with their pips, the player's cast bar, the markers and the hover markers.");
         Assert.That(problems, Is.Empty, string.Join("\n", problems));
     }
 
@@ -243,7 +244,9 @@ public class UiContentTests
     /// <summary>
     /// The move, attack move and hover markers are three prefabs, each drawing its own skin shape in its role (so
     /// colour is never the only cue), and the Gameplay scene's pointer feedback drops the move and attack move markers
-    /// and puts a hover marker under the hovered enemy.
+    /// and puts a hover marker under the hovered enemy. The ally hover marker (Docs/UiRevamp.md, Phase 4) is a variant
+    /// of the hover marker, its shape in Positive, which the feedback puts under the hovered ally: the attack cursor,
+    /// shown over enemies only, tells the two apart besides their colour.
     /// </summary>
     [Test]
     public void TheMarkerKinds_HaveDifferentSprites()
@@ -281,6 +284,14 @@ public class UiContentTests
         Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("attackMarkerPrefab").objectReferenceValue), Is.EqualTo($"{Components}MarkerAttackMove.prefab"));
         SpriteRenderer hover = (SpriteRenderer)serialized.FindProperty("hoverRing").objectReferenceValue;
         Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(hover.gameObject), Is.EqualTo($"{Components}MarkerHover.prefab"));
+
+        GameObject allyMarker = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}MarkerHoverAlly.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(allyMarker)), Is.EqualTo($"{Components}MarkerHover.prefab"), "A variant of the hover marker.");
+        Assert.That(allyMarker.GetComponent<SpriteRenderer>().sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.MarkerHover))), "The enemy's shape.");
+        Assert.That(allyMarker.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Positive));
+        SpriteRenderer allyHover = (SpriteRenderer)serialized.FindProperty("allyHoverRing").objectReferenceValue;
+        Assert.That(allyHover, Is.Not.Null, "The Gameplay scene's ally hover marker.");
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(allyHover.gameObject), Is.EqualTo($"{Components}MarkerHoverAlly.prefab"));
     }
 
     /// <summary>

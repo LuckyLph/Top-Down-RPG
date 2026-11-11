@@ -99,7 +99,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Failures | A failed press shows its reason on the message line for 1.2 s, beside today's flash: "On cooldown", "Already casting", "No target", "Stunned", "Silenced" or "Rooted". The texts sit in one table keyed by `CastOutcome`. A buffered cast that expires or is dropped by a newer order loses its brackets without a text. |
 | Slot states | A slot is ready, cooling down (as today), casting (frame in `Accent`), queued (`Accent` corner brackets), disabled (a hatch) or failed (the flash). Disabled means every slot while stunned or silenced, and the slots whose cast moves the caster (`CastMovement.Ability`) while rooted. |
 | Statuses | Buffs left of the abilities and debuffs right, each in a 3 x 2 grid filling outwards from the abilities. A seventh of a kind shows "+n" on the sixth icon. A debuff's frame is `Danger` with a notched corner, so both its side and its shape carry its kind. |
-| Players in the world | Every player has a world bar with debuff pips and a cast bar under it, on every machine, the local player's own included. An ally under the pointer gets a hover marker of its own shape. |
+| Players in the world | Every player has a world bar with debuff pips and a cast bar under it, on every machine, the local player's own included. An ally under the pointer gets the enemy's hover marker in green (settled in Phase 4). |
 | Player slots | The host gives itself slot 1 and each joining player the lowest free one, and a player who leaves frees theirs. A slot has:<br>• a number;<br>• a shape (circle, diamond, triangle or square);<br>• a colour role (`Player1` to `Player4`).<br>It is a server-written network variable on the player, read by late joiners. |
 | Party frames | At the left edge, one 104 x 26 frame per other player. Each shows the badge, "Player 2", and a bar with debuff pips (unticked, as the command bar's since Phase 3), or else "Respawning in 2", "In another world" or "Joining". Playing alone, none show. |
 | Notices | In-game notices queue on the notice line: Waystone discovered, the world entered, a player joined, left or down, and while you are dead "You fell. Respawning in 3". This replaces the Messages pattern's "short notices float over the local player"; popups are left to hits and heals. |
@@ -148,12 +148,13 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 
 ### Players in the world
 
-- **The bar.** A player's world bar is the `WorldBar`'s 22 x 4 art px bar in `HealthPlayer`, with up to four debuff pips above it and the slot's 5 px badge to its left (from Phase 5).
-- **The cast bar** sits under the bar in `Accent` and fills over the cast time:
+- **The bar.** A player's world bar is the `WorldBar`'s 22 x 4 art px bar in `HealthPlayer`, centred 46 art px above the feet, with up to four debuff pips above it and the slot's 5 px badge to its left (from Phase 5). It stays put whether or not the player casts.
+- **The cast bar** sits under the bar in `Accent`, 22 x 3 with a 1 px fill, sharing the bar's bottom border, and fills over the cast time:
   - the owner drives it from `CastStarted` and `CastEnded`;
-  - every other machine drives it from `RemoteCastStarted`, `RemoteCastCompleted` and `RemoteCastCancelled`.
+  - every other machine drives it from `RemoteCastStarted`, `RemoteCastCompleted` and `RemoteCastCancelled`, filling from when the cast arrives and staying full until the completion or cancel arrives, or 0.5 s past the cast time.
+  - A cast without a cast time never shows it, and a dead player's bar hides.
 - **The local player's own bar and cast bar** show too. The camera centres it, so the eye is already there.
-- **The ally hover marker** (`MarkerHoverAlly`) shows under the ally the pointer is over, in `Positive`, with brackets of a shape the enemy marker does not use.
+- **The ally hover marker** (`MarkerHoverAlly`) shows under the other player the pointer is over: the enemy's brackets in `Positive`. It never shows under the local player, where the pointer often rests. The attack cursor, which shows over enemies only, tells the two markers apart besides their colour.
 
 ### The in-game menu
 
@@ -237,8 +238,8 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
   - **Presenters:** `AbilityBarPresenter` keeps the outcome and reads the local player's controls; `PlayerOrders` raises an event when a cast is buffered and when the buffer clears.
 - **Notices:** a `NoticePresenter` and the HUD's notice line (`NoticeView`). `WaystonePopupPresenter` moves onto them: since Phase 3 the presenter raises the waystone notice itself, and `WaystonePopupPresenter` is gone.
 - **World:**
-  - a `WorldBar` player variant on the player prefab, with `WorldStatusIcons` and a new `WorldCastBar`;
-  - `MarkerHoverAlly` in `PointerFeedbackLayer`.
+  - a `WorldBar` player variant (`WorldBarPlayer`) on the player prefab, with `WorldStatusIcons` and a new `WorldCastBar`;
+  - `MarkerHoverAlly`, a variant of `MarkerHover`, in `PointerFeedbackLayer`.
 - **Slots:**
   - `PlayerSlot`, a `NetworkBehaviour` on the player holding the server-written slot, with the host assigning it;
   - `PartyFramesPresenter` and the `PartyFrame` component.
@@ -504,13 +505,43 @@ Fixes on today's layout, before anything moves.
 
 ### Phase 4: players in the world
 
-- [ ] Previews of your own and an ally's bar, pips and cast bar, and the ally hover marker, signed off.
-- [ ] The `WorldBar` player variant on the player prefab, with `WorldStatusIcons` and `WorldCastBar`, on every machine.
-- [ ] `MarkerHoverAlly` and its skin piece.
-- [ ] PlayMode, with the in-process host and client:
-  - [ ] the client sees the host's bar, pips and cast;
-  - [ ] a late joiner sees current health.
-- [ ] DesignSystem.md's Co-op pattern and Later.
+- [x] Previews of your own and an ally's bar, pips and cast bar, and the ally hover marker, signed off.
+- [x] The `WorldBar` player variant on the player prefab, with `WorldStatusIcons` and `WorldCastBar`, on every machine.
+- [x] `MarkerHoverAlly`, the enemy's shape in `Positive`, so no skin piece.
+- [x] PlayMode, with the in-process host and client:
+  - [x] the client sees the host's bar, pips and cast;
+  - [x] a late joiner sees current health.
+- [x] DesignSystem.md's Co-op pattern and Later.
+
+#### Phase 4 notes
+
+- **Settled with the user on 2026-11-11,** on previews at 640 x 360 (x2, x3 and x6) and 480 x 270 (x4), and on two comparison sheets at x6:
+  - **The cast bar:** 22 x 3 art px with a 1 px fill, sharing the health bar's bottom border, so casting adds 2 px under the bar. The alternatives were a 22 x 4 bar with a 2 px fill sharing the border, and a 22 x 3 bar 1 px apart.
+  - **The ally hover marker:** the enemy's brackets in green. The alternatives were square corners, arcs on the axes, and a whole ring. Since the two markers share a shape, the attack cursor, which shows over enemies only, is the cue besides colour.
+  - **The height:** the bar's centre 46 art px above the feet, so the cast bar's bottom edge is at 42. The tallest look reaches 42 while it stands, idles, walks or runs: the longbow carried on the back, at 41, plus the outline. Casts that raise the arms or leap (Smite, Sweep, Charge, Leap, Volley) and the attacks reach into the bars for a moment, and the bars draw over them.
+  - **Not under yourself:** the ally marker shows only under other players.
+- **The previews.** A Python script, kept outside the repo, composed them in the gitignored `Recordings/UiRevamp/Phase4`:
+  - the skin's sprites in the theme's colours, the adventurer's and the Weasel's baked frames, and the recipe's marker shapes ported;
+  - over Phase 5's Clearing capture, with the Phase 3 HUD masked in from its own captures.
+- **Layout.** `WorldBarPlayer` is a variant of `WorldBar`:
+  - its fill is in `HealthPlayer`;
+  - `CastFrame` (the skin's `BarFrame`, 22 x 3, `HealthTrack`) and `CastFill` (`BarFill`, 20 x 1, `Accent`, read against the cast frame) sit 2.5 art px below its centre, unlit on `Overlay` at orders 0 and 1, and are hidden until a cast;
+  - `WorldCastBar` is on its root, beside `WorldHealthBar` and `WorldStatusIcons`.
+  The player prefab holds an instance as `HealthBar`, its last child, 46 art px up, wired to the player's `Health`, `StatusEffects` and `PlayerAbilities`. Its root's `Overlay` sorting group sorts at the root, as the Weasel's does.
+- **The cast bar.** `WorldCastBar` fills on the game clock (injected, as `CharacterVisuals` is), from the left, sizing its sliced fill as `WorldHealthBar` does.
+  - On the owner it shows on `CastStarted` and hides on `CastEnded`, completed or cancelled. An instant cast starts and ends on one tick, so it never shows.
+  - On a copy it shows on `RemoteCastStarted` and hides on `RemoteCastCompleted` or `RemoteCastCancelled`, or once `remoteHoldSeconds` (0.5 s) pass beyond the cast time, in case neither arrives.
+  - It hides while the player is dead. `LateUpdate` allocates nothing.
+- **The ally hover marker.** `MarkerHoverAlly` is a variant of `MarkerHover` with its role `Positive`. The Gameplay scene's `PointerFeedback` holds an instance, `AllyHoverMarker`, as `PointerFeedbackLayer.allyHoverRing`. `PointerFeedbackPresenter` shows it under a living player the picker finds, unless it is the local player, and hides it with the other feedback.
+- **Found on the way.** The `WorldBar`'s four pips were scaled to 0.832, so they drew 4.16 art px off the pixel grid, though the docs said 5 px. They are unscaled now, on the Weasel too. The fourth pip still reaches 1 px past the bar's right end, as before.
+- **Co-op.** Nothing new is sent: health comes from `NetworkHealth` (a late joiner's at spawn), the pips from `NetworkStatusEffects`, and the casts from `PlayerNetworkSync`'s cast messages. `NetworkWorldBarsPlayModeTests` checks them on the in-process client and host.
+- **Tests.**
+  - `WorldCastBarTests` (8, new) and `NetworkWorldBarsPlayModeTests` (2, new).
+  - `WorldHealthBarTests`: the player prefab's bar, the cast bar clearing the tallest look read from the parts' layers, and the pips unscaled.
+  - `PlayerFeedbackTests`: the ally marker under another player, never under the local player, a dead ally or with the enemy's.
+  - `UiContentTests`: the player prefab read too, its bar's sprites and the ally marker themed, the ally marker a variant of the hover marker in `Positive` that the Gameplay scene uses.
+  - `UiThemeTests`: the cast bar's `Accent` on `HealthTrack`, 13.48:1 in `UiTheme.md`.
+  - `SpriteSortingTests`: the units it renders lose their world bars, which draw over every unit and prop by design.
 
 ### Phase 5: player slots and party frames
 

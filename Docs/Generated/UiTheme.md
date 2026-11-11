@@ -73,6 +73,7 @@ Each pair of a bar's fill role and the role of the track it is read against. A b
 
 | Fill | Track | Contrast | Needs |
 |---|---|---|---|
+| Accent | HealthTrack | 13.48:1 | 3.00:1 |
 | Health | HealthTrack | 3.67:1 | 3.00:1 |
 | HealthPlayer | HealthTrack | 8.04:1 | 3.00:1 |
 | HealthLost | HealthTrack | 12.67:1 | 3.00:1 |

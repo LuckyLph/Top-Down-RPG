@@ -9,13 +9,15 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 
 /// <summary>
 /// Tests for the local player's feedback: <see cref="AbilityBarPresenter"/> (names, key labels, cooldowns, failure
-/// flashes), the HUD prefab's ability bar, and <see cref="PointerFeedbackPresenter"/> (hover, cursor, move markers).
+/// flashes), the HUD prefab's ability bar, and <see cref="PointerFeedbackPresenter"/> (hover, ally hover, cursor, move
+/// markers).
 /// </summary>
 public class PlayerFeedbackTests
 {
     private readonly List<Object> createdObjects = new();
     private ManualClock clock;
     private LocalPlayerTracker localPlayer;
+    private PlayerRegistry players;
     private AbilityBarView bar;
     private AbilitySlotView[] slots;
     private AbilityBarPresenter barPresenter;
@@ -29,6 +31,7 @@ public class PlayerFeedbackTests
     {
         clock = new ManualClock();
         localPlayer = new LocalPlayerTracker();
+        players = new PlayerRegistry();
         keyLabels = new FakeInputBindingLabels();
     }
 
@@ -238,6 +241,52 @@ public class PlayerFeedbackTests
     }
 
     /// <summary>
+    /// Pointing at another living player shows the ally hover marker under it (Docs/UiRevamp.md, Phase 4), without the
+    /// enemy's marker or the attack cursor; pointing at the local player, at a dead ally or at the ground shows none,
+    /// and pointing at an enemy shows only the enemy's.
+    /// </summary>
+    [Test]
+    public void Feedback_MarksTheAllyUnderThePointer_ButNotTheLocalPlayer()
+    {
+        (PointerFeedbackPresenter presenter, PointerFeedbackLayer layer, FakePlayerInput input) = CreateFeedback(alive: true);
+        Health ally = CreateAlly(new Vector2(10f, 20f));
+        Physics2D.SyncTransforms();
+
+        presenter.Tick(0.016f);
+        Assert.That(layer.HoveredAlly, Is.SameAs(ally.transform));
+        Assert.That(layer.AllyHoverRing.enabled, Is.True);
+        Assert.That((Vector2)layer.AllyHoverRing.transform.position, Is.EqualTo(new Vector2(10f, 20f)));
+        Assert.That(layer.Hovered, Is.Null, "An ally gets no enemy marker.");
+        Assert.That(layer.HoverRing.enabled, Is.False);
+        Assert.That(layer.AttackCursorShown, Is.False, "The attack cursor is for enemies only.");
+
+        ally.ApplyDamage(ally.MaxHealth);
+        presenter.Tick(0.016f);
+        Assert.That(layer.HoveredAlly, Is.Null, "A dead ally is not marked.");
+        Assert.That(layer.AllyHoverRing.enabled, Is.False);
+
+        Transform self = localPlayer.Current.Transform;
+        self.gameObject.layer = LayerMask.NameToLayer("Player");
+        self.position = new Vector2(10f, 20f);
+        self.gameObject.AddComponent<BoxCollider2D>().size = new Vector2(0.3f, 0.2f);
+        Physics2D.SyncTransforms();
+        presenter.Tick(0.016f);
+        Assert.That(layer.HoveredAlly, Is.Null, "The local player is never marked under itself.");
+
+        Object.DestroyImmediate(self.GetComponent<BoxCollider2D>());
+        CreateMob(new Vector2(10f, 20f));
+        Physics2D.SyncTransforms();
+        presenter.Tick(0.016f);
+        Assert.That(layer.HoveredAlly, Is.Null);
+        Assert.That(layer.Hovered, Is.Not.Null);
+
+        input.IsPointerOverUI = true;
+        presenter.Tick(0.016f);
+        Assert.That(layer.Hovered, Is.Null);
+        Assert.That(layer.HoveredAlly, Is.Null);
+    }
+
+    /// <summary>
     /// A move click on the ground drops a move marker, while a click over UI or on an enemy does not.
     /// </summary>
     [Test]
@@ -400,9 +449,9 @@ public class PlayerFeedbackTests
     }
 
     /// <summary>
-    /// Builds a pointer feedback layer with move and attack move marker templates and a hover ring, a local player
-    /// that is alive or dead per <paramref name="alive"/>, and a presenter whose fake pointer starts at the screen
-    /// center, which the test camera maps to (10, 20).
+    /// Builds a pointer feedback layer with move and attack move marker templates, a hover ring and an ally hover ring,
+    /// a registered local player that is alive or dead per <paramref name="alive"/>, and a presenter whose fake pointer
+    /// starts at the screen center, which the test camera maps to (10, 20).
     /// </summary>
     private (PointerFeedbackPresenter, PointerFeedbackLayer, FakePlayerInput) CreateFeedback(bool alive)
     {
@@ -411,8 +460,10 @@ public class PlayerFeedbackTests
         GameObject layerObject = Track(new GameObject("PointerFeedback"));
         SpriteRenderer ring = new GameObject("HoverRing").AddComponent<SpriteRenderer>();
         ring.transform.SetParent(layerObject.transform);
+        SpriteRenderer allyRing = new GameObject("AllyHoverRing").AddComponent<SpriteRenderer>();
+        allyRing.transform.SetParent(layerObject.transform);
         PointerFeedbackLayer layer = layerObject.AddComponent<PointerFeedbackLayer>();
-        layer.Configure(markerPrefab, attackMarkerPrefab, ring, AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/UI/AttackCursor.png"));
+        layer.Configure(markerPrefab, attackMarkerPrefab, ring, allyRing, AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Sprites/UI/AttackCursor.png"));
 
         GameObject player = Track(new GameObject("Player"));
         player.AddComponent<PlayerController>();
@@ -422,9 +473,11 @@ public class PlayerFeedbackTests
             health.ApplyDamage(health.MaxHealth);
         }
 
-        localPlayer.Assign(new LocalPlayer(player.GetComponent<PlayerController>()));
+        LocalPlayer local = new(player.GetComponent<PlayerController>());
+        localPlayer.Assign(local);
+        players.Add(local.Handle);
         PlayerControlSettings settings = Track(TestPlayerControlSettings.Create());
-        PointerTargetPicker picker = new(settings, new PlayerRegistry());
+        PointerTargetPicker picker = new(settings, players);
         FakePlayerInput input = new() { PointerScreenPosition = new Vector2(100f, 50f) };
         return (new PointerFeedbackPresenter(input, CreateCamera(new Vector2(10f, 20f)), picker, localPlayer, layer), layer, input);
     }
@@ -468,6 +521,21 @@ public class PlayerFeedbackTests
         mob.AddComponent<BoxCollider2D>().size = new Vector2(0.3f, 0.2f);
         Health health = mob.AddComponent<Health>();
         mob.AddComponent<DamageReceiver>();
+        return health;
+    }
+
+    /// <summary>
+    /// Creates another living player, registered, on the Player layer with a small collider at
+    /// <paramref name="position"/>.
+    /// </summary>
+    private Health CreateAlly(Vector2 position)
+    {
+        GameObject ally = Track(new GameObject("Ally"));
+        ally.layer = LayerMask.NameToLayer("Player");
+        ally.transform.position = position;
+        ally.AddComponent<BoxCollider2D>().size = new Vector2(0.3f, 0.2f);
+        Health health = ally.AddComponent<Health>();
+        players.Add(new PlayerHandle(ally.transform, health));
         return health;
     }
 

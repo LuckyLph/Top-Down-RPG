@@ -212,12 +212,19 @@ public class SpriteSortingTests
     }
 
     /// <summary>
-    /// An instance of the prefab at <paramref name="path"/> standing at <paramref name="at"/>.
+    /// An instance of the prefab at <paramref name="path"/> standing at <paramref name="at"/>, without its world bar,
+    /// which draws on the Overlay layer over every unit and prop by design (Docs/DesignSystem.md, Patterns: World-space
+    /// UI).
     /// </summary>
     private GameObject Spawn(string path, Vector2 at)
     {
         GameObject instance = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(path), at, Quaternion.identity);
         created.Add(instance);
+        foreach (WorldHealthBar bar in instance.GetComponentsInChildren<WorldHealthBar>(true))
+        {
+            bar.gameObject.SetActive(false);
+        }
+
         return instance;
     }
 

@@ -5,7 +5,8 @@ using UnityEngine.Pool;
 /// <summary>
 /// Local-only pointer feedback in the Gameplay scene: a pooled <see cref="MoveMarker"/> per move click or attack move,
 /// each from its own prefab and pool (a move's chevrons, an attack move's crossed ring), the hover marker under the
-/// hovered enemy and the attack cursor. Passive: <see cref="PointerFeedbackPresenter"/> decides what to show.
+/// hovered enemy, the ally hover marker under the hovered ally (Docs/UiRevamp.md, Phase 4) and the attack cursor.
+/// Passive: <see cref="PointerFeedbackPresenter"/> decides what to show.
 /// </summary>
 [DisallowMultipleComponent]
 public class PointerFeedbackLayer : MonoBehaviour
@@ -15,6 +16,8 @@ public class PointerFeedbackLayer : MonoBehaviour
     [SerializeField, Min(0), Tooltip("How many markers of each kind the pools hold from the start.")] private int prewarmCount = 4;
     [SerializeField, Tooltip("The hover marker placed under the hovered enemy; hidden otherwise.")]
     private SpriteRenderer hoverRing;
+    [SerializeField, Tooltip("The ally hover marker placed under the hovered ally; hidden otherwise.")]
+    private SpriteRenderer allyHoverRing;
     [SerializeField] private Texture2D attackCursor;
     [SerializeField] private Vector2 attackCursorHotspot = new(16f, 16f);
 
@@ -22,6 +25,7 @@ public class PointerFeedbackLayer : MonoBehaviour
     private ObjectPool<MoveMarker> pool;
     private ObjectPool<MoveMarker> attackPool;
     private Transform hovered;
+    private Transform hoveredAlly;
     private bool attackCursorShown;
 
     internal int ActiveMarkerCount => active.Count;
@@ -29,22 +33,25 @@ public class PointerFeedbackLayer : MonoBehaviour
     internal Transform Hovered => hovered;
     internal bool AttackCursorShown => attackCursorShown;
     internal SpriteRenderer HoverRing => hoverRing;
+    internal Transform HoveredAlly => hoveredAlly;
+    internal SpriteRenderer AllyHoverRing => allyHoverRing;
 
     /// <summary>
-    /// Logs an error when a marker prefab, the hover marker or the attack cursor is missing, prewarms the marker pools
-    /// and hides the hover marker.
+    /// Logs an error when a marker prefab, a hover marker or the attack cursor is missing, prewarms the marker pools
+    /// and hides the hover markers.
     /// </summary>
     private void Awake()
     {
-        if (markerPrefab == null || attackMarkerPrefab == null || hoverRing == null || attackCursor == null)
+        if (markerPrefab == null || attackMarkerPrefab == null || hoverRing == null || allyHoverRing == null || attackCursor == null)
         {
-            Debug.LogError($"{name} needs a move marker, an attack move marker, a hover marker and an attack cursor.", this);
+            Debug.LogError($"{name} needs a move marker, an attack move marker, a hover marker, an ally hover marker and an attack cursor.", this);
         }
 
         EnsurePool();
         Prewarm(pool, markerPrefab);
         Prewarm(attackPool, attackMarkerPrefab);
         SetHovered(null);
+        SetHoveredAlly(null);
     }
 
     /// <summary>
@@ -88,17 +95,16 @@ public class PointerFeedbackLayer : MonoBehaviour
     public void SetHovered(Transform target)
     {
         hovered = target;
-        if (hoverRing == null)
-        {
-            return;
-        }
+        Place(hoverRing, target);
+    }
 
-        hoverRing.enabled = target != null;
-        if (target != null)
-        {
-            Vector3 position = target.position;
-            hoverRing.transform.position = new Vector3(position.x, position.y, hoverRing.transform.position.z);
-        }
+    /// <summary>
+    /// Puts the ally hover marker under <paramref name="target"/>, or hides it for null.
+    /// </summary>
+    public void SetHoveredAlly(Transform target)
+    {
+        hoveredAlly = target;
+        Place(allyHoverRing, target);
     }
 
     /// <summary>
@@ -137,16 +143,35 @@ public class PointerFeedbackLayer : MonoBehaviour
     }
 
     /// <summary>
-    /// Assigns the marker prefabs, hover marker and attack cursor in code, for tests that build the layer without a
-    /// prefab.
+    /// Assigns the marker prefabs, the hover markers and the attack cursor in code, for tests that build the layer
+    /// without a prefab.
     /// </summary>
-    internal void Configure(MoveMarker prefab, MoveMarker attackPrefab, SpriteRenderer ring, Texture2D cursor)
+    internal void Configure(MoveMarker prefab, MoveMarker attackPrefab, SpriteRenderer ring, SpriteRenderer allyRing, Texture2D cursor)
     {
         markerPrefab = prefab;
         attackMarkerPrefab = attackPrefab;
         hoverRing = ring;
+        allyHoverRing = allyRing;
         attackCursor = cursor;
         EnsurePool();
+    }
+
+    /// <summary>
+    /// Shows <paramref name="marker"/> under <paramref name="target"/>, keeping its z, or hides it for null.
+    /// </summary>
+    private static void Place(SpriteRenderer marker, Transform target)
+    {
+        if (marker == null)
+        {
+            return;
+        }
+
+        marker.enabled = target != null;
+        if (target != null)
+        {
+            Vector3 position = target.position;
+            marker.transform.position = new Vector3(position.x, position.y, marker.transform.position.z);
+        }
     }
 
     /// <summary>

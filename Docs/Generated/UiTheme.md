@@ -25,7 +25,7 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | Danger | `#FF4D40` | 100% |
 | Positive | `#73FF8C` | 100% |
 | Health | `#D92121` | 100% |
-| HealthTrack | `#141414` | 85% |
+| HealthTrack | `#141414` | 100% |
 | Icon | `#FFFFFF` | 100% |
 | IconMissing | `#FFFFFF` | 25% |
 | Border | `#9A9EB3` | 100% |
@@ -64,3 +64,11 @@ Each pair of text role and background role a themed text uses, at the smallest s
 | Placeholder | Accent (selected) | Heading | 5.12:1 | 4.50:1 |
 | Accent | SurfaceEmpty | Caption | 5.24:1 | 4.50:1 |
 | Accent | SurfaceRaised | Body | 13.11:1 | 4.50:1 |
+
+## Fills on tracks
+
+Each pair of a bar's fill role and the role of the track it is read against. A bar is a large shape that carries meaning, so it needs 3:1. A translucent track counts over white and over black, the lower ratio.
+
+| Fill | Track | Contrast | Needs |
+|---|---|---|---|
+| Health | HealthTrack | 3.67:1 | 3.00:1 |

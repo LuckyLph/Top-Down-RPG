@@ -6,7 +6,7 @@ using UnityEngine;
 /// <summary>
 /// What the design tables are built from (Docs/DesignSystem.md, Generated tables): the combat settings with their
 /// status catalog, the weapon catalog, the abilities, the classes, the units, and the UI theme with the themed texts
-/// that use it. <see cref="FromProject"/> reads the project's; tests build their own from <c>Create</c>.
+/// and bar fills that use it. <see cref="FromProject"/> reads the project's; tests build their own from <c>Create</c>.
 /// </summary>
 public sealed class DesignContent
 {
@@ -27,12 +27,14 @@ public sealed class DesignContent
         IEnumerable<PlayerClass> classes,
         IEnumerable<DesignUnit> units,
         UiTheme theme = null,
-        IEnumerable<UiThemeUsage.TextUse> textUses = null)
+        IEnumerable<UiThemeUsage.TextUse> textUses = null,
+        IEnumerable<UiThemeUsage.FillUse> fillUses = null)
     {
         Combat = combat;
         Weapons = weapons;
         Theme = theme;
         TextUses = textUses != null ? new List<UiThemeUsage.TextUse>(textUses) : new List<UiThemeUsage.TextUse>();
+        FillUses = fillUses != null ? new List<UiThemeUsage.FillUse>(fillUses) : new List<UiThemeUsage.FillUse>();
 
         List<AbilityDefinition> sortedAbilities = new(abilities);
         sortedAbilities.Sort((a, b) => string.CompareOrdinal(a.DisplayName, b.DisplayName));
@@ -55,11 +57,13 @@ public sealed class DesignContent
     public IReadOnlyList<DesignUnit> Units { get; }
     public UiTheme Theme { get; }
     public IReadOnlyList<UiThemeUsage.TextUse> TextUses { get; }
+    public IReadOnlyList<UiThemeUsage.FillUse> FillUses { get; }
 
     /// <summary>
     /// The project's content: the combat settings and weapon catalog at their paths, every ability and class under
-    /// <see cref="DataFolder"/>, every unit prefab in <see cref="UnitFolders"/>, the UI theme and every themed text
-    /// (<see cref="UiThemeUsage.Collect"/>). Throws when the settings, the catalog or the theme is missing.
+    /// <see cref="DataFolder"/>, every unit prefab in <see cref="UnitFolders"/>, the UI theme, every themed text
+    /// (<see cref="UiThemeUsage.Collect"/>) and every bar fill (<see cref="UiThemeUsage.CollectFills"/>). Throws when
+    /// the settings, the catalog or the theme is missing.
     /// </summary>
     public static DesignContent FromProject()
     {
@@ -81,7 +85,7 @@ public sealed class DesignContent
             }
         }
 
-        return new DesignContent(combat, weapons, Load<AbilityDefinition>(), Load<PlayerClass>(), units, theme, UiThemeUsage.Collect());
+        return new DesignContent(combat, weapons, Load<AbilityDefinition>(), Load<PlayerClass>(), units, theme, UiThemeUsage.Collect(), UiThemeUsage.CollectFills());
     }
 
     /// <summary>

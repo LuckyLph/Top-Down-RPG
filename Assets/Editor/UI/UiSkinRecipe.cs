@@ -19,6 +19,8 @@ public enum UiSkinPiece
     MarkerHover,
     Pip,
     Check,
+    SlotCorners,
+    Hatch,
 }
 
 /// <summary>
@@ -26,8 +28,9 @@ public enum UiSkinPiece
 /// recipes: greyscale sprites that images and sprite renderers tint by colour role, at one pixel per UI px (or per art
 /// px in the world). The panels, frames and bars are 9-sliced with corners cut along a diagonal: a panel's fill, the
 /// 1 px frame around it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
-/// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, and a check mark, a toggle's
-/// mark while it is on. The markers are drawn around a ground ellipse twice as wide as tall, each a different
+/// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, a check mark, a toggle's
+/// mark while it is on, a slot's corner brackets, shown around a slot whose cast waits, and a hatch of diagonal lines,
+/// tiled over a slot that cannot be cast (Docs/UiRevamp.md, Decisions: Slot states). The markers are drawn around a ground ellipse twice as wide as tall, each a different
 /// shape so colour is never the only cue: four chevrons pointing in for a move, the ring crossed by four ticks for an
 /// attack move, and four brackets on the ring's diagonals under a hovered enemy, each line outlined in translucent
 /// black. <see cref="Generate(UiSkinPiece)"/> draws a piece without touching an asset, the same settings always giving
@@ -60,6 +63,14 @@ public sealed class UiSkinRecipe : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float markerOutline = 0.5f;
     [Tooltip("The share of the ring each hover bracket keeps, around its diagonal.")]
     [SerializeField, Range(0.1f, 1f)] private float bracketShare = 0.75f;
+
+    [Header("Slot states")]
+    [Tooltip("The length in px of each arm of a slot's corner brackets, the corner pixel included.")]
+    [SerializeField, Range(2, 8)] private int cornerArm = 5;
+    [Tooltip("The thickness in px of a slot's corner brackets.")]
+    [SerializeField, Range(1, 2)] private int cornerLine = 1;
+    [Tooltip("The px between the hatch's diagonal lines, which are 1 px wide: the size of the tile it repeats.")]
+    [SerializeField, Range(2, 8)] private int hatchSpacing = 4;
 
     public int CornerCut => cornerCut;
     public int LipHeight => lipHeight;
@@ -112,6 +123,10 @@ public sealed class UiSkinRecipe : ScriptableObject
                 return Pip();
             case UiSkinPiece.Check:
                 return Check();
+            case UiSkinPiece.SlotCorners:
+                return Corners();
+            case UiSkinPiece.Hatch:
+                return Hatch();
             default:
                 return Marker(piece);
         }
@@ -232,6 +247,44 @@ public sealed class UiSkinRecipe : ScriptableObject
         }
 
         return new SkinSprite(UiSkinPiece.Check, width, height, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A slot's corner brackets, 9-sliced so they keep to the corners of whatever they frame: an L of
+    /// <see cref="cornerArm"/> px arms, <see cref="cornerLine"/> px thick, in each corner, and nothing between them.
+    /// </summary>
+    private SkinSprite Corners()
+    {
+        int size = 2 * cornerArm + 1;
+        bool[] drawn = new bool[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int fromX = Math.Min(x, size - 1 - x);
+                int fromY = Math.Min(y, size - 1 - y);
+                bool inCorner = fromX < cornerArm && fromY < cornerArm;
+                drawn[y * size + x] = inCorner && (fromX < cornerLine || fromY < cornerLine);
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.SlotCorners, size, size, Paint(drawn, Grey(1f)), new Vector4(cornerArm, cornerArm, cornerArm, cornerArm));
+    }
+
+    /// <summary>
+    /// A hatch tile, shown tiled rather than sliced: a 1 px diagonal rising to the right across a square of
+    /// <see cref="hatchSpacing"/> px, so the tiles join into lines that far apart.
+    /// </summary>
+    private SkinSprite Hatch()
+    {
+        int size = hatchSpacing;
+        bool[] drawn = new bool[size * size];
+        for (int i = 0; i < size; i++)
+        {
+            drawn[i * size + i] = true;
+        }
+
+        return new SkinSprite(UiSkinPiece.Hatch, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
     }
 
     /// <summary>

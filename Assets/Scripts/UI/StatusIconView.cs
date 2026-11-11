@@ -99,11 +99,12 @@ public class StatusIconView : MonoBehaviour, ITooltipSource
     }
 
     /// <summary>
-    /// The shown status's name and description; false while the icon shows none.
+    /// The shown status's name and description, with no numbers; false while the icon shows none.
     /// </summary>
-    public bool TryGetTooltip(out string title, out string description)
+    public bool TryGetTooltip(out string title, out string details, out string description)
     {
         title = Shown != null ? Shown.DisplayName : null;
+        details = null;
         description = Shown != null ? Shown.Description : null;
         return Shown != null;
     }

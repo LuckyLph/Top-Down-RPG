@@ -365,7 +365,7 @@ public class PlayerFeedbackTests
 
         bar = barObject.AddComponent<AbilityBarView>();
         bar.ConfigureReferences(slots);
-        barPresenter = new AbilityBarPresenter(localPlayer, bar, clock, keyLabels);
+        barPresenter = new AbilityBarPresenter(localPlayer, bar, clock, keyLabels, Track(HudSettings.Create()));
         barPresenter.Start();
     }
 

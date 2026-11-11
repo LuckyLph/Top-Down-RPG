@@ -11,7 +11,8 @@ using UnityEngine.UI;
 /// components among them), the mobs' world UI and the menu scenes, which are only read: every text, image, world UI
 /// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
-/// enough and reachable, the marker kinds are different shapes, and the toggle row shows its state as a check mark.
+/// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
+/// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1).
 /// </summary>
 public class UiContentTests
 {
@@ -205,7 +206,7 @@ public class UiContentTests
             Check(themed.Theme, where, themed, problems);
         }
 
-        foreach (System.Type view in new[] { typeof(AbilitySlotView), typeof(MoveMarker), typeof(PlayerHudView) })
+        foreach (System.Type view in new[] { typeof(AbilitySlotView), typeof(MoveMarker), typeof(WeaponSlotView) })
         {
             foreach ((string where, GameObject root) in roots)
             {
@@ -331,6 +332,53 @@ public class UiContentTests
         }
 
         Assert.That(screens, Is.GreaterThanOrEqualTo(2), "The options prefab and the main menu's screen.");
+    }
+
+    /// <summary>
+    /// The ability slot's states (Docs/UiRevamp.md, Phase 1) are skin pieces in their roles, hidden until shown and
+    /// never taking the pointer: its frame (Border, Accent while casting), the corner brackets 1 UI px outside it in
+    /// Accent, and the hatch, tiled in ControlDisabled inside the frame and under the name, so the name stays readable.
+    /// The message line is a variant of the notice line in Text outlined in Outline, and the HUD's ability bar shows its
+    /// failures on one, hidden until a failure, above the status row.
+    /// </summary>
+    [Test]
+    public void TheSlotStatesAndTheMessageLine_AreSkinnedAndThemed()
+    {
+        AbilitySlotView slot = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}SlotAbility.prefab").GetComponent<AbilitySlotView>();
+        Assert.That(slot.Border.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.SlotFrame))));
+        Assert.That(slot.Border.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+
+        Image queued = slot.Queued;
+        Assert.That(queued.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.SlotCorners))));
+        Assert.That(queued.type, Is.EqualTo(Image.Type.Sliced));
+        Assert.That(queued.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(queued.rectTransform.offsetMin, Is.EqualTo(new Vector2(-1f, -1f)), "Just outside the slot.");
+        Assert.That(queued.rectTransform.offsetMax, Is.EqualTo(new Vector2(1f, 1f)));
+
+        Image hatch = slot.Hatch;
+        Assert.That(hatch.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Hatch))));
+        Assert.That(hatch.type, Is.EqualTo(Image.Type.Tiled));
+        Assert.That(hatch.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.ControlDisabled));
+        Assert.That(hatch.transform.GetSiblingIndex(), Is.LessThan(slot.NameText.transform.GetSiblingIndex()), "Under the name.");
+        foreach (Image state in new[] { queued, hatch })
+        {
+            Assert.That(state.enabled, Is.False, $"{state.name} hides until shown.");
+            Assert.That(state.raycastTarget, Is.False, $"{state.name} never takes the pointer.");
+        }
+
+        GameObject line = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}MessageLine.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(line)), Is.EqualTo($"{Components}NoticeLine.prefab"), "A variant of the notice line.");
+        ThemedText text = line.GetComponent<ThemedText>();
+        Assert.That(text.Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(text.Background, Is.EqualTo(UiColour.Outline));
+
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        TMP_Text message = hud.GetComponentInChildren<AbilityBarView>(true).MessageText;
+        Assert.That(message, Is.Not.Null);
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(message.gameObject)), Is.EqualTo($"{Components}MessageLine.prefab"));
+        Assert.That(message.gameObject.activeSelf, Is.False, "Hidden until a failure.");
+        RectTransform statusRow = (RectTransform)hud.GetComponentInChildren<StatusBarView>(true).transform;
+        Assert.That(message.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(statusRow.anchoredPosition.y + statusRow.sizeDelta.y), "Above the status row.");
     }
 
     /// <summary>

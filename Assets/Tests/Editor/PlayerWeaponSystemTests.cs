@@ -147,15 +147,15 @@ public class PlayerWeaponSystemTests
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
         HudElements hud = CreatePlayerHudCanvas(weaponController);
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.MaxHealth}"));
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{health.MaxHealth} / {health.MaxHealth}"));
         Assert.That(hud.HealthFill.fillAmount, Is.EqualTo(1f).Within(0.001f));
 
         health.ApplyDamage(3);
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.CurrentHealth}"));
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{health.CurrentHealth} / {health.MaxHealth}"));
         Assert.That(hud.HealthFill.fillAmount, Is.EqualTo((float)health.CurrentHealth / health.MaxHealth).Within(0.001f));
 
         health.Heal(2);
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.MaxHealth - 1}"), "Heals show too.");
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{health.MaxHealth - 1} / {health.MaxHealth}"), "Heals show too.");
 
         hudPresenter.Dispose();
         hudPresenter = null;
@@ -494,7 +494,7 @@ public class PlayerWeaponSystemTests
         secondHealth.ApplyDamage(4);
         firstHealth.ApplyDamage(1);
 
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {secondHealth.CurrentHealth}"));
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{secondHealth.CurrentHealth} / {secondHealth.MaxHealth}"));
     }
 
     /// <summary>
@@ -975,7 +975,7 @@ public class PlayerWeaponSystemTests
         healthTextObject.transform.SetParent(healthPanel.transform, false);
         healthTextObject.AddComponent<CanvasRenderer>();
         TextMeshProUGUI healthText = healthTextObject.AddComponent<TextMeshProUGUI>();
-        healthText.text = "HP --";
+        healthText.text = "-- / --";
         healthText.alignment = TextAlignmentOptions.Center;
 
         GameObject weaponSlotObject = new("WeaponSlot");
@@ -986,9 +986,11 @@ public class PlayerWeaponSystemTests
         weaponIconObject.AddComponent<CanvasRenderer>();
         Image weaponIcon = weaponIconObject.AddComponent<Image>();
         weaponIcon.preserveAspect = true;
+        WeaponSlotView weaponSlot = weaponSlotObject.AddComponent<WeaponSlotView>();
+        weaponSlot.ConfigureReferences(weaponIcon, TestThemes.Shared);
 
         PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
-        view.ConfigureReferences(healthFill, healthText, weaponIcon, TestThemes.Shared);
+        view.ConfigureReferences(healthFill, healthText, weaponSlot);
 
         LocalPlayerTracker localPlayer = new();
         localPlayer.Assign(new LocalPlayer(weaponController.GetComponent<PlayerController>()));

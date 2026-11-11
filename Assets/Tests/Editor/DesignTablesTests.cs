@@ -154,8 +154,9 @@ public class DesignTablesTests
     }
 
     /// <summary>
-    /// The theme's table lists each role and each size with its body height at 1080p, and each pair of roles a themed
-    /// text uses with its contrast and threshold; the popup colours are measured against the theme's Outline.
+    /// The theme's table lists each role and each size with its body height at 1080p, each pair of roles a themed
+    /// text uses with its contrast and threshold, and each bar fill on its track against 3:1; the popup colours are
+    /// measured against the theme's Outline.
     /// </summary>
     [Test]
     public void Build_WritesTheThemeTable_AndMeasuresPopupsOnTheOutline()
@@ -165,6 +166,10 @@ public class DesignTablesTests
         UiTheme theme = Track(UiTheme.Create(roles, TestThemes.Shared.TextSizes));
         ThemedText text = Track(new GameObject("Label", typeof(RectTransform), typeof(TMPro.TextMeshProUGUI))).AddComponent<ThemedText>();
         text.Configure(theme, UiColour.Text, UiColour.SurfaceRaised, UiTextSize.Body);
+        ThemedGraphic track = Track(new GameObject("Track", typeof(RectTransform), typeof(UnityEngine.UI.Image))).AddComponent<ThemedGraphic>();
+        track.Configure(theme, UiColour.HealthTrack);
+        ThemedGraphic fill = Track(new GameObject("Fill", typeof(RectTransform), typeof(UnityEngine.UI.Image))).AddComponent<ThemedGraphic>();
+        fill.Configure(theme, UiColour.Health, track);
         CombatSettings combat = Track(CombatSettings.Create(Track(StatusEffectCatalog.Create())));
         DesignContent content = new(
             combat,
@@ -173,7 +178,8 @@ public class DesignTablesTests
             new PlayerClass[0],
             new DesignUnit[0],
             theme,
-            new[] { new UiThemeUsage.TextUse(text, "test") });
+            new[] { new UiThemeUsage.TextUse(text, "test") },
+            new[] { new UiThemeUsage.FillUse(fill, "test") });
 
         Dictionary<string, string> tables = new();
         foreach (DesignTable table in DesignTables.Build(content))
@@ -187,6 +193,9 @@ public class DesignTablesTests
         Assert.That(tables["UiTheme.md"], Does.Contain("| Shade | `#000000` | 65% |"));
         Assert.That(tables["UiTheme.md"], Does.Contain("| Body | Galmuri7 SDF | 8 | 24 px |"));
         Assert.That(tables["UiTheme.md"], Does.Contain($"| Text | SurfaceRaised | Body | {contrast}:1 | 4.50:1 |"));
+        string fillContrast = (System.Math.Floor(UiThemeUsage.FillRatio(roles[UiColour.Health], roles[UiColour.HealthTrack]) * 100.0) / 100.0).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.That(tables["UiTheme.md"], Does.Contain("## Fills on tracks"));
+        Assert.That(tables["UiTheme.md"], Does.Contain($"| Health | HealthTrack | {fillContrast}:1 | 3.00:1 |"));
         Assert.That(tables["DamageTypes.md"], Does.Contain($"| Physical | `#{ColorUtility.ToHtmlStringRGB(combat.GetColor(DamageType.Physical))}` | {physical}:1 |"));
     }
 

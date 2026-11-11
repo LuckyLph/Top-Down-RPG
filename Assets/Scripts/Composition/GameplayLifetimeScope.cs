@@ -17,6 +17,7 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private GameplaySettings settings;
     [SerializeField] private CombatSettings combatSettings;
     [SerializeField] private HitFeedbackSettings hitFeedbackSettings;
+    [SerializeField] private HudSettings hudSettings;
     [SerializeField] private PropFadeSettings propFadeSettings;
     [SerializeField] private WorldStreamingSettings worldStreamingSettings;
     [SerializeField] private DayNightSettings dayNightSettings;
@@ -64,6 +65,12 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
+        if (hudSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(HudSettings)} assigned; the HUD cannot be set up.", this);
+            return;
+        }
+
         builder.RegisterInstance(playerPrefab.ControlSettings);
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
@@ -81,6 +88,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
         builder.RegisterInstance(combatSettings);
+        builder.RegisterInstance(hudSettings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
         builder.RegisterComponentInHierarchy<AbilityBarView>();
         builder.RegisterComponentInHierarchy<StatusBarView>();

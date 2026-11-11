@@ -8,8 +8,11 @@ using UnityEngine;
 /// <summary>
 /// How the project's UI uses the theme (Docs/DesignSystem.md, Accessibility: Contrast): the text and background role
 /// and the size of every <see cref="ThemedText"/> in the prefabs and the menu scenes (<see cref="Collect"/>), and the
-/// contrast of each pair of roles against the threshold its smallest size must meet (<see cref="Measure"/>).
-/// <c>DesignTables</c> writes the pairs into UiTheme.md and <c>UiThemeTests</c> checks them.
+/// contrast of each pair of roles against the threshold its smallest size must meet (<see cref="Measure"/>); and the
+/// role of every bar fill, a <see cref="ThemedGraphic"/> that names its track, with its track's
+/// (<see cref="CollectFills"/>), and the contrast of each pair against the 3:1 of a large shape that carries meaning
+/// (<see cref="MeasureFills"/>). <c>DesignTables</c> writes the pairs into UiTheme.md and <c>UiThemeTests</c> checks
+/// them.
 /// </summary>
 public static class UiThemeUsage
 {
@@ -17,6 +20,7 @@ public static class UiThemeUsage
     public const double NormalTextContrast = 4.5;
     public const double LargeTextContrast = 3.0;
     public const double DisabledTextContrast = 3.0;
+    public const double FillContrast = 3.0;
 
     public static readonly string[] PrefabFolders = { "Assets/Prefabs" };
     public static readonly string[] Scenes = { "Assets/Scenes/MainMenu.unity", "Assets/Scenes/Gameplay.unity" };
@@ -41,14 +45,84 @@ public static class UiThemeUsage
     public static List<TextUse> Collect()
     {
         List<TextUse> uses = new();
+        Visit((root, asset) =>
+        {
+            foreach (ThemedText text in root.GetComponentsInChildren<ThemedText>(true))
+            {
+                uses.Add(new TextUse(text, asset));
+            }
+        });
+        return uses;
+    }
+
+    /// <summary>
+    /// Every bar fill of the project, a themed graphic that names the track it is read against, in the prefabs under
+    /// <see cref="PrefabFolders"/> and in the <see cref="Scenes"/>, opened and closed as <see cref="Collect"/> does.
+    /// </summary>
+    public static List<FillUse> CollectFills()
+    {
+        List<FillUse> uses = new();
+        Visit((root, asset) =>
+        {
+            foreach (ThemedGraphic graphic in root.GetComponentsInChildren<ThemedGraphic>(true))
+            {
+                if (graphic.Track != null)
+                {
+                    uses.Add(new FillUse(graphic, asset));
+                }
+            }
+        });
+        return uses;
+    }
+
+    /// <summary>
+    /// The contrast of each pair of fill and track roles in <paramref name="uses"/> under <paramref name="theme"/>,
+    /// sorted by fill role then track role, each against <see cref="FillContrast"/>.
+    /// </summary>
+    public static List<FillPairContrast> MeasureFills(UiTheme theme, IEnumerable<FillUse> uses)
+    {
+        SortedSet<(UiColour fill, UiColour track)> pairs = new();
+        foreach (FillUse use in uses)
+        {
+            pairs.Add((use.Fill, use.Track));
+        }
+
+        List<FillPairContrast> measured = new();
+        foreach ((UiColour fill, UiColour track) in pairs)
+        {
+            measured.Add(new FillPairContrast(fill, track, FillRatio(theme.Colour(fill), theme.Colour(track)), FillContrast));
+        }
+
+        return measured;
+    }
+
+    /// <summary>
+    /// The contrast ratio of <paramref name="fill"/> drawn over <paramref name="track"/>; a translucent track is laid
+    /// over white and over black, a translucent fill over the track, and the lower ratio counts.
+    /// </summary>
+    public static double FillRatio(Color fill, Color track)
+    {
+        double lowest = double.MaxValue;
+        foreach (Color world in new[] { Color.white, Color.black })
+        {
+            Color shownTrack = Over(track, world);
+            lowest = Math.Min(lowest, DesignMath.ContrastRatio(Over(fill, shownTrack), shownTrack));
+        }
+
+        return lowest;
+    }
+
+    /// <summary>
+    /// Calls <paramref name="visit"/> with each prefab under <see cref="PrefabFolders"/> and each root of the
+    /// <see cref="Scenes"/>, and the path of the asset holding it; a scene that was not open is opened beside the open
+    /// scenes, read and closed again.
+    /// </summary>
+    private static void Visit(Action<GameObject, string> visit)
+    {
         foreach (string guid in AssetDatabase.FindAssets("t:Prefab", PrefabFolders))
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            foreach (ThemedText text in prefab.GetComponentsInChildren<ThemedText>(true))
-            {
-                uses.Add(new TextUse(text, path));
-            }
+            visit(AssetDatabase.LoadAssetAtPath<GameObject>(path), path);
         }
 
         foreach (string path in Scenes)
@@ -64,10 +138,7 @@ public static class UiThemeUsage
             {
                 foreach (GameObject root in scene.GetRootGameObjects())
                 {
-                    foreach (ThemedText text in root.GetComponentsInChildren<ThemedText>(true))
-                    {
-                        uses.Add(new TextUse(text, path));
-                    }
+                    visit(root, path);
                 }
             }
             finally
@@ -78,8 +149,6 @@ public static class UiThemeUsage
                 }
             }
         }
-
-        return uses;
     }
 
     /// <summary>
@@ -196,6 +265,51 @@ public static class UiThemeUsage
         public UiTextSize Size { get; }
         public UiTheme Theme { get; }
         public string Where { get; }
+    }
+
+    /// <summary>
+    /// One bar fill: its role, the role of the track it is read against, and where it is.
+    /// </summary>
+    public readonly struct FillUse
+    {
+        /// <summary>
+        /// Reads <paramref name="fill"/>'s role and its track's; <paramref name="asset"/> is the prefab or scene holding
+        /// it.
+        /// </summary>
+        public FillUse(ThemedGraphic fill, string asset)
+        {
+            Fill = fill.Role;
+            Track = fill.Track.Role;
+            Theme = fill.Theme;
+            Where = $"{asset}: {fill.name}";
+        }
+
+        public UiColour Fill { get; }
+        public UiColour Track { get; }
+        public UiTheme Theme { get; }
+        public string Where { get; }
+    }
+
+    /// <summary>
+    /// The contrast of one bar fill role on one track role and the threshold it must meet.
+    /// </summary>
+    public readonly struct FillPairContrast
+    {
+        /// <summary>
+        /// Records the pair, its ratio and its threshold.
+        /// </summary>
+        public FillPairContrast(UiColour fill, UiColour track, double ratio, double threshold)
+        {
+            Fill = fill;
+            Track = track;
+            Ratio = ratio;
+            Threshold = threshold;
+        }
+
+        public UiColour Fill { get; }
+        public UiColour Track { get; }
+        public double Ratio { get; }
+        public double Threshold { get; }
     }
 
     /// <summary>

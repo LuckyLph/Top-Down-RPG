@@ -90,6 +90,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 18
+  track: {fileID: 6822178737925393511}
 --- !u!1 &1937691068812532519
 GameObject:
   m_ObjectHideFlags: 0
@@ -334,6 +335,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 22
+  track: {fileID: 0}
 --- !u!1 &6769271684685099748
 GameObject:
   m_ObjectHideFlags: 0
@@ -427,3 +429,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 19
+  track: {fileID: 0}

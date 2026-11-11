@@ -11,7 +11,8 @@ using UnityEngine.UI;
 /// Tests for the UI theme (Docs/DesignSystem.md, Phase 4): <see cref="UiTheme"/> and the themed components on themes
 /// from <see cref="UiTheme.Create"/>, the contrast rules of <see cref="UiThemeUsage"/>, then the project's theme: every
 /// role and size, its Galmuri fonts and their outlined presets, Caption readable at every display, and every pair of
-/// roles a themed text uses, and the gameplay popup colours, meeting their contrast.
+/// roles a themed text uses, every bar fill on its track (Docs/UiRevamp.md, Phase 1), and the gameplay popup colours,
+/// meeting their contrast.
 /// </summary>
 public class UiThemeTests
 {
@@ -125,6 +126,37 @@ public class UiThemeTests
             "Placeholder Accent (selected) Heading 4.5",
         }));
         Assert.That(measured[4].Ratio, Is.EqualTo(DesignMath.ContrastRatio(theme.Colour(UiColour.TextOnControl), theme.Colour(UiColour.ControlDisabled))).Within(1e-6));
+    }
+
+    /// <summary>
+    /// A bar's fill is measured as drawn over its track, a translucent track laid over white and over black and the
+    /// lower ratio counting; each pair of fill and track roles is measured once, against 3:1 (Docs/UiRevamp.md,
+    /// Decisions: Bar contrast).
+    /// </summary>
+    [Test]
+    public void MeasureFills_DrawsEachFillOverItsTrack_AgainstThreeToOne()
+    {
+        Color red = new(0.85f, 0.13f, 0.13f);
+        Color translucent = new(0.08f, 0.08f, 0.08f, 0.85f);
+        Color overWhite = new(0.08f * 0.85f + 0.15f, 0.08f * 0.85f + 0.15f, 0.08f * 0.85f + 0.15f);
+        Assert.That(UiThemeUsage.FillRatio(red, translucent), Is.EqualTo(DesignMath.ContrastRatio(red, overWhite)).Within(1e-4), "Over white, the lower ratio.");
+        Assert.That(UiThemeUsage.FillRatio(red, Color.black), Is.EqualTo(DesignMath.ContrastRatio(red, Color.black)).Within(1e-6));
+
+        UiTheme theme = Track(TestThemes.Create());
+        Image track = Track(new GameObject("Track", typeof(RectTransform), typeof(Image))).GetComponent<Image>();
+        ThemedGraphic themedTrack = track.gameObject.AddComponent<ThemedGraphic>();
+        themedTrack.Configure(theme, UiColour.HealthTrack);
+        Image fill = Track(new GameObject("Fill", typeof(RectTransform), typeof(Image))).GetComponent<Image>();
+        ThemedGraphic themedFill = fill.gameObject.AddComponent<ThemedGraphic>();
+        themedFill.Configure(theme, UiColour.Health, themedTrack);
+
+        List<UiThemeUsage.FillPairContrast> measured = UiThemeUsage.MeasureFills(theme, new[] { new UiThemeUsage.FillUse(themedFill, "a"), new UiThemeUsage.FillUse(themedFill, "b") });
+
+        Assert.That(measured.Count, Is.EqualTo(1), "Each pair once.");
+        Assert.That(measured[0].Fill, Is.EqualTo(UiColour.Health));
+        Assert.That(measured[0].Track, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(measured[0].Threshold, Is.EqualTo(3.0));
+        Assert.That(measured[0].Ratio, Is.EqualTo(UiThemeUsage.FillRatio(theme.Colour(UiColour.Health), theme.Colour(UiColour.HealthTrack))).Within(1e-9));
     }
 
     /// <summary>
@@ -374,6 +406,26 @@ public class UiThemeTests
         foreach (UiThemeUsage.PairContrast pair in pairs)
         {
             Assert.That(pair.Ratio, Is.GreaterThanOrEqualTo(pair.Threshold), $"{pair.Text} on {pair.Background} at {pair.Size}");
+        }
+    }
+
+    /// <summary>
+    /// Every bar fill of the project meets 3:1 on its track in the project's theme (the pairs UiTheme.md lists): the
+    /// HUD's health bar and the world bar, Health on an opaque HealthTrack (Docs/UiRevamp.md, Phase 1).
+    /// </summary>
+    [Test]
+    public void EveryFillOnItsTrack_MeetsThreeToOne()
+    {
+        List<UiThemeUsage.FillUse> uses = UiThemeUsage.CollectFills();
+        List<UiThemeUsage.FillPairContrast> pairs = UiThemeUsage.MeasureFills(ProjectTheme(), uses);
+
+        Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/Bar.prefab")), Is.True, "The HUD's bar.");
+        Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/WorldBar.prefab")), Is.True, "The world bar.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.Health && pair.Track == UiColour.HealthTrack), Is.True);
+        Assert.That(ProjectTheme().Colour(UiColour.HealthTrack).a, Is.EqualTo(1f), "The track is opaque.");
+        foreach (UiThemeUsage.FillPairContrast pair in pairs)
+        {
+            Assert.That(pair.Ratio, Is.GreaterThanOrEqualTo(pair.Threshold), $"{pair.Fill} on {pair.Track}");
         }
     }
 

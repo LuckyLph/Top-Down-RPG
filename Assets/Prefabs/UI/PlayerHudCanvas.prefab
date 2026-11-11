@@ -37,6 +37,7 @@ RectTransform:
   - {fileID: 1208407926345582506}
   - {fileID: 2378747935914646210}
   - {fileID: 7782989086058555951}
+  - {fileID: 3081262817260442403}
   - {fileID: 882692396536653943}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -123,8 +124,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerHudView
   healthFill: {fileID: 5767313944965361262}
   healthText: {fileID: 7051673462581731253}
-  weaponIcon: {fileID: 4324841599915887211}
-  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+  weaponSlot: {fileID: 4348270656478253576}
 --- !u!114 &3043054594077654739
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,6 +226,7 @@ MonoBehaviour:
   - {fileID: 8765511231068897391}
   - {fileID: 6298979955689591534}
   - {fileID: 3592368503999295646}
+  messageText: {fileID: 7367297532937630997}
 --- !u!1 &8339733109637786975
 GameObject:
   m_ObjectHideFlags: 0
@@ -837,6 +838,127 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 99c46037ed4626747b56bbe9c2a920d0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::AbilitySlotView
+--- !u!1001 &3079186989494324858
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 6743200217782140512}
+    m_Modifications:
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 240
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 66
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3928520581162625517, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_Name
+      value: MessageLine
+      objectReference: {fileID: 0}
+    - target: {fileID: 3928520581162625517, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5514268869399395183, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+      propertyPath: m_text
+      value: Already casting
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+--- !u!224 &3081262817260442403 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 34234899569171801, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+  m_PrefabInstance: {fileID: 3079186989494324858}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7367297532937630997 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5514268869399395183, guid: 35a880b1e69c7564d85cc532335d9796, type: 3}
+  m_PrefabInstance: {fileID: 3079186989494324858}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1001 &3540616174812423194
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2016,8 +2138,46 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5964665625374266366, guid: 54538e2917060ac488dd775936a52549, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4348270656478253576}
+    - targetCorrespondingSourceObject: {fileID: 5964665625374266366, guid: 54538e2917060ac488dd775936a52549, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3712269437218698778}
   m_SourcePrefab: {fileID: 100100000, guid: 54538e2917060ac488dd775936a52549, type: 3}
+--- !u!1 &1099711732350327753 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5964665625374266366, guid: 54538e2917060ac488dd775936a52549, type: 3}
+  m_PrefabInstance: {fileID: 6738592541571582007}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4348270656478253576
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1099711732350327753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6930d92ce45bf54e804e4ca55077099, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::WeaponSlotView
+  icon: {fileID: 4324841599915887211}
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
+--- !u!114 &3712269437218698778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1099711732350327753}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44477f8edb56e3e4593d1402f70459b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::TooltipTrigger
+  tooltip: {fileID: 7030182760044913744}
 --- !u!224 &1208407926345582506 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 5566847908082405277, guid: 54538e2917060ac488dd775936a52549, type: 3}

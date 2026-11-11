@@ -9,8 +9,9 @@ using UnityEngine;
 /// Tests for <see cref="UiSkinRecipe"/> and <see cref="UiSkinWriter"/> (Docs/DesignSystem.md, Phase 5): every piece is
 /// greyscale, sized to slice around its corners with the border the writer sets, panels and bars have their corners
 /// cut and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
-/// shows while on (Phase 6) is two arms meeting at the bottom; and the project's sprites are what its recipe draws,
-/// imported at 32 pixels per unit with point filtering and their borders.
+/// shows while on (Phase 6) is two arms meeting at the bottom; a slot's corner brackets and the hatch tile
+/// (Docs/UiRevamp.md, Phase 1) are what they say; and the project's sprites are what its recipe draws, imported at 32
+/// pixels per unit with point filtering and their borders.
 /// </summary>
 public class UiSkinWriterTests
 {
@@ -131,6 +132,52 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
+    /// A slot's corner brackets (Docs/UiRevamp.md, Phase 1) are an L of 5 px arms, 1 px thick, in each corner with
+    /// nothing between them, sliced at the arm so they keep to the corners of any slot; the hatch is a 4 px tile with one
+    /// diagonal rising to the right, so the tiles join into lines 4 px apart.
+    /// </summary>
+    [Test]
+    public void TheCornersAndTheHatch_AreBracketsAndADiagonal()
+    {
+        SkinSprite corners = recipe.Generate(UiSkinPiece.SlotCorners);
+        Assert.That(corners.Width, Is.EqualTo(11));
+        Assert.That(corners.Height, Is.EqualTo(11));
+        Assert.That(corners.Border, Is.EqualTo(new Vector4(5f, 5f, 5f, 5f)));
+        string[] rows =
+        {
+            "#####.#####",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "...........",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "#####.#####",
+        };
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < corners.Width; x++)
+            {
+                Assert.That(At(corners, x, corners.Height - 1 - row).a, Is.EqualTo(rows[row][x] == '#' ? 255 : 0), $"Corner pixel ({x}, {row}) from the top left.");
+            }
+        }
+
+        SkinSprite hatch = recipe.Generate(UiSkinPiece.Hatch);
+        Assert.That(hatch.Width, Is.EqualTo(4));
+        Assert.That(hatch.Height, Is.EqualTo(4));
+        for (int y = 0; y < hatch.Height; y++)
+        {
+            for (int x = 0; x < hatch.Width; x++)
+            {
+                Assert.That(At(hatch, x, y).a, Is.EqualTo(x == y ? 255 : 0), $"Hatch pixel ({x}, {y}) from the bottom left.");
+            }
+        }
+    }
+
+    /// <summary>
     /// The project's skin sprites hold exactly what its recipe draws, imported as single sprites at 32 pixels per unit
     /// with point filtering, a centred pivot and the piece's 9-slice border, so one sprite pixel is one UI px.
     /// </summary>
@@ -177,7 +224,7 @@ public class UiSkinWriterTests
     private static bool IsWhole(UiSkinPiece piece)
     {
         return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip
-            || piece == UiSkinPiece.Check;
+            || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch;
     }
 
     /// <summary>

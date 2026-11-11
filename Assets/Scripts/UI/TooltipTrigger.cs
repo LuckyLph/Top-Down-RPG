@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// Shows the <see cref="HudTooltip"/> for the <see cref="ITooltipSource"/> on its object (an ability slot, a status icon)
+/// Shows the <see cref="HudTooltip"/> for the <see cref="ITooltipSource"/> on its object (an ability slot, the weapon slot, a status icon)
 /// while the pointer is over it or it is selected, and hides it when neither holds, the source has nothing to show or
 /// the object is disabled (Docs/DesignSystem.md, Components: Tooltip). Pointer events need a raycast target on the
 /// object, which also keeps the click from reaching the world. Local to this machine.
@@ -108,8 +108,8 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     }
 
     /// <summary>
-    /// Shows the source's title and description over this object while it is pointed at or selected and has something
-    /// to show; hides the tooltip otherwise, when this object shows it.
+    /// Shows the source's title, numbers and description over this object while it is pointed at or selected and has
+    /// something to show; hides the tooltip otherwise, when this object shows it.
     /// </summary>
     private void Refresh()
     {
@@ -119,9 +119,9 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         }
 
         RectTransform target = (RectTransform)transform;
-        if ((pointerOver || selected) && source != null && source.TryGetTooltip(out string title, out string description))
+        if ((pointerOver || selected) && source != null && source.TryGetTooltip(out string title, out string details, out string description))
         {
-            tooltip.Show(target, title, description);
+            tooltip.Show(target, title, details, description);
         }
         else
         {

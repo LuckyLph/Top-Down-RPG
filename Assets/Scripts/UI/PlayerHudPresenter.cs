@@ -3,8 +3,8 @@ using VContainer.Unity;
 
 /// <summary>
 /// Binds the <see cref="PlayerHudView"/> to the local player (rebinding when <see cref="LocalPlayerTracker"/>
-/// changes): refreshes the health bar on every damage, heal, death and restore, and shows the equipped weapon's
-/// HUD icon.
+/// changes): refreshes the health bar on every damage, heal, death and restore, and shows the equipped weapon in the
+/// weapon slot.
 /// </summary>
 public sealed class PlayerHudPresenter : IStartable, IDisposable
 {
@@ -124,11 +124,12 @@ public sealed class PlayerHudPresenter : IStartable, IDisposable
     }
 
     /// <summary>
-    /// Shows <paramref name="weapon"/>'s HUD icon, or the dimmed empty icon when there is none.
+    /// Shows <paramref name="weapon"/> in the weapon slot, its icon and tooltip, or the dimmed empty icon when there is
+    /// none.
     /// </summary>
     private void HandleEquippedWeaponChanged(PlayerWeapon weapon)
     {
-        view.SetWeapon(weapon != null ? weapon.HudIcon : null);
+        view.SetWeapon(weapon);
     }
 
     /// <summary>

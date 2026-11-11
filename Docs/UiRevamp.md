@@ -322,17 +322,55 @@ flowchart LR
 
 Fixes on today's layout, before anything moves.
 
-- [ ] Previews of the slot states, the message line and the health text, signed off.
-- [ ] `HudSettings` with the message time.
-- [ ] `CastFailureMessages`, and `AbilityBarPresenter` keeping the outcome: the message line above the ability bar, beside the flash.
-- [ ] Slot states on `AbilitySlotView`:
-  - [ ] casting;
-  - [ ] queued, from `PlayerOrders`' new buffered event;
-  - [ ] disabled, from the local player's controls.
-- [ ] Skin: the corner brackets and the hatch.
-- [ ] Health reads "72 / 100".
-- [ ] Tooltips with numbers, and the weapon slot's tooltip.
-- [ ] `HealthTrack` opaque. The fill-on-track pairs (`Health` today, `HealthPlayer` from Phase 2) are measured in `UiThemeUsage` and checked at 3:1.
+- [x] Previews of the slot states, the message line and the health text, signed off.
+- [x] `HudSettings` with the message time.
+- [x] `CastFailureMessages`, and `AbilityBarPresenter` keeping the outcome: the message line above the ability bar, beside the flash.
+- [x] Slot states on `AbilitySlotView`:
+  - [x] casting;
+  - [x] queued, from `PlayerOrders`' new buffered event;
+  - [x] disabled, from the local player's controls.
+- [x] Skin: the corner brackets and the hatch.
+- [x] Health reads "72 / 100".
+- [x] Tooltips with numbers, and the weapon slot's tooltip.
+- [x] `HealthTrack` opaque. The fill-on-track pairs (`Health` today, `HealthPlayer` from Phase 2) are measured in `UiThemeUsage` and checked at 3:1.
+
+#### Phase 1 notes
+
+- **Settled with the user on 2026-11-10,** on previews of today's layout at 640 x 360 and 480 x 270:
+  - the slot states as built: the frame in `Accent` while casting, 1 px `Accent` corner brackets 1 UI px outside a queued slot, and the hatch in `ControlDisabled` (`Border` was previewed as a stronger alternative);
+  - the message line 66 UI px up, just above the status row, which today sits directly on the bar (Phase 2 moves it to 12 above the health bar);
+  - "72 / 100", the tooltip numbers below, and a tooltip with no room above its target shown below it.
+- **The previews.** Written to the gitignored `Recordings/UiRevamp/Phase1` by a temporary tool, since removed: the real `PlayerHudCanvas` on a camera's canvas at x3 and x4 over Phase 5's capture of the Clearing, its themed components woken by reflection and its views set by hand. The camera had to sit at the origin: 5000 units away, float error in the world-space round trip of `ThemedText`'s snapping rounded neighbouring glyphs apart.
+- **Failures.** `CastFailureMessages.For(outcome)` gives one of six constant strings, or null for an empty slot, death, and a buffered cast that expired or was dropped (`Expired`, `Cancelled`). Every failure still flashes its slot, as before; only the words depend on the outcome. A message shows for `HudSettings.MessageSeconds` (1.2 s), and a newer failure replaces it and restarts the time. The presenter hides it when its time is up in `Tick`, which allocates nothing.
+- **Slot states.**
+  - **Casting** follows `PlayerAbilities.CastStarted` and `CastEnded`. An instant cast starts and ends on one tick, so it never shows.
+  - **Queued** follows `PlayerOrders.BufferedCastChanged`: the slot when a cast is buffered, -1 whenever the buffer clears (a newer press gives -1, then its slot). `PlayerController` passes it on as an event of its own, which subscribes to its orders, and exposes `BufferedSlot`.
+  - **Disabled** follows `StatusEffects.Changed` and reads `Controls`. An empty slot is never hatched: there is nothing in it to block. The hatch sits under the name, so the name stays readable.
+  - Binding a player shows its running cast, buffered slot and controls at once; `SetAbility` resets the three states and the presenter puts them back.
+- **Co-op.** `PlayerOrders` and `PlayerAbilities` run on the machine that owns the player, a joined client's own included, and its statuses are the mirror of the host's, so the failure words, the casting, queued and disabled states all work on a client from its own events, with nothing sent. `NetworkHudPlayModeTests` binds a copy of the HUD's bar to the in-process client's player and checks each state there, and that the host's own bar shows none of it.
+- **Tooltips.** `ITooltipSource.TryGetTooltip` gives a third string, the numbers, shown on a new line in `Text` between the title and the description; an empty line hides. `TooltipDetails` builds them when a slot shows another ability or weapon:
+  - an ability: "Cooldown 2 s · Cast 0.25 s" ("Instant" for none), and "Range 6" on a second line when it is aimed at a point, a unit or along a line of some length. Sweep and Whirl (`None`) and Charge, Lunge and Roll (a 0-long line) show no range. One line of all three ran to 151 UI px, past the tooltip's 150.
+  - a weapon: "20 Physical · Melee", or "24 Physical · Range 5" for the bow, its attack range rather than its arrow's 6.5.
+  The weapon slot's icon moved from `PlayerHudView` into a new `WeaponSlotView`, the slot's `ITooltipSource`, beside a `TooltipTrigger`; the slot's image now takes the pointer, as the ability slots' do. The tooltip went below the slot, since above it there is no room in the top corner.
+- **Health.** `PlayerHudView` builds "72 / 100" only when the current or maximum health it shows changes, and shows "-- / --" without a local player.
+- **Contrast.**
+  - `HealthTrack` is opaque: `Health` on it is 3.68:1, which `UiTheme.md` floors to 3.67.
+  - A bar's fill names its track: `ThemedGraphic.Track`, set on the `Bar` component's fill (its root) and on the `WorldBar`'s fill (its frame).
+  - `UiThemeUsage.CollectFills` and `MeasureFills` measure each pair once at 3:1, the fill drawn over the track and a translucent track over white and over black. `UiTheme.md` gains a Fills on tracks table, and `UiThemeTests` checks it.
+- **Skin.** `SlotCorners` is 11 px, an L of 5 px arms 1 px thick in each corner, 9-sliced at the arm. `Hatch` is a 4 px tile of one diagonal, shown tiled. Both are greyscale, appended to `UiSkinPiece`, with three new settings on the recipe.
+- **Left as they are.**
+  - **The hatch is not measured.** `ControlDisabled` lines on a slot are 3.39:1 over a black world and 2.0:1 over a white one; `Border` would give 6.49 and 3.83. The hatch is a second cue beside the failure's words and the status icon, and it was settled on the previews.
+  - **The `Accent` frame and brackets** sit on the world, so they are not measured either.
+- **Tests.**
+  - `AbilityBarPresenterTests` (18, new): each outcome's words or none, the message time, casting, queued and dropped brackets through real orders, the hatch per control, rebinding, no allocation.
+  - `PlayerOrdersTests`: the buffered event.
+  - `TooltipTests`: the numbers, the weapon slot, below a target at the top, and the HUD's weapon trigger.
+  - `UiThemeTests`: `FillRatio`, `MeasureFills` and the project's fills at 3:1.
+  - `UiContentTests`: the slot states and the message line.
+  - `UiSkinWriterTests`: the corners and the hatch pixel by pixel.
+  - `DesignTablesTests`: the fill table.
+  - `NetworkHudPlayModeTests` (new).
+  - `PlayerWeaponSystemTests` and `MobPlayModeBehaviorTests`: "72 / 100".
 
 ### Phase 2: the command bar
 

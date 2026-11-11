@@ -92,6 +92,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<PlayerHudView>();
         builder.RegisterComponentInHierarchy<AbilityBarView>();
         builder.RegisterComponentInHierarchy<StatusBarView>();
+        builder.RegisterComponentInHierarchy<NoticeView>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
@@ -131,6 +132,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<PlayerHudPresenter>();
         builder.RegisterEntryPoint<AbilityBarPresenter>();
         builder.RegisterEntryPoint<StatusBarPresenter>();
+        builder.RegisterEntryPoint<NoticePresenter>().AsSelf();
         builder.RegisterComponentInHierarchy<OptionsMenuView>();
         builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
         builder.RegisterComponentInHierarchy<GameMenuView>();
@@ -155,7 +157,6 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<WalkablePlaces>(Lifetime.Singleton);
         builder.Register<WaystoneNotices>(Lifetime.Singleton);
         builder.RegisterEntryPoint<WaystoneDiscovery>();
-        builder.RegisterEntryPoint<WaystonePopupPresenter>();
         builder.Register<KnownWaystones>(Lifetime.Singleton);
         builder.RegisterEntryPoint<WaystoneMarkers>().AsSelf();
         builder.Register<WorldExits>(Lifetime.Singleton);

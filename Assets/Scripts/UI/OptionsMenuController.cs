@@ -15,8 +15,10 @@ using VContainer.Unity;
 /// dyes a look's sheets or parts carry (Phase 5), its button showing the swatch the local settings pick and moving to the
 /// next one of its list, its reset going back to the choice's own; then a Display section with the UI size row
 /// (Docs/DesignSystem.md, Phase 3), its button showing the size the display shows and moving to the next one that fits,
-/// its reset going back to Normal, and the Reduce flashing and Reduce motion toggle rows (Phase 6), each button reading
-/// On or Off and turning it the other way, each reset turning it off; then a row per rebindable action of
+/// its reset going back to Normal, the Reduce flashing and Reduce motion toggle rows (Phase 6), each button reading
+/// On or Off and turning it the other way, each reset turning it off, and the allies' damage numbers row
+/// (Docs/UiRevamp.md, Phase 3), its button showing Shown, Smaller or Hidden and moving to the next, its reset going back
+/// to Shown; then a row per rebindable action of
 /// <see cref="InputBindings"/> under its section, rebinding a row when its binding is selected (listening starts on the
 /// next tick, so the click itself is never captured), naming the action that moved on a swap, resetting one row or all
 /// of them after a confirmation; and it closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back
@@ -37,6 +39,8 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     public const string ReduceMotionLabel = "Reduce motion";
     public const string OnName = "On";
     public const string OffName = "Off";
+    public const string AllyPopupsLabel = "Allies' damage numbers";
+    public static readonly string[] AllyPopupsNames = { "Shown", "Smaller", "Hidden" };
 
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
@@ -54,6 +58,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private KeyBindingRowView uiSizeRow;
     private KeyBindingRowView reduceFlashingRow;
     private KeyBindingRowView reduceMotionRow;
+    private KeyBindingRowView allyPopupsRow;
     private Action onClosed;
     private int pendingRebind = -1;
     private int listeningRow = -1;
@@ -80,6 +85,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     internal KeyBindingRowView UiSizeRow => uiSizeRow;
     internal KeyBindingRowView ReduceFlashingRow => reduceFlashingRow;
     internal KeyBindingRowView ReduceMotionRow => reduceMotionRow;
+    internal KeyBindingRowView AllyPopupsRow => allyPopupsRow;
     internal int ColourRowCount => colourRows.Count;
     internal int PartRowCount => partRows.Count;
 
@@ -185,6 +191,11 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         if (reduceMotionRow != null)
         {
             settings.ReduceMotionChanged -= RefreshReduceMotion;
+        }
+
+        if (allyPopupsRow != null)
+        {
+            settings.AllyPopupsChanged -= RefreshAllyPopups;
         }
 
         menus.Remove(this);
@@ -503,7 +514,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
 
     /// <summary>
     /// Builds the Display section: its UI size row, when there is a UI zoom to follow, then the Reduce flashing and
-    /// Reduce motion toggle rows.
+    /// Reduce motion toggle rows and the allies' damage numbers row.
     /// </summary>
     private void BuildDisplaySection()
     {
@@ -530,6 +541,43 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         settings.ReduceMotionChanged += RefreshReduceMotion;
         RefreshReduceFlashing();
         RefreshReduceMotion();
+        allyPopupsRow = view.AddRow();
+        allyPopupsRow.SetLabel(AllyPopupsLabel);
+        allyPopupsRow.BindingButton.onClick.AddListener(NextAllyPopups);
+        allyPopupsRow.ResetButton.onClick.AddListener(ResetAllyPopups);
+        settings.AllyPopupsChanged += RefreshAllyPopups;
+        RefreshAllyPopups();
+    }
+
+    /// <summary>
+    /// Allies' damage numbers button: keeps the next way they show, after Hidden Shown. Ignored while listening or
+    /// confirming.
+    /// </summary>
+    private void NextAllyPopups()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetAllyPopups((AllyPopups)(((int)settings.AllyPopups + 1) % AllyPopupsNames.Length));
+        }
+    }
+
+    /// <summary>
+    /// Allies' damage numbers reset button: back to Shown. Ignored while listening or confirming.
+    /// </summary>
+    private void ResetAllyPopups()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetAllyPopups(AllyPopups.Shown);
+        }
+    }
+
+    /// <summary>
+    /// Shows how allies' damage numbers show on their row's button.
+    /// </summary>
+    private void RefreshAllyPopups()
+    {
+        allyPopupsRow.SetBinding(AllyPopupsNames[(int)settings.AllyPopups]);
     }
 
     /// <summary>

@@ -36,6 +36,8 @@ public sealed class CombatSettings : ScriptableObject
     [SerializeField] private string immuneText = "Immune";
     [SerializeField, Tooltip("The text size of damage-over-time popups; direct hits use the popup's own size.")]
     private UiTextSize periodicPopupSize = UiTextSize.Caption;
+    [SerializeField, Tooltip("The text size of allies' popups (hits, ticks and heals involving another player but not this machine's) while its player shows them smaller (Docs/UiRevamp.md, Phase 3).")]
+    private UiTextSize allyPopupSize = UiTextSize.Caption;
 
     public int ResistanceFloor => resistanceFloor;
     public int ResistanceCap => resistanceCap;
@@ -47,6 +49,7 @@ public sealed class CombatSettings : ScriptableObject
     public Color ImmuneColor => immuneColor;
     public string ImmuneText => immuneText;
     public UiTextSize PeriodicPopupSize => periodicPopupSize;
+    public UiTextSize AllyPopupSize => allyPopupSize;
 
     /// <summary>
     /// Builds an unsaved, hidden runtime instance with default rules and <paramref name="catalog"/>, for tests that

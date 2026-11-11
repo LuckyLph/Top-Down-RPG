@@ -45,7 +45,8 @@ public class UiScalePlayModeTests
 
     /// <summary>
     /// While hosting with a client connected, the host choosing Large at 1080p puts its HUD, popup and in-game menu
-    /// canvases at zoom 4; the client's settings keep Normal and its copy of the host's player keeps its look, colours
+    /// canvases at zoom 4, and its health text, injected with the zoom, at 3/4 (Docs/UiRevamp.md, Phase 3); the
+    /// client's settings keep Normal and its copy of the host's player keeps its look, colours
     /// and parts.
     /// </summary>
     [UnityTest]
@@ -65,12 +66,17 @@ public class UiScalePlayModeTests
         CharacterColourPicks colours = copy.ShownColours;
         CharacterPartPicks parts = copy.ShownParts;
 
+        Transform healthText = Object.FindAnyObjectByType<PlayerHudView>().GetComponentInChildren<PixelTextScale>(true).transform;
+        Assert.That(healthText.localScale.x, Is.EqualTo(PixelTextScale.ScaleFor(scale.Factor, 0.75f)).Within(1e-5f), "The health text follows the zoom it was injected with.");
+
         SceneBootTestHelper.ResolveFromMain<UserSettings>().SetUiSizeStep(1);
         scale.Apply(1920, 1080, 1);
         foreach (CanvasScaler scaler in scalers)
         {
             Assert.That(scaler.scaleFactor, Is.EqualTo(4f), scaler.name);
         }
+
+        Assert.That(healthText.localScale.x, Is.EqualTo(0.75f).Within(1e-5f), "Each font pixel of the health text covers 3 display pixels at x4.");
 
         for (int frame = 0; frame < 10; frame++)
         {

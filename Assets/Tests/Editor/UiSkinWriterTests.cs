@@ -7,8 +7,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="UiSkinRecipe"/> and <see cref="UiSkinWriter"/> (Docs/DesignSystem.md, Phase 5): every piece is
-/// greyscale, sized to slice around its corners with the border the writer sets, panels and bars have their corners
-/// cut and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
+/// greyscale, sized to slice around its corners with the border the writer sets, panels and frames have square corners
+/// (Docs/UiRevamp.md, Phase 3), or cut ones at a recipe's cut, and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
 /// shows while on (Phase 6) is two arms meeting at the bottom; a slot's corner brackets and the hatch tile
 /// (Docs/UiRevamp.md, Phase 1) and a bar's tick and a debuff's notch (Phase 2) are what they say; and the project's sprites are what its recipe draws, imported at 32
 /// pixels per unit with point filtering and their borders.
@@ -64,21 +64,33 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
-    /// A panel's corner pixel is cut while the pixels beside it are filled, its frame is 1 px wide, and a raised
-    /// panel's lip is darker than its face, inside the border its bottom slices at.
+    /// By default a panel's and a frame's corners are square (Docs/UiRevamp.md, Phase 3): the corner pixel is filled,
+    /// so the 1 px frame closes; with a cut of 1 the corner pixel goes while the pixels beside it stay. The frame is 1 px
+    /// wide, and a raised panel's lip is darker than its face, inside the border its bottom slices at.
     /// </summary>
     [Test]
-    public void Panels_HaveCutCorners_AndARaisedPanelALip()
+    public void Panels_HaveSquareCorners_OrCutOnes_AndARaisedPanelALip()
     {
+        Assert.That(recipe.CornerCut, Is.Zero);
         SkinSprite panel = recipe.Generate(UiSkinPiece.Panel);
-        Assert.That(At(panel, 0, 0).a, Is.Zero, "The corner is cut.");
-        Assert.That(At(panel, 1, 0).a, Is.EqualTo(255));
-        Assert.That(At(panel, 0, 1).a, Is.EqualTo(255));
+        Assert.That(At(panel, 0, 0).a, Is.EqualTo(255), "The corner is square.");
         Assert.That(At(panel, panel.Width / 2, panel.Height / 2).a, Is.EqualTo(255), "A panel is filled.");
 
         SkinSprite frame = recipe.Generate(UiSkinPiece.PanelFrame);
+        Assert.That(At(frame, 0, 0).a, Is.EqualTo(255), "The frame closes at its corner.");
         Assert.That(At(frame, 0, frame.Height / 2).a, Is.EqualTo(255), "The frame runs along the edge.");
         Assert.That(At(frame, 1, frame.Height / 2).a, Is.Zero, "1 px wide.");
+        Assert.That(At(recipe.Generate(UiSkinPiece.BarFrame), 0, 0).a, Is.EqualTo(255), "A bar's corner is square too.");
+
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("cornerCut").intValue = 1;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        SkinSprite cut = recipe.Generate(UiSkinPiece.Panel);
+        Assert.That(At(cut, 0, 0).a, Is.Zero, "A cut corner.");
+        Assert.That(At(cut, 1, 0).a, Is.EqualTo(255));
+        Assert.That(At(cut, 0, 1).a, Is.EqualTo(255));
+        settings.FindProperty("cornerCut").intValue = 0;
+        settings.ApplyModifiedPropertiesWithoutUndo();
 
         SkinSprite raised = recipe.Generate(UiSkinPiece.PanelRaised);
         int middle = raised.Width / 2;

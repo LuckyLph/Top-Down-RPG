@@ -106,7 +106,9 @@ public class ThemedText : MonoBehaviour
 
     /// <summary>
     /// Moves every visible glyph of <paramref name="info"/> by what is left of its origin under a whole UI px, counted
-    /// from the root canvas's corner, so each font pixel covers whole display pixels.
+    /// from the root canvas's corner, so each font pixel covers whole display pixels. A text drawn at another scale than
+    /// its canvas (<see cref="PixelTextScale"/>, whose font pixels are whole display pixels) snaps to whole display
+    /// pixels instead, which a whole UI px of its own would not land on.
     /// </summary>
     internal void SnapToPixels(TMP_TextInfo info)
     {
@@ -119,6 +121,8 @@ public class ThemedText : MonoBehaviour
         RectTransform root = (RectTransform)canvas.rootCanvas.transform;
         Vector2 corner = root.rect.min;
         Transform own = transform;
+        float relative = root.lossyScale.y != 0f ? Mathf.Abs(own.lossyScale.y / root.lossyScale.y) : 1f;
+        float step = Mathf.Abs(relative - 1f) > 0.001f && canvas.rootCanvas.scaleFactor > 0f ? 1f / canvas.rootCanvas.scaleFactor : 1f;
         for (int i = 0; i < info.characterCount; i++)
         {
             TMP_CharacterInfo character = info.characterInfo[i];
@@ -130,7 +134,7 @@ public class ThemedText : MonoBehaviour
             Vector3 onCanvas = root.InverseTransformPoint(own.TransformPoint(new Vector3(character.origin, character.baseLine, 0f)));
             float x = onCanvas.x - corner.x;
             float y = onCanvas.y - corner.y;
-            Vector3 offset = own.InverseTransformVector(root.TransformVector(new Vector3(Mathf.Round(x) - x, Mathf.Round(y) - y, 0f)));
+            Vector3 offset = own.InverseTransformVector(root.TransformVector(new Vector3(Mathf.Round(x / step) * step - x, Mathf.Round(y / step) * step - y, 0f)));
             Vector3[] vertices = info.meshInfo[character.materialReferenceIndex].vertices;
             for (int v = character.vertexIndex; v < character.vertexIndex + 4; v++)
             {

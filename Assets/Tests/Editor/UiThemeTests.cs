@@ -238,6 +238,70 @@ public class UiThemeTests
     }
 
     /// <summary>
+    /// <see cref="PixelTextScale"/> (Docs/UiRevamp.md, Phase 3) scales its text so each font pixel covers the whole
+    /// number of display pixels nearest three quarters of the zoom's, at least two: 2/3 at x3, 3/4 at x4, 4/5 at x5, 5/6
+    /// at x6, 6/8 at x8, unchanged at x2 and x1. A text so scaled snaps its glyphs to whole display pixels of its
+    /// canvas, which its own whole UI px would not land on.
+    /// </summary>
+    [Test]
+    public void PixelTextScale_KeepsFontPixelsOnWholeDisplayPixels()
+    {
+        Assert.That(PixelTextScale.ScaleFor(1, 0.75f), Is.EqualTo(1f));
+        Assert.That(PixelTextScale.ScaleFor(2, 0.75f), Is.EqualTo(1f));
+        Assert.That(PixelTextScale.ScaleFor(3, 0.75f), Is.EqualTo(2f / 3f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(4, 0.75f), Is.EqualTo(0.75f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(5, 0.75f), Is.EqualTo(0.8f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(6, 0.75f), Is.EqualTo(5f / 6f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(8, 0.75f), Is.EqualTo(0.75f).Within(1e-5f));
+
+        const int zoom = 3;
+        UiTheme theme = Track(TestThemes.Create());
+        GameObject canvasObject = Track(new GameObject("Canvas", typeof(RectTransform), typeof(Canvas)));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        RectTransform canvasRect = (RectTransform)canvasObject.transform;
+        canvasRect.sizeDelta = new Vector2(101f, 51f);
+        canvas.scaleFactor = zoom;
+        TextMeshProUGUI text = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+        text.rectTransform.SetParent(canvasRect, false);
+        text.rectTransform.sizeDelta = new Vector2(61f, 21f);
+        text.rectTransform.anchoredPosition = new Vector2(0.3f, 0.7f);
+        text.alignment = TextAlignmentOptions.Center;
+        ThemedText themed = text.gameObject.AddComponent<ThemedText>();
+        themed.Configure(theme, UiColour.Text, UiColour.Outline, UiTextSize.Body);
+        PixelTextScale pixels = text.gameObject.AddComponent<PixelTextScale>();
+        pixels.Apply(zoom);
+        Assert.That(text.transform.localScale.x, Is.EqualTo(2f / 3f).Within(1e-5f));
+        text.text = "72 / 100";
+        text.ForceMeshUpdate(true, true);
+        TMP_TextInfo info = text.textInfo;
+        Vector3[] before = (Vector3[])info.meshInfo[0].vertices.Clone();
+
+        themed.SnapToPixels(info);
+
+        Vector2 corner = canvasRect.rect.min;
+        int checkedGlyphs = 0;
+        for (int i = 0; i < info.characterCount; i++)
+        {
+            TMP_CharacterInfo character = info.characterInfo[i];
+            if (!character.isVisible)
+            {
+                continue;
+            }
+
+            Vector3 offset = info.meshInfo[0].vertices[character.vertexIndex] - before[character.vertexIndex];
+            Vector3 origin = canvasRect.InverseTransformPoint(text.transform.TransformPoint(new Vector3(character.origin, character.baseLine, 0f) + offset));
+            float across = (origin.x - corner.x) * zoom;
+            float up = (origin.y - corner.y) * zoom;
+            Assert.That(across, Is.EqualTo(Mathf.Round(across)).Within(1e-3f), $"Glyph {i} across, in display pixels");
+            Assert.That(up, Is.EqualTo(Mathf.Round(up)).Within(1e-3f), $"Glyph {i} up, in display pixels");
+            checkedGlyphs++;
+        }
+
+        Assert.That(checkedGlyphs, Is.EqualTo(6));
+    }
+
+    /// <summary>
     /// A themed graphic colours an Image or a SpriteRenderer in its role; a themed selectable sets its colour block
     /// from the control roles, Accent when selected.
     /// </summary>
@@ -433,20 +497,19 @@ public class UiThemeTests
     }
 
     /// <summary>
-    /// The popup colours on the gameplay assets (each damage type, heal, immune and the waystone notice) read against
-    /// the Outline role at the contrast of text under Title.
+    /// The popup colours on the combat settings (each damage type, heal and immune) read against the Outline role at
+    /// the contrast of text under Title; the waystone notice left the popups for the notice line, whose colours are
+    /// theme roles (Docs/UiRevamp.md, Phase 3).
     /// </summary>
     [Test]
     public void GameplayPopupColours_MeetTheirContrastOnTheOutline()
     {
         Color outline = ProjectTheme().Colour(UiColour.Outline);
         CombatSettings combat = AssetDatabase.LoadAssetAtPath<CombatSettings>(DesignContent.CombatSettingsPath);
-        GameplaySettings gameplay = AssetDatabase.LoadAssetAtPath<GameplaySettings>("Assets/Data/GameplaySettings.asset");
         Dictionary<string, Color> colours = new()
         {
             ["Heal"] = combat.HealColor,
             ["Immune"] = combat.ImmuneColor,
-            ["Waystone discovered"] = gameplay.WaystoneDiscoveredColor,
         };
         foreach (DamageType type in (DamageType[])System.Enum.GetValues(typeof(DamageType)))
         {

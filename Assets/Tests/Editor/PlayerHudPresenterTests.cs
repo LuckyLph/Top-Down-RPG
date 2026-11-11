@@ -90,6 +90,26 @@ public class PlayerHudPresenterTests
     }
 
     /// <summary>
+    /// With a tick spacing of 0, as the project's settings have since Docs/UiRevamp.md's Phase 3, the bar shows no
+    /// ticks, the ones it showed before hidden.
+    /// </summary>
+    [Test]
+    public void ATickSpacingOfZero_ShowsNoTicks()
+    {
+        health.ApplyDamage(28);
+        Assert.That(bar.TickCount, Is.EqualTo(9));
+
+        bar.SetHealth(72, 100, 0);
+
+        Assert.That(bar.TickCount, Is.Zero);
+        Assert.That(bar.Text.text, Is.EqualTo("72 / 100"));
+        foreach (Image tick in bar.GetComponentsInChildren<Image>(false))
+        {
+            Assert.That(tick.name, Does.Not.StartWith("Tick"), $"{tick.name} is hidden.");
+        }
+    }
+
+    /// <summary>
     /// A hit shows the part just lost, from the health before it, for the recent-loss time; a second hit within it
     /// keeps the highest start and restarts the time; a heal past that start hides it.
     /// </summary>

@@ -179,7 +179,8 @@ internal static class ContentRules
 
     /// <summary>
     /// The combat settings: the resistance floor from -100 to 0 and the cap from 0 to 99, a minimum damage that is not
-    /// negative, a periodic popup size that is a text size, a status catalog, an immune text and opaque popup colours.
+    /// negative, periodic and allies' popup sizes that are text sizes, a status catalog, an immune text and opaque popup
+    /// colours.
     /// </summary>
     public static List<string> Combat(CombatSettings settings)
     {
@@ -190,6 +191,7 @@ internal static class ContentRules
         Within(problems, data, owner, "resistanceCap", 0, 99);
         AtLeast(problems, data, owner, "minimumDamage", 0);
         Within(problems, data, owner, "periodicPopupSize", (int)UiTextSize.Caption, (int)UiTextSize.Display);
+        Within(problems, data, owner, "allyPopupSize", (int)UiTextSize.Caption, (int)UiTextSize.Display);
         Set(problems, data, owner, "statusCatalog");
         NotEmpty(problems, data, owner, "immuneText");
         foreach (string colour in new[] { "physicalColor", "fireColor", "frostColor", "lightningColor", "poisonColor", "trueColor", "healColor", "immuneColor" })
@@ -197,6 +199,34 @@ internal static class ContentRules
             Opaque(problems, data, owner, colour);
         }
 
+        return problems;
+    }
+
+    /// <summary>
+    /// A world (Docs/UiRevamp.md, Phase 3): the display name players see, and each entry's, unique within the world's
+    /// entries.
+    /// </summary>
+    public static List<string> World(WorldDefinition world)
+    {
+        List<string> problems = new();
+        SerializedObject data = new(world);
+        NotEmpty(problems, data, world.name, "displayName");
+        SerializedProperty entries = Property(data, "entries");
+        List<string> names = new();
+        for (int i = 0; i < entries.arraySize; i++)
+        {
+            SerializedProperty entry = entries.GetArrayElementAtIndex(i);
+            string displayName = Relative(entry, "displayName").stringValue;
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                problems.Add($"{world.name} entry {Relative(entry, "name").stringValue}: displayName is empty.");
+                continue;
+            }
+
+            names.Add(displayName);
+        }
+
+        problems.AddRange(Unique($"{world.name} entry names", names));
         return problems;
     }
 

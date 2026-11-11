@@ -285,8 +285,9 @@ public class UiContentTests
 
     /// <summary>
     /// The toggle row (Docs/DesignSystem.md, Phase 6) is a variant of the row with a 12 UI px box before its value, in
-    /// Shade framed in Border, holding the skin's check mark in Accent while it is on: its state shows as a mark and
-    /// as the On or Off its button reads, never as colour alone. The mark keeps 4.5:1 against the box on the screen's
+    /// Shade framed in ControlSecondary (in Border until Docs/UiRevamp.md's Phase 3 made frames black, which a box on the
+    /// dark panel would lose), holding the skin's check mark in Accent while it is on: its state shows as a mark and as
+    /// the On or Off its button reads, never as colour alone. The mark keeps 4.5:1 against the box on the screen's
     /// raised panel, and the frame 3:1 against the panel. Every options screen makes its toggle rows from it.
     /// </summary>
     [Test]
@@ -308,13 +309,13 @@ public class UiContentTests
         ThemedGraphic frame = null;
         foreach (ThemedGraphic graphic in box.GetComponentsInChildren<ThemedGraphic>(true))
         {
-            if (graphic.Role == UiColour.Border)
+            if (graphic.Role == UiColour.ControlSecondary)
             {
                 frame = graphic;
             }
         }
 
-        Assert.That(frame, Is.Not.Null, "The box is framed in Border.");
+        Assert.That(frame, Is.Not.Null, "The box is framed in ControlSecondary.");
         Assert.That(box.transform.parent.GetSiblingIndex(), Is.LessThan(view.BindingButton.transform.GetSiblingIndex()), "The box comes before the value.");
 
         Color panel = theme.Colour(UiColour.SurfaceRaised);
@@ -322,7 +323,7 @@ public class UiContentTests
         Color well = Color.Lerp(panel, shade, shade.a);
         well.a = 1f;
         Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.Accent), well), Is.GreaterThanOrEqualTo(4.5), "The mark against its box.");
-        Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.Border), panel), Is.GreaterThanOrEqualTo(3.0), "The box's frame against the panel.");
+        Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.ControlSecondary), panel), Is.GreaterThanOrEqualTo(3.0), "The box's frame against the panel.");
 
         int screens = 0;
         foreach ((string where, OptionsMenuView options) in All<OptionsMenuView>())
@@ -338,8 +339,9 @@ public class UiContentTests
     /// <summary>
     /// The ability slot's states (Docs/UiRevamp.md, Phase 1) are skin pieces in their roles, hidden until shown and
     /// never taking the pointer: its frame (Border, Accent while casting), the corner brackets 1 UI px outside it in
-    /// Accent, and the hatch, tiled in ControlDisabled inside the frame and under the name, so the name stays readable.
-    /// The message line is a variant of the notice line in Text outlined in Outline, and the HUD's ability bar shows its
+    /// Accent, and the hatch, tiled in ControlDisabled inside the frame and under the name, so the name stays readable;
+    /// since Phase 3 its key sits in its top left corner and its cooldown seconds in its top right. The message line is
+    /// a variant of the notice line in Text outlined in Outline, and the HUD's ability bar shows its
     /// failures on one, hidden until a failure, above the status row.
     /// </summary>
     [Test]
@@ -348,6 +350,10 @@ public class UiContentTests
         AbilitySlotView slot = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}SlotAbility.prefab").GetComponent<AbilitySlotView>();
         Assert.That(slot.Border.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.SlotFrame))));
         Assert.That(slot.Border.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(slot.KeyText.rectTransform.anchorMin, Is.EqualTo(new Vector2(0f, 1f)), "The key in the top left corner (Docs/UiRevamp.md, Phase 3).");
+        Assert.That(slot.KeyText.alignment, Is.EqualTo(TextAlignmentOptions.TopLeft));
+        Assert.That(slot.CooldownText.rectTransform.anchorMin, Is.EqualTo(new Vector2(1f, 1f)), "The cooldown seconds in the top right corner.");
+        Assert.That(slot.CooldownText.alignment, Is.EqualTo(TextAlignmentOptions.TopRight));
 
         Image queued = slot.Queued;
         Assert.That(queued.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.SlotCorners))));
@@ -407,7 +413,10 @@ public class UiContentTests
         Assert.That(tick.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthTrack));
         Assert.That(tick.gameObject.activeSelf, Is.False, "A template.");
         Assert.That(bar.Text.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
-        Assert.That(((RectTransform)bar.transform).sizeDelta, Is.EqualTo(new Vector2(242f, 12f)));
+        PixelTextScale smaller = bar.Text.GetComponent<PixelTextScale>();
+        Assert.That(smaller, Is.Not.Null, "The health text draws smaller than the zoom (Docs/UiRevamp.md, Phase 3).");
+        Assert.That(smaller.TargetScale, Is.EqualTo(0.75f));
+        Assert.That(((RectTransform)bar.transform).sizeDelta, Is.EqualTo(new Vector2(242f, 13f)), "13 tall, so the 9 px outlined text centres in its 11 px inside (Docs/UiRevamp.md, Phase 3).");
 
         AbilityBarView abilities = hud.GetComponentInChildren<AbilityBarView>(true);
         Transform weapon = hud.GetComponent<PlayerHudView>().WeaponSlot.transform;
@@ -437,6 +446,44 @@ public class UiContentTests
         Assert.That(notch.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Danger));
         Assert.That(notch.raycastTarget, Is.False);
         Assert.That(notch.rectTransform.anchorMin, Is.EqualTo(Vector2.one), "In the top right corner.");
+    }
+
+    /// <summary>
+    /// The HUD's notice line (Docs/UiRevamp.md, Phase 3): a <c>Panel</c> at the top centre, 8 UI px below the top edge,
+    /// hidden until a notice shows and never taking the pointer, holding a wrapping <c>NoticeLine</c> in Accent read
+    /// against the panel's Surface, centred, ending in an ellipsis past what fits, that <see cref="NoticeView"/> sizes,
+    /// up to the notice band's 240 x 24 UI px and two lines; drawn before the tooltip.
+    /// </summary>
+    [Test]
+    public void TheNoticeLine_IsAPanelHoldingAWrappingNoticeLine_AtTheTopCentre()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        NoticeView notice = hud.GetComponentInChildren<NoticeView>(true);
+        Assert.That(notice, Is.Not.Null);
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(notice.gameObject)), Is.EqualTo($"{Components}Panel.prefab"));
+        Assert.That(notice.gameObject.activeSelf, Is.False, "Hidden until a notice shows.");
+        Assert.That(notice.GetComponent<Image>().raycastTarget, Is.False, "The world under it still takes clicks.");
+        RectTransform panel = (RectTransform)notice.transform;
+        Assert.That(panel.anchorMin, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(panel.anchorMax, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(panel.pivot, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(panel.anchoredPosition, Is.EqualTo(new Vector2(0f, -8f)), "8 UI px below the top edge.");
+        Assert.That(notice.MaxWidth, Is.EqualTo(240f));
+        Assert.That(notice.MaxHeight, Is.EqualTo(24f));
+        Assert.That(notice.MaxLines, Is.EqualTo(2));
+        Assert.That(notice.transform.GetSiblingIndex(), Is.LessThan(hud.GetComponentInChildren<HudTooltip>(true).transform.GetSiblingIndex()), "The tooltip draws over it.");
+
+        TMP_Text text = notice.Label;
+        Assert.That(text.transform.parent, Is.EqualTo(notice.transform));
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(text.gameObject)), Is.EqualTo($"{Components}NoticeLine.prefab"));
+        Assert.That(text.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal), "The notice line wraps.");
+        Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis), "A notice past two lines ends in an ellipsis rather than leaving the band.");
+        Assert.That(text.horizontalAlignment, Is.EqualTo(HorizontalAlignmentOptions.Center));
+        Assert.That(text.raycastTarget, Is.False);
+        ThemedText themed = text.GetComponent<ThemedText>();
+        Assert.That(themed.Colour, Is.EqualTo(UiColour.Accent));
+        Assert.That(themed.Background, Is.EqualTo(UiColour.Surface), "Read against the panel.");
+        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}NoticeLine.prefab").GetComponent<TMP_Text>().textWrappingMode, Is.EqualTo(TextWrappingModes.Normal), "The component wraps.");
     }
 
     /// <summary>

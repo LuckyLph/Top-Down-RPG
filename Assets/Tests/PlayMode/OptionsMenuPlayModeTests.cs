@@ -27,7 +27,7 @@ public class OptionsMenuPlayModeTests
 
         Assert.That(options, Is.Not.Null, "The main menu has an options screen.");
         Assert.That(options.IsShown, Is.False);
-        Assert.That(options.RowsContainer.childCount, Is.EqualTo(41), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row and two toggle rows, three section headers and nine rows.");
+        Assert.That(options.RowsContainer.childCount, Is.EqualTo(42), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row, two toggle rows and the allies' damage numbers row, three section headers and nine rows.");
 
         menu.OpenOptions();
         yield return null;

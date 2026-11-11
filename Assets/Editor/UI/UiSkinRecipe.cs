@@ -28,8 +28,9 @@ public enum UiSkinPiece
 /// <summary>
 /// An editor-only recipe for the UI skin (Docs/DesignSystem.md, Foundations: Art), made like the prop and terrain
 /// recipes: greyscale sprites that images and sprite renderers tint by colour role, at one pixel per UI px (or per art
-/// px in the world). The panels, frames and bars are 9-sliced with corners cut along a diagonal: a panel's fill, the
-/// 1 px frame around it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
+/// px in the world). The panels, frames and bars are 9-sliced, their corners cut along a diagonal by
+/// <see cref="CornerCut"/> px, none since Docs/UiRevamp.md's Phase 3, so square: a panel's fill, the 1 px frame around
+/// it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
 /// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, a check mark, a toggle's
 /// mark while it is on, a slot's corner brackets, shown around a slot whose cast waits, and a hatch of diagonal lines,
 /// tiled over a slot that cannot be cast (Docs/UiRevamp.md, Decisions: Slot states), a bar's tick, a short line down from
@@ -48,7 +49,7 @@ public sealed class UiSkinRecipe : ScriptableObject
 
     [Header("Frames")]
     [Tooltip("How many px each corner of a panel, frame and bar is cut by along a diagonal; 0 keeps them square.")]
-    [SerializeField, Range(0, 3)] private int cornerCut = 1;
+    [SerializeField, Range(0, 3)] private int cornerCut;
     [Tooltip("How many px of a raised panel's bottom are its lip, under its face.")]
     [SerializeField, Range(0, 4)] private int lipHeight = 2;
     [Tooltip("The grey of a raised panel's lip, so its tint shows darker there by as much.")]
@@ -230,7 +231,7 @@ public sealed class UiSkinRecipe : ScriptableObject
     }
 
     /// <summary>
-    /// A small mark shown whole rather than sliced (a status over a unit): 5 px with the panel's cut corners.
+    /// A small mark shown whole rather than sliced (a status over a unit): 5 px with the panel's corners.
     /// </summary>
     private SkinSprite Pip()
     {

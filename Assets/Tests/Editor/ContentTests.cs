@@ -14,10 +14,11 @@ public class ContentTests
 {
     private static readonly string[] DataFolders = { "Assets/Data" };
     private static readonly string[] MobFolders = { "Assets/Data", "Assets/Settings/AI" };
+    private static readonly string[] WorldFolders = { "Assets/Worlds", "Assets/Dev/Worlds" };
 
     private static readonly string[] Kinds =
     {
-        "Weapons", "Abilities", "Classes", "Statuses", "Combat profiles", "Mob configs", "Looks", "Character colours", "Combat settings",
+        "Weapons", "Abilities", "Classes", "Statuses", "Combat profiles", "Mob configs", "Looks", "Character colours", "Combat settings", "Worlds",
     };
 
     private readonly List<Object> created = new();
@@ -179,6 +180,29 @@ public class ContentTests
     }
 
     /// <summary>
+    /// A world with a display name and entries named apart follows the rules; one without a display name, an entry
+    /// without one and two entries of one name are reported for each.
+    /// </summary>
+    [Test]
+    public void AWorld_BreakingTheRules_IsReported()
+    {
+        WorldDefinition good = Track(WorldDefinition.Create("Good", new Vector2Int(2048, 0), Vector2Int.one, new[] { Vector2Int.zero },
+            new WorldDefinition.Entry("start", Vector2.zero, true, "Start"),
+            new WorldDefinition.Entry("gate", Vector2.one, false, "Gate")));
+        Assert.That(ContentRules.World(good), Is.Empty);
+
+        WorldDefinition bad = Track(WorldDefinition.Create("Bad", new Vector2Int(4096, 0), Vector2Int.one, new[] { Vector2Int.zero },
+            new WorldDefinition.Entry("start", Vector2.zero, true, "Gate"),
+            new WorldDefinition.Entry("gate", Vector2.one, false, "Gate"),
+            new WorldDefinition.Entry("door", Vector2.one, false)));
+        SerializedObject data = new(bad);
+        data.FindProperty("displayName").stringValue = string.Empty;
+        data.ApplyModifiedPropertiesWithoutUndo();
+
+        AssertReports(ContentRules.World(bad), "Bad: displayName is empty", "entry door: displayName is empty", "Bad entry names: Gate");
+    }
+
+    /// <summary>
     /// The problems with the project's definitions of <paramref name="kind"/>.
     /// </summary>
     private static List<string> Check(string kind)
@@ -230,6 +254,13 @@ public class ContentTests
             case "Combat settings":
                 Find<CombatSettings>(DataFolders, problems, kind).ForEach(settings => problems.AddRange(ContentRules.Combat(settings)));
                 break;
+            case "Worlds":
+            {
+                List<WorldDefinition> worlds = Find<WorldDefinition>(WorldFolders, problems, kind);
+                worlds.ForEach(world => problems.AddRange(ContentRules.World(world)));
+                problems.AddRange(ContentRules.Unique("world names", worlds.Select(world => Serialized(world, "displayName"))));
+                break;
+            }
             default:
                 problems.Add($"No check for {kind}.");
                 break;

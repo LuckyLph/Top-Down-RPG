@@ -6,9 +6,10 @@ using UnityEngine;
 /// The local machine's preferences as written to disk: a format version, the key binding overrides, this install's
 /// player id, the name of the look its player is drawn with, the swatch it picked for each of its colour choices
 /// (Docs/PlayerCharacter.md, Phase 5), the option it picked for each of its part slots (Phase 6), by name, the UI
-/// size step (Docs/DesignSystem.md, Phase 3), and whether the player reduces flashing and motion (Phase 6). A file
-/// without a player id, a look, colours, parts, a UI size step or the reduce preferences (written before there was
-/// one) reads with an empty one, the step at Normal (0) and the preferences off.
+/// size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), and how
+/// allies' popups show (Docs/UiRevamp.md, Phase 3). A file without a player id, a look, colours, parts, a UI size step,
+/// the reduce preferences or the allies' popups (written before there was one) reads with an empty one, the step at
+/// Normal (0), the preferences off and allies' popups shown.
 /// </summary>
 [Serializable]
 public sealed class UserSettingsData
@@ -24,14 +25,15 @@ public sealed class UserSettingsData
     [SerializeField] private int uiSizeStep;
     [SerializeField] private bool reduceFlashing;
     [SerializeField] private bool reduceMotion;
+    [SerializeField] private int allyPopups;
 
     /// <summary>
     /// Creates settings data in the current format holding <paramref name="inputBindingOverrides"/>,
     /// <paramref name="playerId"/>, <paramref name="characterLook"/>, <paramref name="colours"/>,
-    /// <paramref name="parts"/>, <paramref name="sizeStep"/>, <paramref name="lessFlashing"/> and
-    /// <paramref name="lessMotion"/>.
+    /// <paramref name="parts"/>, <paramref name="sizeStep"/>, <paramref name="lessFlashing"/>,
+    /// <paramref name="lessMotion"/> and <paramref name="allies"/>.
     /// </summary>
-    public UserSettingsData(string inputBindingOverrides, string playerId, string characterLook, IEnumerable<UserColourPick> colours = null, IEnumerable<UserPartPick> parts = null, int sizeStep = 0, bool lessFlashing = false, bool lessMotion = false)
+    public UserSettingsData(string inputBindingOverrides, string playerId, string characterLook, IEnumerable<UserColourPick> colours = null, IEnumerable<UserPartPick> parts = null, int sizeStep = 0, bool lessFlashing = false, bool lessMotion = false, AllyPopups allies = AllyPopups.Shown)
     {
         version = CurrentVersion;
         this.inputBindingOverrides = inputBindingOverrides;
@@ -42,6 +44,7 @@ public sealed class UserSettingsData
         uiSizeStep = sizeStep;
         reduceFlashing = lessFlashing;
         reduceMotion = lessMotion;
+        allyPopups = (int)allies;
     }
 
     /// <summary>
@@ -60,6 +63,11 @@ public sealed class UserSettingsData
     public int UiSizeStep => Mathf.Max(0, uiSizeStep);
     public bool ReduceFlashing => reduceFlashing;
     public bool ReduceMotion => reduceMotion;
+
+    /// <summary>
+    /// How allies' popups show; a value this build does not know (written by a newer one) reads as shown.
+    /// </summary>
+    public AllyPopups AllyPopups => allyPopups > (int)AllyPopups.Shown && allyPopups <= (int)AllyPopups.Hidden ? (AllyPopups)allyPopups : AllyPopups.Shown;
 
     /// <summary>
     /// The data as pretty-printed JSON.

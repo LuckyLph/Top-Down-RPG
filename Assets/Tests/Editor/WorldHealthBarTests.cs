@@ -106,7 +106,7 @@ public class WorldHealthBarTests
     /// <summary>
     /// The weasel prefab's health bar is an instance of the world bar component and reads the weasel's health: the
     /// skin's bar frame, 22 x 4 art px, in HealthTrack, with its bar fill, 2 px tall and 1 px inside it, in Health,
-    /// both sliced so their cut corners keep at any width, with unlit materials on the Overlay sorting layer, which
+    /// both sliced so their corners keep at any width, with unlit materials on the Overlay sorting layer, which
     /// sorts above units; four status pips above it; the whole bar on whole art px above the weasel's head.
     /// </summary>
     [Test]
@@ -124,7 +124,7 @@ public class WorldHealthBarTests
         Assert.That(prefabFrame.sprite, Is.EqualTo(Skin(UiSkinPiece.BarFrame)));
         Assert.That(prefabFill.sprite, Is.EqualTo(Skin(UiSkinPiece.BarFill)));
         Assert.That(prefabFrame.drawMode, Is.EqualTo(SpriteDrawMode.Sliced));
-        Assert.That(prefabFill.drawMode, Is.EqualTo(SpriteDrawMode.Sliced), "Sliced keeps the cut corners at any width.");
+        Assert.That(prefabFill.drawMode, Is.EqualTo(SpriteDrawMode.Sliced), "Sliced keeps the corners at any width.");
         Assert.That(prefabFrame.size * ArtPixelsPerUnit, Is.EqualTo(new Vector2(22f, 4f)));
         Assert.That(prefabFill.size * ArtPixelsPerUnit, Is.EqualTo(new Vector2(20f, 2f)));
         Assert.That(prefabFrame.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthTrack));

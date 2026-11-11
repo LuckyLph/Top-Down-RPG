@@ -92,7 +92,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 |---|---|
 | Directions | **HUD:** the command bar, plus the world bars of the world-first direction. **In-game menu:** the side column and cards. **Main menu:** the title view and full screens. Each proposal's text fixes ship first, where they stand on their own. |
 | Screen regions | In game, each part of the screen has one owner, so nothing overlaps at 480 x 270:<br>• the bottom centre: the command bar;<br>• the top centre: a 24 UI px notice band;<br>• the left edge: the party frames;<br>• the top right: kept free for a place name and a minimap later.<br>Online, menus opened in game stay clear of the command bar and the notice band. |
-| Health | In the command bar: 242 x 12 over the ability row, reading "72 / 100".<br>• **Ticks:** one every 10 HP, one Weasel hit ([Units.md](Generated/Units.md)).<br>• **Recent loss:** the part just lost shows pale for 0.4 s.<br>• **Low:** at 30% or less, the frame turns `Danger` and pulses once a second, holding steady with Reduce flashing on.<br>The numbers live in `HudSettings`. |
+| Health | In the command bar: 242 x 13 (12 until Phase 3) over the ability row, reading "72 / 100".<br>• **Ticks:** one every 10 HP, one Weasel hit ([Units.md](Generated/Units.md)), until Phase 3 took them out (`HudSettings.TickHealth` 0 draws none).<br>• **Recent loss:** the part just lost shows pale for 0.4 s.<br>• **Low:** at 30% or less, the frame turns `Danger` and pulses once a second, holding steady with Reduce flashing on.<br>The numbers live in `HudSettings`. |
 | Bar contrast | A bar's fill against its track is measured like a text pair and meets 3:1. `HealthTrack` becomes opaque, which takes today's red to 3.68:1. |
 | Players' health colour | Players' bars fill in a new `HealthPlayer` role, green, on the HUD and in the world. Mobs keep `Health`, red. The slot badge and the bar's shape still tell them apart, so colour is never alone. The exact green is settled on Phase 2's previews. |
 | Weapon | The weapon slot joins the ability row beside its two abilities: Q W E R, a gap, then the weapon, 1 and 2. Its tooltip gives its damage, type and range. |
@@ -101,7 +101,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Statuses | Buffs left of the abilities and debuffs right, each in a 3 x 2 grid filling outwards from the abilities. A seventh of a kind shows "+n" on the sixth icon. A debuff's frame is `Danger` with a notched corner, so both its side and its shape carry its kind. |
 | Players in the world | Every player has a world bar with debuff pips and a cast bar under it, on every machine, the local player's own included. An ally under the pointer gets a hover marker of its own shape. |
 | Player slots | The host gives itself slot 1 and each joining player the lowest free one, and a player who leaves frees theirs. A slot has:<br>• a number;<br>• a shape (circle, diamond, triangle or square);<br>• a colour role (`Player1` to `Player4`).<br>It is a server-written network variable on the player, read by late joiners. |
-| Party frames | At the left edge, one 104 x 26 frame per other player. Each shows the badge, "Player 2", and a ticked bar with debuff pips, or else "Respawning in 2", "In another world" or "Joining". Playing alone, none show. |
+| Party frames | At the left edge, one 104 x 26 frame per other player. Each shows the badge, "Player 2", and a bar with debuff pips (unticked, as the command bar's since Phase 3), or else "Respawning in 2", "In another world" or "Joining". Playing alone, none show. |
 | Notices | In-game notices queue on the notice line: Waystone discovered, the world entered, a player joined, left or down, and while you are dead "You fell. Respawning in 3". This replaces the Messages pattern's "short notices float over the local player"; popups are left to hits and heals. |
 | In-game menu | **A column on the left:** titled "Paused" offline and "Menu" online. Under the title, a status line ("Offline · paused", "Hosting · not paused" or "Joined · not paused") and a line saying whether the game waits or keeps running. Then Resume, Character, Options, Leave game and Quit to desktop, looping, and a saved line ("Saved at 14:32").<br>**Cards on the right:** Party (online) and Controls. A card that would reach the command bar or the notice band drops, Controls first.<br>**Party frames** hide while the menu is open, since the Party card shows the same players. |
 | Scrim | Offline, where time stands still, the menu dims the game with the `Scrim`. Online there is none: the column and cards are opaque, and the game stays live between them. Words carry the difference, not the dimming alone. |
@@ -129,7 +129,7 @@ Sizes are at 640 x 360 and 480 x 270 alike, anchored 8 UI px above the bottom ed
 | Part | Layout (UI px) | Behaviour |
 |---|---|---|
 | Ability row | Seven 32 px slots, 2 apart: Q W E R, an 8 px gap, then the weapon, 1 and 2. The row is 242 wide | Slot states and failures as in Decisions. The weapon slot shows the weapon's icon (or `IconMissing`) and has a tooltip |
-| Health bar | 242 x 12, directly over the slots | "72 / 100" in `Body` outlined in `Outline`. Ticks, recent loss and the low state as in Decisions |
+| Health bar | 242 x 13, directly over the slots | "72 / 100" in `Body` outlined in `Outline`. Ticks, recent loss and the low state as in Decisions |
 | Status groups | Two 3 x 2 grids of 20 px icons, 64 x 42 each, beside the slots | Buffs left, debuffs right, filling from the slots outwards |
 | Message line | Centred 12 above the health bar, as wide as it | A failure's text for 1.2 s |
 
@@ -138,12 +138,12 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 ### The notice line and moments
 
 - **Layout.** A `NoticeLine` on a `Panel`, 8 below the top edge, sized to its text up to 240 UI px and wrapping to two lines.
-- **Queue.** Each notice shows for its time from `HudSettings`, then the next shows. A notice repeated while it shows restarts it.
+- **Queue.** Each notice shows for its time from `HudSettings` (3 s), then the next shows. A notice repeated while it shows restarts it.
 - **Notices:**
   - "Waystone discovered";
   - "Entering the Overworld", from the world's display name;
   - "Player 2 joined", "Player 2 left" and "Player 2 is down" (from Phase 5);
-  - "You fell. Respawning in 3", counting down from `GameplaySettings.RespawnDelaySeconds`, then "Respawning…" until the player stands again.
+  - "You fell. Respawning in 3", counting down from `GameplaySettings.RespawnDelaySeconds`, then "Respawning..." until the player stands again.
 - **On this machine only.** Each machine raises its notices from state it already has.
 
 ### Players in the world
@@ -235,7 +235,7 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
   - **`CastFailureMessages`:** the table of failure texts.
   - **Views:** `AbilitySlotView` gains the slot states; `PlayerHudView` and its prefab become the command bar; `StatusBarView` splits into two groups, with a `StatusIconDebuff` variant.
   - **Presenters:** `AbilityBarPresenter` keeps the outcome and reads the local player's controls; `PlayerOrders` raises an event when a cast is buffered and when the buffer clears.
-- **Notices:** a `NoticePresenter` and the HUD's notice line. `WaystonePopupPresenter` moves onto them.
+- **Notices:** a `NoticePresenter` and the HUD's notice line (`NoticeView`). `WaystonePopupPresenter` moves onto them: since Phase 3 the presenter raises the waystone notice itself, and `WaystonePopupPresenter` is gone.
 - **World:**
   - a `WorldBar` player variant on the player prefab, with `WorldStatusIcons` and a new `WorldCastBar`;
   - `MarkerHoverAlly` in `PointerFeedbackLayer`.
@@ -265,14 +265,14 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 
 ## Networking
 
-- **New:** the player slot, a server-written network variable on the player, read by late joiners at spawn. Nothing else in this plan adds replicated state or messages.
+- **New:** the player slot, a server-written network variable on the player, read by late joiners at spawn. Nothing else in this plan adds replicated state or messages. Phase 3 gave three existing host messages one more field: a heal, an immune hit and a blocked status name their source unit, as a hit already did, so a client's popups tell its own apart.
 - **Already replicated, now shown:**
   - health (`NetworkHealth`) and statuses (`NetworkStatusEffects`) on the party frames, the world bars and the Party card;
   - casts (`RemoteCast*`) on the cast bars;
   - each player's world (`PlayerWorldSync`) for "In another world".
 - **Unchanged:** look, colour and part picks stay owner-written network variables on `PlayerNetworkSync`, now edited from the Character screen. The join payload is unchanged.
 - **Local only:**
-  - the layout, failure texts, slot states and notices;
+  - the layout, failure texts, slot states and notices, and the allies' damage numbers preference;
   - the saved line and the invite addresses;
   - the recent hosts, the first-run flag and the title view.
   The host's simulation never reads any of them.
@@ -433,14 +433,74 @@ Fixes on today's layout, before anything moves.
 
 ### Phase 3: notices and moments
 
-- [ ] Open question settled: other players' damage popups.
-- [ ] Previews of the notice line and the death notice, signed off.
-- [ ] `NoticePresenter` and the notice line, with its queue.
-- [ ] "Waystone discovered" moves to the notice line.
-- [ ] Display names on `WorldDefinition` and its entries, a content rule and a `ContentTests` case, and the world-entered notice.
-- [ ] The death notice and its countdown.
-- [ ] The damage popup policy, as settled.
-- [ ] DesignSystem.md's Messages pattern.
+- [x] Open question settled: other players' damage popups.
+- [x] Previews of the notice line and the death notice, signed off.
+- [x] `NoticePresenter` and the notice line, with its queue.
+- [x] "Waystone discovered" moves to the notice line.
+- [x] Display names on `WorldDefinition` and its entries, a content rule and a `ContentTests` case, and the world-entered notice.
+- [x] The death notice and its countdown.
+- [x] The damage popup policy, as settled.
+- [x] DesignSystem.md's Messages pattern.
+
+#### Phase 3 notes
+
+- **Settled with the user on 2026-11-10:**
+  - **Open question 1,** on previews of the three options over the Clearing with the host, an ally and Weasels: all three, as a preference. A Display row of the options screen, "Allies' damage numbers", reads Shown (the default, today's behaviour), Smaller or Hidden.
+  - **The notice line,** on previews at 640 x 360, 480 x 270 and every UI size of the Scale table: `Accent` text on a `Panel` (`Surface`, framed in `Border`), 15 UI px tall for one line, with 2 UI px above and below. A 13 px panel was the alternative.
+  - **"Respawning..."** is written with three full stops. Galmuri's ellipsis draws its dots at mid-height.
+  - **Square corners** for the whole skin. Cut by 1 px, a 1 px frame met itself only at a diagonal and a square fill (a status icon's colour, a bar's fill) showed past it, so frames looked chipped. A 2 px bevel was the alternative. `UiSkinRecipe`'s corner cut is now 0 and every piece was written again: panels, frames and slots are 6 px with 2 px borders, the bar frame 3 px with 1 px borders, and the pip a 5 px square.
+  - **Black frames and the key top left.** `Border`, every frame's role, is now black. It was `#9A9EB3`. The toggle row's box keeps a light frame in `ControlSecondary`, since a black one would vanish on the options screen's dark panel. On every ability slot the key moved to the top left corner and the cooldown seconds to the top right.
+  - **The health bar** loses its ticks: `HudSettings.TickHealth` is 0, which draws none (the bar keeps the mechanism and its hidden template). Digits of our own (3 x 6 and 3 x 5 px, Galmuri having no smaller size) were previewed and read blockier once outlined.
+  - **The health bar is 13 UI px tall,** where it was 12. Its outlined text is 9 px tall, and the bar's inside was 10 px, so the text sat half a pixel off centre: 1 px low at x3 and 1 px high at x4. Inside 11 px it centres at every zoom, with 1 px of fill above and below. The message line stays at 48, so the command bar keeps 60 and its region 68. Its text still clears the bar by 2 UI px, since its glyphs sit inside its 12 px rect. Scaling the text to 0.9, also tried, put each font pixel on 2.7 or 3.6 screen pixels, and was still 1 px off at x4.
+  - **The health text draws smaller,** through `PixelTextScale` on the `Bar`'s text. A scale only keeps the pixel font crisp when each font pixel covers a whole number of display pixels, so it changes with the zoom: the whole number nearest three quarters of the zoom's, rounded half up and at least two. That gives 2/3 at x3, 3/4 at x4 and 5/6 at x6, and leaves x2 unchanged. `ThemedText` snaps such a text to whole display pixels rather than whole UI px. A fixed 0.9 scale, tried first, could not keep to the grid. At 1080p the digits are 14 px tall, under the 18 px minimum for text; this is an exception recorded in DesignSystem.md's Accessibility, since the bar's fill shows the health too. The text is centred to within 1 display pixel, the most these sizes allow.
+  - **Wrapping stays on** the main menu's status line. Its long host-gone status now wraps to three lines in its 160 UI px column, and the buttons shrink 4 UI px while it shows, until Phase 9 rebuilds the menu.
+- **The previews.** A temporary tool, since removed, wrote them to the gitignored `Recordings/UiRevamp/Phase3`, as in Phase 2:
+  - the real `PlayerHudCanvas` on a camera's canvas at x3 and x4 over Phase 5's Clearing capture;
+  - for the popups, the `PopupText` prefab placed over that capture with the adventurer's idle frames and the Weasel's added.
+  - At 480 x 270 (Large at 1080p) the capture stays at x3 under a UI at x4, as in game.
+- **Layout.** `Notice` is a `Panel` drawn before the tooltip, anchored at the top centre 8 UI px down, its image never taking the pointer.
+  - It holds a `NoticeLine` instance (`Accent` on `Surface`, ending in an ellipsis past what fits).
+  - `NoticeView.Show` lays the text out at 240 UI px less 4 a side, then shrinks the panel to its widest line, rounded to an even width so it stays centred, and to its lines at Galmuri7's 11 UI px line height plus 2 above and below.
+  - Two lines take the band's 24 whole.
+  - `NoticeLine` itself now wraps (`TextWrappingMode` Normal).
+- **Queue.** `NoticePresenter.Show(notice)`:
+  - shows a notice at once when none shows, restarts it when it already shows, and queues it once otherwise;
+  - shows each for `HudSettings.NoticeSeconds` (3 s) of game time;
+  - stops the time while `GameFlow.IsTransitioning`, so a notice raised as a trip starts shows its whole time after the fade in.
+  The presenter is local to its machine, and `Tick` allocates nothing.
+- **The notices.**
+  - **"Waystone discovered":** on `WaystoneNotices.Discovered` for the local player. The `WaystonePopupPresenter` and `GameplaySettings`' waystone popup colour are gone, along with its `UiThemeTests` check. The text stays on `GameplaySettings`.
+  - **"Entering the Overworld":** when `PlayerWorlds` puts the local player in another world than the one announced last: at a session's start, on joining (also when the player is bound already in a world), and after a trip to another world. A trip within the world, a respawn's included, announces nothing.
+  - **The death notice:** from the local player's `Health.Died` on this machine, a client's own from the host's replicated hit. "You fell. Respawning in 3" counts whole seconds of game time down from the respawn delay, its texts built once. "Respawning..." then holds until `Health.Restored`, and shows at once for a player bound dead. The death notice holds the line, and the shown notice's time stands still behind it.
+- **Display names.** `WorldDefinition.DisplayName` and `Entry.DisplayName`, without an article, since the notice reads "Entering the" and the name.
+  - **Overworld:** the regions (Clearing, Village forest, Lakeside, Snowfield, Coast, Lava fields) and their gates ("Clearing, south road").
+  - **Sandbox, Sandbox interior, Testlands and Stress test** name their own entries.
+  - `ContentRules.World` checks a world's name is set, unique among worlds, and its entries' names are set and unique within the world.
+  - The world generator's merge (`MergeEntries`) and `WorldAuthoring.SetEntry` keep an entry's display name, which is written by hand.
+- **Allies' popups.** `DamagePopupPresenter` treats a hit, tick, heal or block as an ally's when it involves another registered player but not the local one. It shows it as `UserSettings.AllyPopups` asks: as before, at `CombatSettings.AllyPopupSize` (Caption, the ticks' size; Galmuri has nothing smaller), or not at all. Your own popups, and those no player is part of, always show at their own size.
+  - **What a client knows.** It knows a hit's source already. In this phase `HealedRpc`, the immune `HitRpc` and `BlockedRpc` also name their source unit, so a heal you gave an ally is yours on a client too. No new state is replicated.
+  - **Events.** `Health.Healed`, `DamageReceiver.ImmuneHit` and `StatusEffects.Blocked` gained the source.
+- **Co-op.**
+  - **Waystones:** a joined client learns of its own discoveries from `PlayerWorldSync.WaystoneDiscoveredRpc`, which raises its `WaystoneNotices`.
+  - **Worlds:** it learns of its own world from `PlayerWorldSync`'s replicated state applied to its `PlayerWorlds`.
+  - **Death:** it learns of its own death from `NetworkHealth`'s replayed hit, and of its restore from `RestoredRpc`.
+  - So every notice is raised on its own machine, with nothing new on the wire. `NetworkNoticesPlayModeTests` drives a copy of the HUD's notice line on the in-process client.
+- **Tests.**
+  - `NoticePresenterTests` (9, new) and `NetworkNoticesPlayModeTests` (new).
+  - `HudLayoutTests`: the notice line within the notice band at its widest and tallest.
+  - `UiContentTests`: the notice line's components.
+  - `ContentTests`: worlds' display names and a world breaking the rule.
+  - `CombatComponentTests`: allies' popups in each setting.
+  - `UserSettingsTests` and `OptionsMenuControllerTests`: the preference and its row. `OptionsMenuPlayModeTests` counts 42 items.
+  - `WorldGenerationWriterTests`: display names kept by the merge.
+  - `UiThemeTests`: without the waystone colour; `UiTheme.md` gains `Accent` on `Surface`, 7.44:1.
+  - `WaystonePlayModeTests`: the discovery on the notice line.
+  - `UiSkinWriterTests`: square corners by default, a cut one at a cut of 1.
+  - `PlayerHudPresenterTests`: a tick spacing of 0 shows no ticks.
+  - `UiContentTests`: the health bar 242 x 13, its text carrying `PixelTextScale` at 0.75.
+  - `UiThemeTests`: `PixelTextScale`'s scale at each zoom, and a scaled text snapped to whole display pixels.
+  - `UiScalePlayModeTests`: the hosted HUD's health text at the zoom's scale, 3/4 at Large.
+  - `UiContentTests`: the key top left and the seconds top right, and the toggle box framed in `ControlSecondary` at 3:1 or more on the panel. `UiTheme.md`: `Border` black.
 
 ### Phase 4: players in the world
 
@@ -598,5 +658,5 @@ The Character button arrives with Phase 7.
 
 ## Open questions
 
-1. **Phase 3, other players' damage popups.** Keep every hit on every machine as today, show allies' hits smaller, or show only the hits you dealt or took? With four players, every hit on every machine gets busy. A smaller size would need a third popup size beside the hits' `Heading` and the ticks' `Caption`.
+1. **Phase 3, other players' damage popups.** Settled on 2026-11-10: all three, as the player's choice. The "Allies' damage numbers" preference reads Shown (the default), Smaller (at `Caption`, the ticks' size: Galmuri has nothing smaller, so there is no third size) or Hidden (Phase 3 notes).
 2. **Phase 11, the game's name and logo.** A placeholder made by a recipe from the name in Galmuri, doubled and outlined, or a logo drawn in Aseprite once the game is named?

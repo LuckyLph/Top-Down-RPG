@@ -1728,8 +1728,8 @@ public static class WorldAuthoring
 
     /// <summary>
     /// Gives <paramref name="world"/> the entry <paramref name="entryName"/> at <paramref name="localPosition"/> from
-    /// its origin, replacing the one of that name or adding it after the others (so the default stays first), and
-    /// saves the world.
+    /// its origin, replacing the one of that name (keeping its display name) or adding it after the others (so the
+    /// default stays first), and saves the world.
     /// </summary>
     public static void SetEntry(WorldDefinition world, string entryName, Vector2 localPosition, bool waystone)
     {
@@ -1739,7 +1739,7 @@ public static class WorldAuthoring
         {
             if (entry != null && entry.Name == entryName)
             {
-                entries.Add(new WorldDefinition.Entry(entryName, localPosition, waystone));
+                entries.Add(new WorldDefinition.Entry(entryName, localPosition, waystone, entry.DisplayName));
                 replaced = true;
             }
             else

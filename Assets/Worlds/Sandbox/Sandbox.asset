@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Sandbox
   m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
   worldId: b6376a2ae0bb44c44bd70deacbeb0358
+  displayName: Sandbox
   rootScene: {fileID: 11400000, guid: 41cf3236b41fc0a4dbb08637f3fa2477, type: 2}
   origin: {x: 2048, y: 0}
   sizeInChunks: {x: 2, y: 2}
@@ -27,27 +28,35 @@ MonoBehaviour:
     scene: {fileID: 11400000, guid: 79f8a32eb5d1f9a428ccda1a9e7c7224, type: 2}
   entries:
   - name: start
+    displayName: Start
     position: {x: 30.5, y: 42}
     waystone: 1
   - name: fromInterior
+    displayName: Interior door
     position: {x: 33.5, y: 42}
     waystone: 0
   - name: fromTestlands
+    displayName: Testlands road
     position: {x: 5.5, y: 42}
     waystone: 0
   - name: campsite
+    displayName: Campsite
     position: {x: 23.5, y: 30.5}
     waystone: 0
   - name: lava
+    displayName: Lava pool
     position: {x: 99.5, y: 19.5}
     waystone: 0
   - name: plateau
+    displayName: Plateau
     position: {x: 108, y: 50}
     waystone: 0
   - name: spells
+    displayName: Spell range
     position: {x: 91, y: 88}
     waystone: 0
   - name: walls
+    displayName: Walls
     position: {x: 67.5, y: 23.5}
     waystone: 0
   maxSearchCells: 4096

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>
 /// A passive health bar on a screen (Docs/UiRevamp.md, Decisions: Health), the <c>Bar</c> component: the fill in its
 /// role (<c>HealthPlayer</c> for players), "72 / 100" outlined over it, a tick every so many HP down from the top of
-/// the fill, the part just lost in <c>HealthLost</c> under the fill, and the frame in <c>Danger</c> while the health is
+/// the fill (none for a spacing of 0), the part just lost in <c>HealthLost</c> under the fill, and the frame in <c>Danger</c> while the health is
 /// low, at a strength the presenter pulses. The text is built and the ticks laid out only when what they show changes;
 /// ticks come from a hidden template and are kept for reuse. Colours are read from its <see cref="UiTheme"/> when it
 /// wakes.
@@ -65,7 +65,7 @@ public class HealthBarView : MonoBehaviour
 
     /// <summary>
     /// Fills the bar to <paramref name="current"/> over <paramref name="max"/>, shows both, and puts a tick every
-    /// <paramref name="tickHealth"/> HP, rebuilding the text only when the numbers changed and the ticks only when the
+    /// <paramref name="tickHealth"/> HP (none for 0), rebuilding the text only when the numbers changed and the ticks only when the
     /// maximum or the spacing did. Values are clamped so the max is at least 1 and the current lies between 0 and it.
     /// </summary>
     public void SetHealth(int current, int max, int tickHealth)
@@ -74,7 +74,7 @@ public class HealthBarView : MonoBehaviour
         int clampedCurrent = Mathf.Clamp(current, 0, clampedMax);
         if (clampedMax != shownMax || tickHealth != shownTickHealth)
         {
-            LayoutTicks(clampedMax, Mathf.Max(1, tickHealth));
+            LayoutTicks(clampedMax, Mathf.Max(0, tickHealth));
         }
 
         if (clampedCurrent == shownCurrent && clampedMax == shownMax)
@@ -176,7 +176,7 @@ public class HealthBarView : MonoBehaviour
 
     /// <summary>
     /// Puts a tick at every multiple of <paramref name="tickHealth"/> below <paramref name="max"/>, anchored at its
-    /// share of the bar's width, copying the template for ticks it has not made yet.
+    /// share of the bar's width, copying the template for ticks it has not made yet; none for a spacing of 0.
     /// </summary>
     private void LayoutTicks(int max, int tickHealth)
     {
@@ -186,7 +186,7 @@ public class HealthBarView : MonoBehaviour
             return;
         }
 
-        int count = (max - 1) / tickHealth;
+        int count = tickHealth > 0 ? (max - 1) / tickHealth : 0;
         while (ticks.Count < count)
         {
             Image tick = Instantiate(tickTemplate, tickTemplate.transform.parent);

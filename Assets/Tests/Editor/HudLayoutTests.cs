@@ -5,10 +5,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Tests for the HUD's screen regions (Docs/DesignSystem.md, Foundations: Screen regions; Docs/UiRevamp.md, Phase 2), on
-/// a copy of <c>PlayerHudCanvas</c> laid out at a canvas size, every status icon and the message line shown: everything
-/// the HUD draws, its tooltip aside, keeps to the command bar's region at the bottom centre at 480 x 270 and at the UI
-/// size of every display in the Scale table, every size step included, and the four regions never overlap there.
+/// Tests for the HUD's screen regions (Docs/DesignSystem.md, Foundations: Screen regions; Docs/UiRevamp.md, Phases 2 and
+/// 3), on a copy of <c>PlayerHudCanvas</c> laid out at a canvas size, every status icon, the message line and a notice
+/// long enough to fill both of its lines shown: the notice line keeps to the notice band at the top centre and
+/// everything else the HUD draws, its tooltip aside, to the command bar's region at the bottom centre, at 480 x 270 and
+/// at the UI size of every display in the Scale table, every size step included, and the four regions never overlap
+/// there.
 /// </summary>
 public class HudLayoutTests
 {
@@ -20,6 +22,7 @@ public class HudLayoutTests
     private const float NoticeHeight = 24f;
     private const float PartyWidth = 104f;
     private const float PartyHeight = 82f;
+    private const string LongNotice = "A notice long enough to fill the notice line: it wraps to a second line, then stops at the line's width and its two lines.";
 
     private GameObject hud;
 
@@ -36,11 +39,12 @@ public class HudLayoutTests
     }
 
     /// <summary>
-    /// At 480 x 270, the smallest layout, every graphic of the HUD but its tooltip lies in the command bar's region,
-    /// 378 UI px wide at the bottom centre and 68 tall, clear of the notice band, the party frames and the top right.
+    /// At 480 x 270, the smallest layout, every graphic of the HUD but its tooltip and its notice line lies in the command
+    /// bar's region, 378 UI px wide at the bottom centre and 68 tall, and the notice line, at its widest and tallest, in
+    /// the notice band, 240 x 24 UI px 8 below the top edge, both clear of the party frames and the top right.
     /// </summary>
     [Test]
-    public void AtTheSmallestLayout_TheHudKeepsToTheCommandBarsRegion()
+    public void AtTheSmallestLayout_TheHudKeepsToTheCommandBarsRegion_AndTheNoticeToItsBand()
     {
         List<string> problems = new();
         CheckAt(480, 270, problems);
@@ -50,7 +54,7 @@ public class HudLayoutTests
 
     /// <summary>
     /// At the UI size of every display in the Scale table, at every size step it fits, the HUD keeps to the command
-    /// bar's region and the regions do not overlap.
+    /// bar's region, its notice line to the notice band, and the regions do not overlap.
     /// </summary>
     [Test]
     public void AtEveryDisplay_TheHudKeepsToItsRegion_AndTheRegionsDoNotOverlap()
@@ -78,8 +82,8 @@ public class HudLayoutTests
 
     /// <summary>
     /// Lays the HUD out on a <paramref name="width"/> x <paramref name="height"/> UI px canvas with everything shown,
-    /// and adds to <paramref name="problems"/> each graphic outside the command bar's region and each pair of regions
-    /// that overlap.
+    /// and adds to <paramref name="problems"/> each graphic of the notice line outside the notice band, each other
+    /// graphic outside the command bar's region and each pair of regions that overlap.
     /// </summary>
     private void CheckAt(int width, int height, List<string> problems)
     {
@@ -103,7 +107,9 @@ public class HudLayoutTests
         }
 
         HudTooltip tooltip = root.GetComponentInChildren<HudTooltip>(true);
+        NoticeView noticeLine = root.GetComponentInChildren<NoticeView>(true);
         int checkedGraphics = 0;
+        int noticeGraphics = 0;
         foreach (Graphic graphic in root.GetComponentsInChildren<Graphic>(false))
         {
             if (graphic.transform.IsChildOf(tooltip.transform))
@@ -113,9 +119,12 @@ public class HudLayoutTests
 
             Rect rect = Bounds(graphic.rectTransform, root);
             checkedGraphics++;
-            if (rect.xMin < commandBar.xMin - 0.01f || rect.xMax > commandBar.xMax + 0.01f || rect.yMin < commandBar.yMin - 0.01f || rect.yMax > commandBar.yMax + 0.01f)
+            bool inNotice = graphic.transform.IsChildOf(noticeLine.transform);
+            noticeGraphics += inNotice ? 1 : 0;
+            Rect region = inNotice ? notice : commandBar;
+            if (rect.xMin < region.xMin - 0.01f || rect.xMax > region.xMax + 0.01f || rect.yMin < region.yMin - 0.01f || rect.yMax > region.yMax + 0.01f)
             {
-                problems.Add($"{at}: {graphic.name} at {rect} leaves the command bar's region {commandBar}.");
+                problems.Add($"{at}: {graphic.name} at {rect} leaves its region {region}.");
             }
         }
 
@@ -124,13 +133,19 @@ public class HudLayoutTests
             problems.Add($"{at}: only {checkedGraphics} graphics were laid out.");
         }
 
+        if (noticeGraphics < 3 || noticeLine.Label.textInfo.lineCount != 2)
+        {
+            problems.Add($"{at}: the notice line showed {noticeGraphics} graphics and {noticeLine.Label.textInfo.lineCount} lines, not a panel, its frame and two lines of text.");
+        }
+
         Object.DestroyImmediate(hud);
         hud = null;
     }
 
     /// <summary>
     /// A copy of the HUD on a world-space canvas of <paramref name="width"/> x <paramref name="height"/> UI px, its
-    /// message line and every status icon shown and its layout groups laid out; returns its root.
+    /// message line, every status icon and a notice filling the notice line shown and its layout groups laid out;
+    /// returns its root.
     /// </summary>
     private RectTransform Layout(int width, int height)
     {
@@ -146,6 +161,8 @@ public class HudLayoutTests
         {
             icon.gameObject.SetActive(true);
         }
+
+        hud.GetComponentInChildren<NoticeView>(true).Show(LongNotice);
 
         foreach (LayoutGroup group in hud.GetComponentsInChildren<LayoutGroup>(true))
         {

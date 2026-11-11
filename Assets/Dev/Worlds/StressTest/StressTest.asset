@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: StressTest
   m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
   worldId: 78a4e45ce27d1a8418adf2bdd72d5b10
+  displayName: Stress test
   rootScene: {fileID: 11400000, guid: 415206a3c0fd891428af149b348f0b8e, type: 2}
   origin: {x: 0, y: 0}
   sizeInChunks: {x: 2, y: 2}
@@ -27,6 +28,7 @@ MonoBehaviour:
     scene: {fileID: 11400000, guid: 000ce4eeac886764fa3cfc0f1b9b043d, type: 2}
   entries:
   - name: start
+    displayName: Start
     position: {x: 64.5, y: 64.5}
     waystone: 0
   maxSearchCells: 4096

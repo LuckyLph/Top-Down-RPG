@@ -24,9 +24,9 @@ public class StatusEffects : MonoBehaviour
     }
 
     /// <summary>
-    /// Raised on the authoritative machine when a status was blocked by an immunity.
+    /// Raised on the authoritative machine when a status was blocked by an immunity, with the status's source.
     /// </summary>
-    public event Action<StatusEffectDefinition> Blocked;
+    public event Action<StatusEffectDefinition, GameObject> Blocked;
 
     public StatusEffectSet Set => set;
     public int Count => set.Count;
@@ -77,8 +77,8 @@ public class StatusEffects : MonoBehaviour
     /// <summary>
     /// Raises <see cref="Blocked"/>; called by <see cref="StatusEffectService"/> when an immunity blocks a status.
     /// </summary>
-    internal void NotifyBlocked(StatusEffectDefinition definition)
+    internal void NotifyBlocked(StatusEffectDefinition definition, GameObject source)
     {
-        Blocked?.Invoke(definition);
+        Blocked?.Invoke(definition, source);
     }
 }

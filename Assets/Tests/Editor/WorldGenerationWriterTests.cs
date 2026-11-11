@@ -408,23 +408,24 @@ public class WorldGenerationWriterTests
     /// <summary>
     /// The entries after a write are the generated ones in the composition's order, then the entries made by hand in
     /// their order; an entry the last write made that the composition no longer has goes, and a hand-made entry of a
-    /// generated entry's name gives way to it.
+    /// generated entry's name gives way to it; a generated entry keeps the display name the world gave its name, which
+    /// is written by hand (Docs/UiRevamp.md, Phase 3).
     /// </summary>
     [Test]
     public void TheEntries_AreTheGeneratedOnesFirst_ThenTheHandMadeOnes_AndAStaleGeneratedOneGoes()
     {
         WorldDefinition.Entry[] current =
         {
-            new("clearing", new Vector2(1f, 1f), true),
-            new("camp", new Vector2(5f, 5f), false),
-            new("clearingEast", new Vector2(2f, 1f), false),
+            new("clearing", new Vector2(1f, 1f), true, "Clearing"),
+            new("camp", new Vector2(5f, 5f), false, "Camp"),
+            new("clearingEast", new Vector2(2f, 1f), false, "Clearing, east road"),
             new("lakeside", new Vector2(9f, 9f), false),
-            new("dock", new Vector2(7f, 7f), true)
+            new("dock", new Vector2(7f, 7f), true, "Dock")
         };
         WorldDefinition.Entry[] generated =
         {
             new("clearing", new Vector2(3f, 3f), true),
-            new("lakeside", new Vector2(4f, 4f), true)
+            new("lakeside", new Vector2(4f, 4f), true, "Lakeside")
         };
 
         List<WorldDefinition.Entry> merged = WorldGenerationWriter.MergeEntries(current, generated, new[] { "clearing", "clearingEast" });
@@ -433,6 +434,7 @@ public class WorldGenerationWriterTests
         Assert.That(merged[0].Position, Is.EqualTo(new Vector2(3f, 3f)), "the generated entry's place");
         Assert.That(merged[1].Waystone, Is.True, "the generated entry's waystone");
         Assert.That(merged[3].Waystone, Is.True, "the hand-made entry stays as it was");
+        Assert.That(merged.ConvertAll(entry => entry.DisplayName), Is.EqualTo(new[] { "Clearing", "Lakeside", "Camp", "Dock" }), "the world's display names kept, the generator's where the world had none");
     }
 
     /// <summary>

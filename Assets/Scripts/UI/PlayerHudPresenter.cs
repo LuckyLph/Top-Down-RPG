@@ -152,7 +152,7 @@ public sealed class PlayerHudPresenter : IStartable, ITickable, IDisposable
     /// <summary>
     /// Refreshes the health bar after the player is healed.
     /// </summary>
-    private void HandleHealed(Health _, int amount)
+    private void HandleHealed(Health _, int amount, GameObject source)
     {
         RefreshHealth();
     }

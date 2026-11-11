@@ -71,8 +71,9 @@ public class OptionsMenuControllerTests : InputTestFixture
     /// Starting builds the Character section's Look row, a part row for each of the adventurer's eight part slots its
     /// player picks (not the weapon's, which shows the equipped weapon's gear) and a colour row for each of the fifteen
     /// colour choices its sheets or parts carry, then the Display section's UI size row (Docs/DesignSystem.md, Phase 3)
-    /// and its Reduce flashing and Reduce motion toggle rows (Phase 6), then nine binding rows under three section
-    /// headers, labelled with each action and its current binding, and leaves the screen hidden.
+    /// and its Reduce flashing and Reduce motion toggle rows (Phase 6) and the allies' damage numbers row
+    /// (Docs/UiRevamp.md, Phase 3), then nine binding rows under three section headers, labelled with each action and
+    /// its current binding, and leaves the screen hidden.
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
@@ -81,7 +82,7 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(controller.RowCount, Is.EqualTo(9));
         Assert.That(controller.PartRowCount, Is.EqualTo(8));
         Assert.That(controller.ColourRowCount, Is.EqualTo(15));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(41), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row and two toggle rows, three section headers and nine rows.");
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(42), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row, two toggle rows and the allies' damage numbers row, three section headers and nine rows.");
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
         Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
         Assert.That(view.RowsContainer.GetChild(2).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetPartRow(0)));
@@ -90,7 +91,8 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.RowsContainer.GetChild(26).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.UiSizeRow));
         Assert.That(view.RowsContainer.GetChild(27).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceFlashingRow));
         Assert.That(view.RowsContainer.GetChild(28).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceMotionRow));
-        Assert.That(view.RowsContainer.GetChild(29).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.GetChild(29).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.AllyPopupsRow));
+        Assert.That(view.RowsContainer.GetChild(30).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
         Assert.That(controller.GetRow(AttackMoveRow).Label.text, Is.EqualTo("Attack move"));
@@ -183,6 +185,38 @@ public class OptionsMenuControllerTests : InputTestFixture
         motion.ResetButton.onClick.Invoke();
         Assert.That(settings.ReduceFlashing, Is.True, "Nothing changes while a confirmation shows.");
         Assert.That(settings.ReduceMotion, Is.True);
+    }
+
+    /// <summary>
+    /// The allies' damage numbers row (Docs/UiRevamp.md, Phase 3) reads Shown by default; its button keeps the next way
+    /// (Smaller, Hidden, then Shown again), its reset goes back to Shown, it follows a change made elsewhere, and nothing
+    /// changes while a confirmation shows.
+    /// </summary>
+    [Test]
+    public void TheAlliesDamageNumbersRow_CyclesShownSmallerAndHidden()
+    {
+        KeyBindingRowView row = controller.AllyPopupsRow;
+        Assert.That(row.Label.text, Is.EqualTo(OptionsMenuController.AllyPopupsLabel));
+        Assert.That(row.BindingText.text, Is.EqualTo("Shown"));
+
+        controller.Open(null);
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Smaller));
+        Assert.That(row.BindingText.text, Is.EqualTo("Smaller"));
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Hidden));
+        Assert.That(row.BindingText.text, Is.EqualTo("Hidden"));
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Shown));
+
+        settings.SetAllyPopups(AllyPopups.Hidden);
+        Assert.That(row.BindingText.text, Is.EqualTo("Hidden"), "The row follows a change made elsewhere.");
+        row.ResetButton.onClick.Invoke();
+        Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Shown));
+
+        view.ResetAllButton.onClick.Invoke();
+        row.BindingButton.onClick.Invoke();
+        Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Shown), "Nothing changes while a confirmation shows.");
     }
 
     /// <summary>

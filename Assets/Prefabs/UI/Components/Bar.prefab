@@ -285,6 +285,7 @@ GameObject:
   - component: {fileID: 724855958760020834}
   - component: {fileID: 3099573611000376214}
   - component: {fileID: 1550243117007516799}
+  - component: {fileID: 6609682769585410398}
   m_Layer: 5
   m_Name: Text
   m_TagString: Untagged
@@ -427,6 +428,19 @@ MonoBehaviour:
   colour: 0
   background: 23
   size: 1
+--- !u!114 &6609682769585410398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1937691068812532519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97ea6760e501a024cb078e951fd6eccb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PixelTextScale
+  targetScale: 0.75
 --- !u!1 &4423383430099263963
 GameObject:
   m_ObjectHideFlags: 0

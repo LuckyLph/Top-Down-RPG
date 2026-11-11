@@ -328,7 +328,8 @@ public static class WorldGenerationWriter
     /// The world's entries after a write: <paramref name="generated"/>, in order, then each of
     /// <paramref name="current"/>, in order, that is neither generated now nor named in
     /// <paramref name="previouslyGenerated"/> (the entries the last write set), so the entries made by hand stay after
-    /// the generated ones and an entry the generator no longer makes goes.
+    /// the generated ones and an entry the generator no longer makes goes. A generated entry keeps the display name the
+    /// world gave the entry of its name, since display names are written by hand (Docs/DesignSystem.md, content rule 5).
     /// </summary>
     internal static List<WorldDefinition.Entry> MergeEntries(IReadOnlyList<WorldDefinition.Entry> current, IReadOnlyList<WorldDefinition.Entry> generated, IReadOnlyList<string> previouslyGenerated)
     {
@@ -336,7 +337,9 @@ public static class WorldGenerationWriter
         List<string> names = new();
         foreach (WorldDefinition.Entry entry in generated)
         {
-            merged.Add(new WorldDefinition.Entry(entry.Name, entry.Position, entry.Waystone));
+            WorldDefinition.Entry named = FindEntry(current, entry.Name);
+            string displayName = named != null && named.DisplayName.Length > 0 ? named.DisplayName : entry.DisplayName;
+            merged.Add(new WorldDefinition.Entry(entry.Name, entry.Position, entry.Waystone, displayName));
             names.Add(entry.Name);
         }
 
@@ -1331,7 +1334,7 @@ public static class WorldGenerationWriter
         for (int i = 0; same && i < merged.Count; i++)
         {
             WorldDefinition.Entry entry = world.Entries[i];
-            same = entry != null && entry.Name == merged[i].Name && entry.Position == merged[i].Position && entry.Waystone == merged[i].Waystone;
+            same = entry != null && entry.Name == merged[i].Name && entry.Position == merged[i].Position && entry.Waystone == merged[i].Waystone && entry.DisplayName == merged[i].DisplayName;
         }
 
         if (!same)

@@ -218,6 +218,36 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// Allies' popups (Docs/UiRevamp.md, Phase 3) show by default, in a file from before them and for a value this build
+    /// does not know; changing them writes the file at once and raises their change once per change.
+    /// </summary>
+    [Test]
+    public void AlliesPopups_ShowByDefault_AndChangingThemWritesTheFile()
+    {
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"reduceMotion\":true}" }).AllyPopups, Is.EqualTo(AllyPopups.Shown));
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"allyPopups\":7}" }).AllyPopups, Is.EqualTo(AllyPopups.Shown));
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"allyPopups\":-1}" }).AllyPopups, Is.EqualTo(AllyPopups.Shown));
+
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        int changes = 0;
+        settings.AllyPopupsChanged += () => changes++;
+        Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Shown));
+
+        Assert.That(settings.SetAllyPopups(AllyPopups.Smaller), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+        Assert.That(settings.SetAllyPopups(AllyPopups.Smaller), Is.False);
+        Assert.That(store.WriteCount, Is.EqualTo(1), "An unchanged value writes nothing.");
+        Assert.That(changes, Is.EqualTo(1));
+        Assert.That(new UserSettings(store).AllyPopups, Is.EqualTo(AllyPopups.Smaller));
+
+        Assert.That(settings.SetAllyPopups(AllyPopups.Hidden), Is.True);
+        Assert.That(new UserSettings(store).AllyPopups, Is.EqualTo(AllyPopups.Hidden));
+        Assert.That(new UserSettings(store).ReduceMotion, Is.False, "The other preferences are left alone.");
+        Assert.That(changes, Is.EqualTo(2));
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
-using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -10,7 +9,7 @@ using UnityEngine.TestTools;
 /// PlayMode tests for waystones and respawns in Testlands (Docs/WorldStreaming.md: Death and respawn), whose default
 /// entry `start` and waystone `north` lie 50 cells apart: offline, a dead player respawns after the delay at the nearest
 /// waystone it discovered, its own machine travelling there; walking to a waystone discovers it, shows the player a
-/// popup, and Continue keeps it; in a hosted game a client's dead player respawns at its waystone with the host
+/// notice on its HUD's notice line (Docs/UiRevamp.md, Phase 3), and Continue keeps it; in a hosted game a client's dead player respawns at its waystone with the host
 /// deciding and the client moving its own player there; a trip to a waystone protects the traveller (Docs/KnownGaps.md,
 /// Phase 2): a mob by the entry does not hurt the host's player or a client's until its machine has faded in; and a
 /// waystone's stone shows what each machine's own player discovered, a client's discoveries reaching it from the host,
@@ -103,7 +102,7 @@ public class WaystonePlayModeTests
         SessionSave session = SceneBootTestHelper.ResolveFromMain<SessionSave>();
         yield return SceneBootTestHelper.WaitUntil(() => WaystoneRules.Contains(session.WaystonesOf(playerId), world.WorldId, "north"), "walking to `north` to discover it");
         Assert.That(told, Is.EqualTo(new[] { "north" }));
-        Assert.That(ShowsText(settings.WaystoneDiscoveredText), Is.True, "The player sees the discovery.");
+        yield return SceneBootTestHelper.WaitUntil(() => ShowsNotice(settings.WaystoneDiscoveredText), "the notice line to show the discovery");
 
         gameFlow.ShowMainMenuAsync();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
@@ -527,20 +526,12 @@ public class WaystonePlayModeTests
     }
 
     /// <summary>
-    /// Whether an active floating popup shows <paramref name="message"/>.
+    /// Whether the HUD's notice line shows <paramref name="message"/>.
     /// </summary>
-    private static bool ShowsText(string message)
+    private static bool ShowsNotice(string message)
     {
-        foreach (FloatingDamageText popup in Object.FindObjectsByType<FloatingDamageText>())
-        {
-            TMP_Text text = popup.GetComponentInChildren<TMP_Text>();
-            if (popup.gameObject.activeInHierarchy && text != null && text.text == message)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        NoticeView notice = Object.FindAnyObjectByType<NoticeView>(FindObjectsInactive.Include);
+        return notice != null && notice.IsShown && notice.Text == message && notice.Label.text == message;
     }
 
     /// <summary>

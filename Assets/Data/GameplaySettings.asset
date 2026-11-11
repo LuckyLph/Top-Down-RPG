@@ -18,5 +18,6 @@ MonoBehaviour:
   tripProtectionSeconds: 10
   waystoneReachCells: 2
   waystoneDiscoveredText: Waystone discovered
-  waystoneDiscoveredColor: {r: 0.55, g: 0.9, b: 1, a: 1}
   savedPlaceSearchCells: 16
+  spareOutfits: 2
+  outfitSpritesPerFrame: 500

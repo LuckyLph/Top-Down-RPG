@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// A unit's hit points, starting full. Raises <see cref="Damaged"/> and <see cref="Died"/> when damage lands,
-/// <see cref="Healed"/> for HP added and <see cref="Restored"/> when refilled. Gameplay damage and heals go through
+/// <see cref="Healed"/> for HP added (with the heal's source) and <see cref="Restored"/> when refilled. Gameplay damage and heals go through
 /// <see cref="DamageService"/>; <see cref="NetworkHealth"/> mirrors HP to clients.
 /// </summary>
 [DisallowMultipleComponent]
@@ -55,7 +55,7 @@ public class Health : MonoBehaviour
     public event Action<DamageEvent> Damaged;
     public event Action<Health> Died;
     public event Action<Health> Restored;
-    public event Action<Health, int> Healed;
+    public event Action<Health, int, GameObject> Healed;
 
     public int MaxHealth => maxHealth;
 
@@ -122,9 +122,10 @@ public class Health : MonoBehaviour
 
     /// <summary>
     /// Adds up to <paramref name="amount"/> HP without exceeding the maximum and raises <see cref="Healed"/> with
-    /// what was added. Never brings a dead unit back; that is <see cref="Restore"/>.
+    /// what was added and the heal's <paramref name="source"/>. Never brings a dead unit back; that is
+    /// <see cref="Restore"/>.
     /// </summary>
-    public int Heal(int amount)
+    public int Heal(int amount, GameObject source = null)
     {
         InitializeIfNeeded();
 
@@ -138,7 +139,7 @@ public class Health : MonoBehaviour
         int healed = currentHealth - previousHealth;
         if (healed > 0)
         {
-            Healed?.Invoke(this, healed);
+            Healed?.Invoke(this, healed, source);
         }
 
         return healed;

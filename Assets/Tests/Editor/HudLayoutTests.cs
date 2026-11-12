@@ -6,9 +6,10 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Tests for the HUD's screen regions (Docs/DesignSystem.md, Foundations: Screen regions; Docs/UiRevamp.md, Phases 2 and
-/// 3), on a copy of <c>PlayerHudCanvas</c> laid out at a canvas size, every status icon, the message line and a notice
-/// long enough to fill both of its lines shown: the notice line keeps to the notice band at the top centre and
-/// everything else the HUD draws, its tooltip aside, to the command bar's region at the bottom centre, at 480 x 270 and
+/// 3), on a copy of <c>PlayerHudCanvas</c> laid out at a canvas size, every status icon, the message line, a notice
+/// long enough to fill both of its lines and the three party frames shown: the notice line keeps to the notice band at
+/// the top centre, the party frames to the left edge (Phase 5) and everything else the HUD draws, its tooltip aside, to
+/// the command bar's region at the bottom centre, at 480 x 270 and
 /// at the UI size of every display in the Scale table, every size step included, and the four regions never overlap
 /// there.
 /// </summary>
@@ -108,8 +109,10 @@ public class HudLayoutTests
 
         HudTooltip tooltip = root.GetComponentInChildren<HudTooltip>(true);
         NoticeView noticeLine = root.GetComponentInChildren<NoticeView>(true);
+        PartyFramesView partyFrames = root.GetComponentInChildren<PartyFramesView>(true);
         int checkedGraphics = 0;
         int noticeGraphics = 0;
+        int partyGraphics = 0;
         foreach (Graphic graphic in root.GetComponentsInChildren<Graphic>(false))
         {
             if (graphic.transform.IsChildOf(tooltip.transform))
@@ -120,8 +123,10 @@ public class HudLayoutTests
             Rect rect = Bounds(graphic.rectTransform, root);
             checkedGraphics++;
             bool inNotice = graphic.transform.IsChildOf(noticeLine.transform);
+            bool inParty = graphic.transform.IsChildOf(partyFrames.transform);
             noticeGraphics += inNotice ? 1 : 0;
-            Rect region = inNotice ? notice : commandBar;
+            partyGraphics += inParty ? 1 : 0;
+            Rect region = inNotice ? notice : inParty ? party : commandBar;
             if (rect.xMin < region.xMin - 0.01f || rect.xMax > region.xMax + 0.01f || rect.yMin < region.yMin - 0.01f || rect.yMax > region.yMax + 0.01f)
             {
                 problems.Add($"{at}: {graphic.name} at {rect} leaves its region {region}.");
@@ -131,6 +136,11 @@ public class HudLayoutTests
         if (checkedGraphics < 40)
         {
             problems.Add($"{at}: only {checkedGraphics} graphics were laid out.");
+        }
+
+        if (partyGraphics < 3 * 6)
+        {
+            problems.Add($"{at}: the party frames showed only {partyGraphics} graphics.");
         }
 
         if (noticeGraphics < 3 || noticeLine.Label.textInfo.lineCount != 2)
@@ -144,8 +154,8 @@ public class HudLayoutTests
 
     /// <summary>
     /// A copy of the HUD on a world-space canvas of <paramref name="width"/> x <paramref name="height"/> UI px, its
-    /// message line, every status icon and a notice filling the notice line shown and its layout groups laid out;
-    /// returns its root.
+    /// message line, every status icon, a notice filling the notice line and its three party frames (the first with its
+    /// bar and four pips, the others with their longest line) shown and its layout groups laid out; returns its root.
     /// </summary>
     private RectTransform Layout(int width, int height)
     {
@@ -163,6 +173,22 @@ public class HudLayoutTests
         }
 
         hud.GetComponentInChildren<NoticeView>(true).Show(LongNotice);
+        PartyFramesView party = hud.GetComponentInChildren<PartyFramesView>(true);
+        Color[] pips = { Color.red, Color.green, Color.blue, Color.yellow };
+        for (int i = 0; i < party.Count; i++)
+        {
+            PartyFrameView frame = party.Frame(i);
+            frame.ShowSlot(i + 2);
+            if (i == 0)
+            {
+                frame.ShowHealth(0.5f);
+                frame.ShowDebuffs(pips, pips.Length);
+            }
+            else
+            {
+                frame.ShowState(PartyFramesPresenter.InAnotherWorld);
+            }
+        }
 
         foreach (LayoutGroup group in hud.GetComponentsInChildren<LayoutGroup>(true))
         {

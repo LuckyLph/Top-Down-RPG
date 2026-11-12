@@ -33,6 +33,10 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | ControlSecondary | `#9E9E96` | 100% |
 | HealthPlayer | `#4CC25A` | 100% |
 | HealthLost | `#D6D6D6` | 100% |
+| Player1 | `#4FA3FF` | 100% |
+| Player2 | `#C084FC` | 100% |
+| Player3 | `#2DD4BF` | 100% |
+| Player4 | `#FB923C` | 100% |
 
 ## Text sizes
 
@@ -59,6 +63,8 @@ Each pair of text role and background role a themed text uses, at the smallest s
 | TextOnControl | ControlDisabled | Body | 3.41:1 | 3.00:1 |
 | TextOnControl | Danger | Body | 5.27:1 | 4.50:1 |
 | TextOnControl | ControlSecondary | Body | 6.42:1 | 4.50:1 |
+| TextOnControl | Player1 | Body | 6.61:1 | 4.50:1 |
+| TextMuted | Surface | Body | 5.56:1 | 4.50:1 |
 | TextMuted | SurfaceRaised | Body | 9.80:1 | 4.50:1 |
 | Placeholder | ControlNormal | Heading | 4.91:1 | 4.50:1 |
 | Placeholder | ControlHighlighted | Heading | 7.00:1 | 4.50:1 |

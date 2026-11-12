@@ -295,6 +295,63 @@ public class UiContentTests
     }
 
     /// <summary>
+    /// The party frames (Docs/UiRevamp.md, Phase 5): the HUD holds three <c>PartyFrame</c>s at the left edge, 104 x 82 UI
+    /// px 8 from the left and top edges, 28 apart and hidden, before the tooltip. The component is a variant of the panel,
+    /// 104 x 26: the skin's large badge with its number in TextOnControl, the name in Text and the state line in
+    /// TextMuted on Surface, a bar whose fill in HealthPlayer is read against its track in HealthTrack, and four pips in
+    /// its top right corner, hidden; nothing in it but the panel takes the pointer.
+    /// </summary>
+    [Test]
+    public void TheHudsPartyFrames_AreThreePartyFramesAtTheLeftEdge()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        PartyFramesView party = hud.GetComponentInChildren<PartyFramesView>(true);
+        Assert.That(party, Is.Not.Null);
+        RectTransform region = (RectTransform)party.transform;
+        Assert.That(region.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(region.anchorMax, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(region.pivot, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(region.anchoredPosition, Is.EqualTo(new Vector2(8f, -8f)));
+        Assert.That(region.sizeDelta, Is.EqualTo(new Vector2(104f, 82f)));
+        Assert.That(party.transform.GetSiblingIndex(), Is.LessThan(hud.GetComponentInChildren<HudTooltip>(true).transform.GetSiblingIndex()), "Drawn under the tooltip.");
+        Assert.That(party.Count, Is.EqualTo(PlayerSlots.Count - 1), "One frame for each other player there can be.");
+        for (int i = 0; i < party.Count; i++)
+        {
+            PartyFrameView frame = party.Frame(i);
+            Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(frame.gameObject), Is.EqualTo($"{Components}PartyFrame.prefab"));
+            Assert.That(frame.gameObject.activeSelf, Is.False, "Hidden until the presenter shows it.");
+            Assert.That(((RectTransform)frame.transform).anchoredPosition, Is.EqualTo(new Vector2(0f, -28f * i)));
+        }
+
+        GameObject component = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}PartyFrame.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(component)), Is.EqualTo($"{Components}Panel.prefab"), "A variant of the panel.");
+        Assert.That(((RectTransform)component.transform).sizeDelta, Is.EqualTo(new Vector2(104f, 26f)));
+        PartyFrameView view = component.GetComponent<PartyFrameView>();
+        SerializedObject serialized = new(view);
+        Assert.That(view.Badge.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.BadgeLarge))));
+        Assert.That(((Component)serialized.FindProperty("number").objectReferenceValue).GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextOnControl));
+        Assert.That(((Component)serialized.FindProperty("playerName").objectReferenceValue).GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(view.State.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(view.State.gameObject.activeSelf, Is.False);
+        ThemedGraphic fill = view.Fill.GetComponent<ThemedGraphic>();
+        Assert.That(fill.Role, Is.EqualTo(UiColour.HealthPlayer));
+        Assert.That(fill.Track, Is.Not.Null);
+        Assert.That(fill.Track.Role, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(view.Fill.type, Is.EqualTo(Image.Type.Filled));
+        Assert.That(view.Pips.Length, Is.EqualTo(4));
+        foreach (Image pip in view.Pips)
+        {
+            Assert.That(pip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Pip))));
+            Assert.That(pip.enabled, Is.False);
+        }
+
+        foreach (Graphic graphic in component.GetComponentsInChildren<Graphic>(true))
+        {
+            Assert.That(graphic.raycastTarget, Is.EqualTo(graphic.gameObject == component), $"{graphic.name} takes the pointer only as the panel.");
+        }
+    }
+
+    /// <summary>
     /// The toggle row (Docs/DesignSystem.md, Phase 6) is a variant of the row with a 12 UI px box before its value, in
     /// Shade framed in ControlSecondary (in Border until Docs/UiRevamp.md's Phase 3 made frames black, which a box on the
     /// dark panel would lose), holding the skin's check mark in Accent while it is on: its state shows as a mark and as

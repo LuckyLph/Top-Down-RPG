@@ -215,6 +215,51 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
+    /// A player slot's badges (Docs/UiRevamp.md, Phase 5) are discs outlined in opaque black: the small one 5 px across
+    /// in a 7 px sprite, its corners cut, and the large one 16 px across in an 18 px sprite, round and symmetric, white
+    /// inside, black around and clear beyond.
+    /// </summary>
+    [Test]
+    public void TheBadges_AreDiscsOutlinedInBlack()
+    {
+        SkinSprite badge = recipe.Generate(UiSkinPiece.Badge);
+        string[] rows = { ".ooooo.", "oo###oo", "o#####o", "o#####o", "o#####o", "oo###oo", ".ooooo." };
+        Assert.That(badge.Width, Is.EqualTo(7));
+        Assert.That(badge.Height, Is.EqualTo(7));
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < badge.Width; x++)
+            {
+                Color32 pixel = At(badge, x, badge.Height - 1 - row);
+                char expected = rows[row][x];
+                Assert.That(pixel.a, Is.EqualTo(expected == '.' ? 0 : 255), $"Badge pixel ({x}, {row}) from the top left.");
+                Assert.That(pixel.r, Is.EqualTo(expected == '#' ? 255 : 0), $"Badge pixel ({x}, {row}) is {(expected == '#' ? "white" : "black or clear")}.");
+            }
+        }
+
+        SkinSprite large = recipe.Generate(UiSkinPiece.BadgeLarge);
+        Assert.That(large.Width, Is.EqualTo(18));
+        Assert.That(large.Height, Is.EqualTo(18));
+        int white = 0;
+        for (int y = 0; y < large.Height; y++)
+        {
+            for (int x = 0; x < large.Width; x++)
+            {
+                Color32 pixel = At(large, x, y);
+                Assert.That(pixel, Is.EqualTo(At(large, large.Width - 1 - x, y)), $"Large badge pixel ({x}, {y}) mirrors across.");
+                Assert.That(pixel, Is.EqualTo(At(large, y, x)), $"Large badge pixel ({x}, {y}) mirrors along the diagonal.");
+                white += pixel.r == 255 ? 1 : 0;
+            }
+        }
+
+        Assert.That(At(large, 9, 9).r, Is.EqualTo(255), "White in the middle.");
+        Assert.That(At(large, 1, 9).r, Is.EqualTo(255), "Reaching the edge of its 16 px.");
+        Assert.That(At(large, 0, 9), Is.EqualTo(new Color32(0, 0, 0, 255)), "Outlined in black.");
+        Assert.That(At(large, 1, 1).a, Is.Zero, "Round: its corners clear.");
+        Assert.That(white, Is.InRange(190, 210), "About pi times 8 squared.");
+    }
+
+    /// <summary>
     /// The project's skin sprites hold exactly what its recipe draws, imported as single sprites at 32 pixels per unit
     /// with point filtering, a centred pivot and the piece's 9-slice border, so one sprite pixel is one UI px.
     /// </summary>
@@ -261,7 +306,8 @@ public class UiSkinWriterTests
     private static bool IsWhole(UiSkinPiece piece)
     {
         return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip
-            || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch || piece == UiSkinPiece.BarTick || piece == UiSkinPiece.Notch;
+            || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch || piece == UiSkinPiece.BarTick || piece == UiSkinPiece.Notch
+            || piece == UiSkinPiece.Badge || piece == UiSkinPiece.BadgeLarge;
     }
 
     /// <summary>

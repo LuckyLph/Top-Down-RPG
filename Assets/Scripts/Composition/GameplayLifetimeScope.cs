@@ -93,6 +93,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<AbilityBarView>();
         builder.RegisterComponentInHierarchy<StatusBarView>();
         builder.RegisterComponentInHierarchy<NoticeView>();
+        builder.RegisterComponentInHierarchy<PartyFramesView>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
@@ -133,6 +134,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<AbilityBarPresenter>();
         builder.RegisterEntryPoint<StatusBarPresenter>();
         builder.RegisterEntryPoint<NoticePresenter>().AsSelf();
+        builder.RegisterEntryPoint<PartyFramesPresenter>().AsSelf();
         builder.RegisterComponentInHierarchy<OptionsMenuView>();
         builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
         builder.RegisterComponentInHierarchy<GameMenuView>();

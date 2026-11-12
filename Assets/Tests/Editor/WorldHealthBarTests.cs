@@ -219,6 +219,69 @@ public class WorldHealthBarTests
     }
 
     /// <summary>
+    /// The player's world bar carries its slot's badge (Docs/UiRevamp.md, Phase 5): the skin's small badge, unlit on the
+    /// Overlay layer over the bar's frame, hidden until the player has a slot, its 5 px disc just left of the bar's frame
+    /// and from its bottom row up, on whole art px, wired to the player's slot and health and the project's theme.
+    /// </summary>
+    [Test]
+    public void PlayerPrefab_CarriesItsSlotsBadge_LeftOfItsBar()
+    {
+        GameObject player = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Player.prefab");
+        Assert.That(player.GetComponent<PlayerSlot>(), Is.Not.Null, "The player holds its slot.");
+        PlayerSlotBadge badgeView = player.GetComponentInChildren<PlayerSlotBadge>(true);
+        Assert.That(badgeView, Is.Not.Null);
+        SerializedObject serialized = new(badgeView);
+        Assert.That(serialized.FindProperty("slot").objectReferenceValue, Is.SameAs(player.GetComponent<PlayerSlot>()));
+        Assert.That(serialized.FindProperty("health").objectReferenceValue, Is.SameAs(player.GetComponent<Health>()));
+        Assert.That(serialized.FindProperty("theme").objectReferenceValue, Is.EqualTo(AssetDatabase.LoadAssetAtPath<UiTheme>(UiThemeUsage.ThemePath)));
+        SpriteRenderer badge = (SpriteRenderer)serialized.FindProperty("badge").objectReferenceValue;
+        Assert.That(badge.sprite, Is.EqualTo(Skin(UiSkinPiece.Badge)));
+        Assert.That(badge.enabled, Is.False, "Hidden until the player has a slot.");
+        Assert.That(badge.sortingLayerName, Is.EqualTo("Overlay"));
+        Assert.That(badge.sharedMaterial.shader.name, Does.Contain("Unlit"));
+        SpriteRenderer barFrame = (SpriteRenderer)new SerializedObject(player.GetComponentInChildren<WorldHealthBar>(true)).FindProperty("frame").objectReferenceValue;
+        Assert.That(badge.sortingOrder, Is.GreaterThan(barFrame.sortingOrder));
+        float discRight = (badge.transform.localPosition.x + badge.sprite.rect.width * 0.5f / ArtPixelsPerUnit) * ArtPixelsPerUnit - 1f;
+        float discBottom = (badge.transform.localPosition.y - badge.sprite.rect.height * 0.5f / ArtPixelsPerUnit) * ArtPixelsPerUnit + 1f;
+        float frameLeft = (barFrame.transform.localPosition.x - barFrame.size.x * 0.5f) * ArtPixelsPerUnit;
+        float frameBottom = (barFrame.transform.localPosition.y - barFrame.size.y * 0.5f) * ArtPixelsPerUnit;
+        Assert.That(discRight, Is.EqualTo(frameLeft - 1f).Within(1e-4f), "The disc ends 1 px left of the bar, its outline against the frame.");
+        Assert.That(discBottom, Is.EqualTo(frameBottom).Within(1e-4f), "The disc stands on the bar's bottom row.");
+        Assert.That(discRight, Is.EqualTo(Mathf.Round(discRight)).Within(1e-4f), "On whole art px.");
+    }
+
+    /// <summary>
+    /// The badge shows in its slot's colour while the player has a slot and lives, follows a change of slot, and hides
+    /// without one or while the player is dead.
+    /// </summary>
+    [Test]
+    public void TheBadge_ShowsTheSlotsColour_WhileThePlayerHasASlotAndLives()
+    {
+        PlayerSlot slot = health.gameObject.AddComponent<PlayerSlot>();
+        SpriteRenderer badge = new GameObject("Badge").AddComponent<SpriteRenderer>();
+        badge.transform.SetParent(bar.transform);
+        PlayerSlotBadge view = bar.gameObject.AddComponent<PlayerSlotBadge>();
+        view.Configure(slot, health, badge, TestThemes.Shared);
+        Assert.That(view.IsShown, Is.False, "No slot, no badge: offline.");
+
+        slot.Configure(2, false);
+        Assert.That(view.IsShown, Is.True);
+        Assert.That(badge.color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.Player2)));
+        slot.Configure(3, false);
+        Assert.That(badge.color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.Player3)));
+
+        health.ApplyDamage(health.MaxHealth);
+        view.Refresh();
+        Assert.That(view.IsShown, Is.False, "Hidden while dead, as the bar is.");
+        health.Restore();
+        view.Refresh();
+        Assert.That(view.IsShown, Is.True);
+
+        slot.Configure(0, false);
+        Assert.That(view.IsShown, Is.False);
+    }
+
+    /// <summary>
     /// How many art px above the feet the adventurer's tallest look reaches while it stands, idles, walks or runs: the
     /// highest top of any part's layer in those clips, plus the 1 px outline drawn around the character.
     /// </summary>

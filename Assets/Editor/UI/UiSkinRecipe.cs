@@ -23,6 +23,8 @@ public enum UiSkinPiece
     Hatch,
     BarTick,
     Notch,
+    Badge,
+    BadgeLarge,
 }
 
 /// <summary>
@@ -35,7 +37,8 @@ public enum UiSkinPiece
 /// mark while it is on, a slot's corner brackets, shown around a slot whose cast waits, and a hatch of diagonal lines,
 /// tiled over a slot that cannot be cast (Docs/UiRevamp.md, Decisions: Slot states), a bar's tick, a short line down from
 /// the top of a health bar every so many HP, and a debuff's notch, a right triangle in an icon's top right corner
-/// (Docs/UiRevamp.md, Phase 2). The markers are drawn around a ground ellipse twice as wide as tall, each a different
+/// (Docs/UiRevamp.md, Phase 2), and a player slot's badge, a disc outlined in black, small over a player in the world and
+/// large in a party frame (Phase 5). The markers are drawn around a ground ellipse twice as wide as tall, each a different
 /// shape so colour is never the only cue: four chevrons pointing in for a move, the ring crossed by four ticks for an
 /// attack move, and four brackets on the ring's diagonals under a hovered enemy, each line outlined in translucent
 /// black. <see cref="Generate(UiSkinPiece)"/> draws a piece without touching an asset, the same settings always giving
@@ -82,6 +85,14 @@ public sealed class UiSkinRecipe : ScriptableObject
     [SerializeField, Range(1, 8)] private int tickLength = 3;
     [Tooltip("The legs in px of a debuff's notch, the right triangle in its top right corner.")]
     [SerializeField, Range(2, 10)] private int notchSize = 5;
+
+    [Header("Player slots")]
+    [Tooltip("The diameter in px of a player slot's badge beside its world bar, inside its outline.")]
+    [SerializeField, Range(3, 9)] private int badgeSize = 5;
+    [Tooltip("The diameter in px of a player slot's badge in a party frame, inside its outline.")]
+    [SerializeField, Range(8, 24)] private int badgeLargeSize = 16;
+    [Tooltip("The opacity of the 1 px black outline around a badge.")]
+    [SerializeField, Range(0f, 1f)] private float badgeOutline = 1f;
 
     public int CornerCut => cornerCut;
     public int LipHeight => lipHeight;
@@ -142,6 +153,10 @@ public sealed class UiSkinRecipe : ScriptableObject
                 return Tick();
             case UiSkinPiece.Notch:
                 return Notch();
+            case UiSkinPiece.Badge:
+                return Badge(piece, badgeSize);
+            case UiSkinPiece.BadgeLarge:
+                return Badge(piece, badgeLargeSize);
             default:
                 return Marker(piece);
         }
@@ -329,6 +344,37 @@ public sealed class UiSkinRecipe : ScriptableObject
         }
 
         return new SkinSprite(UiSkinPiece.Notch, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A player slot's badge, shown whole: a disc <paramref name="diameter"/> px across (the pixels whose centres lie
+    /// within half of it of its centre) in white, with a 1 px outline around it in black at <see cref="badgeOutline"/>,
+    /// so the sprite is 2 px wider and taller than the disc.
+    /// </summary>
+    private SkinSprite Badge(UiSkinPiece piece, int diameter)
+    {
+        int size = diameter + 2;
+        bool[] disc = new bool[size * size];
+        double radius = diameter * 0.5;
+        for (int y = 0; y < diameter; y++)
+        {
+            for (int x = 0; x < diameter; x++)
+            {
+                disc[(y + 1) * size + x + 1] = Sq(x + 0.5 - radius) + Sq(y + 0.5 - radius) <= radius * radius;
+            }
+        }
+
+        Color32[] pixels = new Color32[disc.Length];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                pixels[i] = disc[i] ? Grey(1f) : Touches(disc, size, size, x, y) ? Black(badgeOutline) : Clear;
+            }
+        }
+
+        return new SkinSprite(piece, size, size, pixels, Vector4.zero);
     }
 
     /// <summary>

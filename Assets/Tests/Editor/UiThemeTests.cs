@@ -474,6 +474,25 @@ public class UiThemeTests
     }
 
     /// <summary>
+    /// The four player slots' colours (Docs/UiRevamp.md, Phase 5) are opaque and different, and the number a party
+    /// frame's badge shows on each, in TextOnControl, reads at 4.5:1 or more on all four, not only on Player1, the one
+    /// the prefab names.
+    /// </summary>
+    [Test]
+    public void ThePlayerSlotColours_AreDistinct_AndCarryTheirNumbers()
+    {
+        UiTheme theme = ProjectTheme();
+        HashSet<Color> colours = new();
+        for (int slot = 1; slot <= PlayerSlots.Count; slot++)
+        {
+            Color colour = theme.Colour(PlayerSlots.Role(slot));
+            Assert.That(colour.a, Is.EqualTo(1f), $"Player {slot} is opaque.");
+            Assert.That(colours.Add(colour), Is.True, $"Player {slot} has a colour of its own.");
+            Assert.That(UiThemeUsage.Ratio(theme.Colour(UiColour.TextOnControl), colour), Is.GreaterThanOrEqualTo(4.5), $"The number on Player {slot}'s badge.");
+        }
+    }
+
+    /// <summary>
     /// Every bar fill of the project meets 3:1 on its track in the project's theme (the pairs UiTheme.md lists): the
     /// world bar's Health on an opaque HealthTrack (Docs/UiRevamp.md, Phase 1), the command bar's HealthPlayer and
     /// its part just lost in HealthLost (Phase 2), and the players' cast bars in Accent (Phase 4).

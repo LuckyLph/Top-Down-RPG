@@ -59,8 +59,9 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Command bar | The HUD's cluster at the bottom centre: the health bar over the ability row, buffs to its left, debuffs to its right, and the message line above |
 | Message line | The line above the command bar that says why a press failed |
 | Notice line | The line at the top centre where in-game notices queue |
-| Player slot | A number from 1 to 4 that the host gives each player as they join, with a shape and a colour. Every machine agrees on it |
+| Player slot | A number from 1 to 4 that the host gives each player as they join, with a colour. Every machine agrees on it |
 | Party frames | The HUD's frames for the other players, at the left edge |
+| Chat | The HUD's box of the session's lines, under the party frames: players' messages and the party's comings and goings (Phase 12) |
 | Vitals strip | The session line and the local player's health, shown on a full screen opened in game online |
 | Preview stage | The local character drawn off screen into a render texture, for the Character screen and the title view |
 | Title view | The still picture of the Overworld behind the main menu, rendered by a recipe |
@@ -81,7 +82,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 - **Kicking a player**, and **pausing online** while every player has the menu open (Later).
 - **A live title scene,** such as a lit campfire with the player beside it (Later). The title view is a still picture.
 - **A tabbed game hub** (inventory, map, quests), until those features exist. The in-game menu's column and cards can become its first tabs then.
-- **A minimap, an XP bar, chat, audio and window or resolution settings.** The HUD keeps the top right free for a place name and a minimap.
+- **A minimap, an XP bar, audio and window or resolution settings.** The HUD keeps the top right free for a place name and a minimap. The chat, a non-goal at first, became Phase 12 when Phase 5 sent the party's notices to it.
 - **Icon art** for abilities and statuses, which stays in DesignSystem.md's Later. Slots keep the ability names and statuses keep their abbreviations.
 - **Join codes, a relay or lobbies,** and an on-screen keypad for gamepad players to type addresses. Recent hosts let a gamepad player rejoin with one press.
 - **A HUD layout setting,** such as Diablo IV's choice of a centre or corner layout.
@@ -91,7 +92,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Topic | Decision |
 |---|---|
 | Directions | **HUD:** the command bar, plus the world bars of the world-first direction. **In-game menu:** the side column and cards. **Main menu:** the title view and full screens. Each proposal's text fixes ship first, where they stand on their own. |
-| Screen regions | In game, each part of the screen has one owner, so nothing overlaps at 480 x 270:<br>• the bottom centre: the command bar;<br>• the top centre: a 24 UI px notice band;<br>• the left edge: the party frames;<br>• the top right: kept free for a place name and a minimap later.<br>Online, menus opened in game stay clear of the command bar and the notice band. |
+| Screen regions | In game, each part of the screen has one owner, so nothing overlaps at 480 x 270:<br>• the bottom centre: the command bar;<br>• the top centre: a 24 UI px notice band;<br>• the left edge: the party frames, and under them the chat (Phase 12, its size settled on its previews);<br>• the top right: kept free for a place name and a minimap later.<br>Online, menus opened in game stay clear of the command bar and the notice band. |
 | Health | In the command bar: 242 x 13 (12 until Phase 3) over the ability row, reading "72 / 100".<br>• **Ticks:** one every 10 HP, one Weasel hit ([Units.md](Generated/Units.md)), until Phase 3 took them out (`HudSettings.TickHealth` 0 draws none).<br>• **Recent loss:** the part just lost shows pale for 0.4 s.<br>• **Low:** at 30% or less, the frame turns `Danger` and pulses once a second, holding steady with Reduce flashing on.<br>The numbers live in `HudSettings`. |
 | Bar contrast | A bar's fill against its track is measured like a text pair and meets 3:1. `HealthTrack` becomes opaque, which takes today's red to 3.68:1. |
 | Players' health colour | Players' bars fill in a new `HealthPlayer` role, green, on the HUD and in the world. Mobs keep `Health`, red. The slot badge and the bar's shape still tell them apart, so colour is never alone. The exact green is settled on Phase 2's previews. |
@@ -100,9 +101,10 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Slot states | A slot is ready, cooling down (as today), casting (frame in `Accent`), queued (`Accent` corner brackets), disabled (a hatch) or failed (the flash). Disabled means every slot while stunned or silenced, and the slots whose cast moves the caster (`CastMovement.Ability`) while rooted. |
 | Statuses | Buffs left of the abilities and debuffs right, each in a 3 x 2 grid filling outwards from the abilities. A seventh of a kind shows "+n" on the sixth icon. A debuff's frame is `Danger` with a notched corner, so both its side and its shape carry its kind. |
 | Players in the world | Every player has a world bar with debuff pips and a cast bar under it, on every machine, the local player's own included. An ally under the pointer gets the enemy's hover marker in green (settled in Phase 4). |
-| Player slots | The host gives itself slot 1 and each joining player the lowest free one, and a player who leaves frees theirs. A slot has:<br>• a number;<br>• a shape (circle, diamond, triangle or square);<br>• a colour role (`Player1` to `Player4`).<br>It is a server-written network variable on the player, read by late joiners. |
+| Player slots | The host gives itself slot 1 and each joining player the lowest free one, and a player who leaves frees theirs. A slot has:<br>• a number;<br>• a colour role (`Player1` to `Player4`): blue, violet, teal and orange;<br>• a badge, a disc in that colour outlined in black, 5 px beside the world bar and 16 px with the number on it in a party frame. Every badge is a disc (settled in Phase 5, where shapes per slot were proposed), so in the world only its colour tells slots apart.<br>It is a server-written network variable on the player, read by late joiners, which also says whether the player is still joining. Offline there is no slot and no badge. |
 | Party frames | At the left edge, one 104 x 26 frame per other player. Each shows the badge, "Player 2", and a bar with debuff pips (unticked, as the command bar's since Phase 3), or else "Respawning in 2", "In another world" or "Joining". Playing alone, none show. |
-| Notices | In-game notices queue on the notice line: Waystone discovered, the world entered, a player joined, left or down, and while you are dead "You fell. Respawning in 3". This replaces the Messages pattern's "short notices float over the local player"; popups are left to hits and heals. |
+| Notices | In-game notices queue on the notice line: Waystone discovered, the world entered, and while you are dead "You fell. Respawning in 3". This replaces the Messages pattern's "short notices float over the local player"; popups are left to hits and heals. A player joining, leaving or going down is a line in the chat (Phase 12), not a notice. |
+| Chat | At the left edge under the party frames (Phase 12): the session's lines, newest at the bottom.<br>• **Players' lines:** "Player 2: on my way", the name in its slot's colour.<br>• **Party lines,** in `TextMuted`: "Player 2 joined", "Player 2 left" and "Player 2 is down", each machine raising its own from what it already knows.<br>• **Typing:** the Chat key (Enter) opens a field, Enter sends and Escape cancels; gameplay input is off while it is open. A gamepad reads but cannot type (Later's on-screen keypad).<br>• Lines fade after a while unless the field is open. Nothing is saved. |
 | In-game menu | **A column on the left:** titled "Paused" offline and "Menu" online. Under the title, a status line ("Offline · paused", "Hosting · not paused" or "Joined · not paused") and a line saying whether the game waits or keeps running. Then Resume, Character, Options, Leave game and Quit to desktop, looping, and a saved line ("Saved at 14:32").<br>**Cards on the right:** Party (online) and Controls. A card that would reach the command bar or the notice band drops, Controls first.<br>**Party frames** hide while the menu is open, since the Party card shows the same players. |
 | Scrim | Offline, where time stands still, the menu dims the game with the `Scrim`. Online there is none: the column and cards are opaque, and the game stays live between them. Words carry the difference, not the dimming alone. |
 | Saving on open | Opening the in-game menu saves, offline and on the host. A joined client writes its copy. The saved line shows the time just written. |
@@ -117,7 +119,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Title view | A still picture of the Overworld at dusk, rendered by an editor recipe into a sprite of 768 x 432 art px, which covers every canvas in the Scale table. The local character stands in it, drawn by the preview stage. |
 | First run | On the first launch, a Welcome panel offers UI size, Reduce flashing and Reduce motion before the menu. The first New game goes through the Character screen, whose Back reads "Start". Later New games do not. |
 | Online pause | Kept as it is: the game never pauses online. |
-| New art | All from recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, and the four slot badges at 5 and 16 px;<br>• **a new title view recipe.**<br>No Aseprite work is needed. |
+| New art | All from recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, and the slot badge, a disc at 5 and 16 px;<br>• **a new title view recipe.**<br>No Aseprite work is needed. |
 | New theme roles | `HealthPlayer`, `HealthLost`, and `Player1` to `Player4`. Each is measured in `UiTheme.md` like every other role. |
 
 ## Behaviour
@@ -142,9 +144,21 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 - **Notices:**
   - "Waystone discovered";
   - "Entering the Overworld", from the world's display name;
-  - "Player 2 joined", "Player 2 left" and "Player 2 is down" (from Phase 5);
   - "You fell. Respawning in 3", counting down from `GameplaySettings.RespawnDelaySeconds`, then "Respawning..." until the player stands again.
+  - "Player 2 joined", "Player 2 left" and "Player 2 is down" were planned here for Phase 5, and are the chat's party lines instead (Phase 12).
 - **On this machine only.** Each machine raises its notices from state it already has.
+
+### Player slots and party frames
+
+- **Slots.** The host gives its own player slot 1 when it spawns, and each joining player the lowest slot no other player holds. A player who leaves takes its slot with it. The slot is a server-written network value on the player, so every machine reads the same one, a late joiner with each player's spawn.
+- **Joining.** A client's player is joining from its spawn until the host hears its machine has the world around it loaded. The host writes that in the same value, so every machine knows.
+- **Badges.** Beside each player's world bar, the 5 px badge in its slot's colour, while it has a slot and lives. Offline there is none.
+- **Party frames.** At the left edge, 8 UI px from the left and top edges, one 104 x 26 frame per other player in slot order, 2 apart, up to three. Each holds:
+  - the 16 px badge with the slot's number in `TextOnControl`;
+  - "Player 2" in `Text`;
+  - a 74 x 6 bar in `HealthPlayer` on `HealthTrack`, with up to four debuff pips in its top right corner;
+  - or, in place of the bar, a line in `TextMuted`: "Joining", "In another world", "Respawning in 2" counting down from this machine's sight of the death, then "Respawning...".
+  Playing alone, none show.
 
 ### Players in the world
 
@@ -155,6 +169,16 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
   - A cast without a cast time never shows it, and a dead player's bar hides.
 - **The local player's own bar and cast bar** show too. The camera centres it, so the eye is already there.
 - **The ally hover marker** (`MarkerHoverAlly`) shows under the other player the pointer is over: the enemy's brackets in `Positive`. It never shows under the local player, where the pointer often rests. The attack cursor, which shows over enemies only, tells the two markers apart besides their colour.
+
+### The chat
+
+Settled at the start of Phase 12; this is the plan it starts from.
+
+- **Place.** At the left edge under the party frames, above the command bar's region, as wide as the frames or a little wider, sized on Phase 12's previews to fit 480 x 270.
+- **Lines.** Newest at the bottom, wrapping, the oldest scrolling off: players' messages with the sender's "Player 2" in its slot's colour, and the party's lines in `TextMuted`. A line fades after a while; opening the field shows them all again.
+- **Typing.** The Chat key opens a `Field` at the box's foot. Enter sends and closes it, Escape closes it, and either way gameplay input comes back. Text is kept to the characters the UI's Galmuri atlases hold (`UiFonts.Characters`) and to 80 of them.
+- **Party lines.** "Player 2 joined" once its joining ends, "Player 2 left" when its player despawns, and "Player 2 is down" when it dies, raised on each machine from what it already knows.
+- **Offline,** with nobody to talk to, the chat does not show.
 
 ### The in-game menu
 
@@ -241,8 +265,14 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
   - a `WorldBar` player variant (`WorldBarPlayer`) on the player prefab, with `WorldStatusIcons` and a new `WorldCastBar`;
   - `MarkerHoverAlly`, a variant of `MarkerHover`, in `PointerFeedbackLayer`.
 - **Slots:**
-  - `PlayerSlot`, a `NetworkBehaviour` on the player holding the server-written slot, with the host assigning it;
-  - `PartyFramesPresenter` and the `PartyFrame` component.
+  - `PlayerSlot`, a `NetworkBehaviour` on the player holding the server-written `PlayerSlotState` (its number and whether it is joining), with the host assigning it; `PlayerSlots`, the slots' count, roles and labels and the lowest free one;
+  - `PlayerSlotBadge` on the `WorldBarPlayer` component;
+  - `PartyFramesPresenter`, `PartyFramesView` and the `PartyFrame` component (`PartyFrameView`).
+- **Chat (Phase 12):**
+  - `ChatLog`, the session's lines on this machine;
+  - `ChatPresenter` and the HUD's `ChatView`, with a `Field` for typing;
+  - `PlayerChatSync` (or the session's named messages): a client's line to the host, the host's relay to every machine;
+  - the Chat action in the bindings (`RebindableActionList`).
 - **In-game menu:**
   - `GameMenuView` and `GameMenuCanvas` rebuilt;
   - `PartyCardView` and its presenter (`IPlayerRegistry`, `ISessionStatus`), and `ControlsCardView`;
@@ -266,7 +296,10 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 
 ## Networking
 
-- **New:** the player slot, a server-written network variable on the player, read by late joiners at spawn. Nothing else in this plan adds replicated state or messages. Phase 3 gave three existing host messages one more field: a heal, an immune hit and a blocked status name their source unit, as a hit already did, so a client's popups tell its own apart.
+- **New:**
+  - the player slot, a server-written network variable on the player, read by late joiners at spawn, which since Phase 5 also says whether the player is still joining;
+  - the chat's messages (Phase 12): a client sends its line to the host, which checks its length and characters, names the sender's slot and relays it to every machine; the host's own goes out the same way. Lines are not saved, and a late joiner sees only those sent after it joined.
+  Nothing else in this plan adds replicated state or messages. Phase 3 gave three existing host messages one more field: a heal, an immune hit and a blocked status name their source unit, as a hit already did, so a client's popups tell its own apart.
 - **Already replicated, now shown:**
   - health (`NetworkHealth`) and statuses (`NetworkStatusEffects`) on the party frames, the world bars and the Party card;
   - casts (`RemoteCast*`) on the cast bars;
@@ -282,13 +315,13 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 ## Removals and migrations
 
 - **DesignSystem.md**:
-  - **Messages:** in-game notices move to the notice line.
+  - **Messages:** in-game notices move to the notice line, and the party's comings and goings to the chat (Phase 12).
   - **Co-op:** players get world bars and party frames; the HUD still shows only the local player's own controls.
   - **Menus:** the scrim marks a paused game.
   - **Feedback:** a failure is answered in words too.
   - **Components:** the new components join the table.
   - **Later:** "Co-op identity" and "players' world bars and status icons" are done.
-- **KeyBindings.md:** the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (column, cards, confirmations, saving on open) and the main menu (Play together in place of the Host and Join buttons and the join field).
+- **KeyBindings.md:** the Chat key (Phase 12); the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (column, cards, confirmations, saving on open) and the main menu (Play together in place of the Host and Join buttons and the join field).
 - **PlayerCharacter.md:** its non-goal "An in-game character creator" is lifted, and its customization rows move to the Character screen. **AsepriteCharacters.md:** the Look row's home moves the same way.
 - **Multiplayer.md:**
   - "the menu shows no slot list" becomes the Saved games screen;
@@ -302,7 +335,7 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 
 Each phase ships on its own, keeps the game playable offline and hosted, and comes with tests. A phase whose look can change settles it on previews first, signed off before its tests and docs. Previews show every state of what they change (ready, cooldown, casting, queued, failed, disabled, low, down, elsewhere, joining) at every display in the Scale table. An open question is settled with the user at the start of the phase named for it. Each phase updates Architecture.md and Roadmap.md as it lands.
 
-The HUD comes first, because it is on screen the most. The menus follow, and the main menu last. Phases 7 to 11 do not depend on the HUD's phases, so the order can change.
+The HUD comes first, because it is on screen the most. The menus follow, and the main menu last. Phases 7 to 11 do not depend on the HUD's phases, so the order can change. Phase 12, the chat, was added after Phase 5; it needs Phase 5's slots and can come any time after it.
 
 ```mermaid
 flowchart LR
@@ -317,6 +350,7 @@ flowchart LR
     P9 --> P10[10. Saved games]
     P7 --> P11[11. Title view and first run]
     P9 --> P11
+    P5 --> P12[12. Chat]
 ```
 
 ### Phase 1: the HUD says why
@@ -545,17 +579,43 @@ Fixes on today's layout, before anything moves.
 
 ### Phase 5: player slots and party frames
 
-- [ ] Previews of the badges and the party frames in each state, signed off.
-- [ ] `PlayerSlot`: the host assigns the lowest free slot, a leaver frees theirs, and late joiners read it.
-- [ ] Theme roles `Player1` to `Player4`. Skin: the badges at 5 and 16 px.
-- [ ] Badges on the players' world bars.
-- [ ] `PartyFrame` and `PartyFramesPresenter`: alive, respawning, in another world, joining.
-- [ ] The joined, left and down notices.
-- [ ] PlayMode:
-  - [ ] slots agree on host and client;
-  - [ ] a late joiner reads them;
-  - [ ] a leaver's slot is reused.
-- [ ] Multiplayer.md's authority table.
+- [x] Previews of the badges and the party frames in each state, signed off.
+- [x] `PlayerSlot`: the host assigns the lowest free slot, a leaver frees theirs, and late joiners read it.
+- [x] Theme roles `Player1` to `Player4`. Skin: the badge, a disc at 5 and 16 px.
+- [x] Badges on the players' world bars.
+- [x] `PartyFrame` and `PartyFramesPresenter`: alive, respawning, in another world, joining.
+- [x] The joined, left and down notices: moved to the chat, Phase 12.
+- [x] PlayMode:
+  - [x] slots agree on host and client;
+  - [x] a late joiner reads them;
+  - [x] a leaver's slot is reused.
+- [x] Multiplayer.md's authority table.
+
+#### Phase 5 notes
+
+- **Settled with the user on 2026-11-11,** on previews at 640 x 360 (x2, x3 and x6) and 480 x 270 (x4), and on sheets of the badges, the frame's states and the notices:
+  - **Every badge is a disc,** in its slot's colour: `Player1` blue `#4FA3FF`, `Player2` violet `#C084FC`, `Player3` teal `#2DD4BF` and `Player4` orange `#FB923C`. Circle, diamond, triangle and square per slot were previewed first. In the world only the colour tells slots apart, a choice against DesignSystem.md's "never colour alone" that is recorded there; a party frame's badge also carries its number.
+  - **The badges are outlined in black,** which also sets the orange disc apart from an orange debuff pip.
+  - **The party frame** as previewed, and no badge offline.
+  - **The notices** "Player 2 joined", "Player 2 left" and "Player 2 is down" belong in a chat, which did not exist: they moved to a new Phase 12, the chat.
+  - **Joining** needs the host to tell every machine when a player has loaded, so the slot's network value carries that flag too.
+- **The previews.** The Phase 4 script, outside the repo, composed them in the gitignored `Recordings/UiRevamp/Phase5`, the text drawn from `Galmuri7.ttf` at 8 px; `engine_frames.png` is the real `PartyFrame` rendered in the editor in each state, its themed components woken by reflection, which matched them.
+- **Slots.** `PlayerSlot` is a `NetworkBehaviour` on the player prefab holding a server-written `NetworkVariable<PlayerSlotState>` (a byte for the number, a bool for joining).
+  - In `OnNetworkSpawn` the host gives the player the lowest slot no other registered player holds (`PlayerSlots.LowestFree`), so its own player, spawned first, has 1. A leaver's player despawns and leaves the registry, so its slot is the next one given. A fifth player, were `NetworkSettings.MaxPlayers` raised, would have none and show no badge or frame.
+  - A client's player is joining from its spawn until `IClientReadiness.IsClientReady` (the client reported a chunk loaded for its current trip), which the host checks each frame while it is joining; the host's own player never is.
+  - `Changed` is raised on every machine as the value replicates, and at spawn and despawn. Offline the player is never spawned, so it has no slot.
+- **Badges.** The recipe's `Badge` and `BadgeLarge` are discs 5 and 16 px across, in sprites 7 and 18 px with a 1 px black outline (`Player slots` settings). `PlayerSlotBadge` on `WorldBarPlayer` shows the small one in its slot's colour, read from the theme, while the player has a slot and lives (polling health, as the bar does), on `Overlay` at order 2, its disc 1 px left of the bar's frame and standing on its bottom row.
+- **Party frames.** `PartyFrame` is a variant of `Panel`, 104 x 26, with the large badge at (4, 4) holding its number, "Player 2" at (25, 3), the state line at (25, 14) and the bar at (25, 15), 74 x 6, its fill read against its track, and four pips from (95, 4) leftwards. Only the panel takes the pointer. `PartyFrameView` changes its graphics only when what it shows changed.
+  - The HUD's `PartyFrames` holds three, 28 apart, at the left edge region, hidden, under the tooltip.
+  - `PartyFramesPresenter` follows the registry, leaves out the local player (by its transform) and players without a slot, and orders the rest by slot each tick. A frame says "Joining" first, then "In another world" (its world in `PlayerWorlds` differs from the local player's), then counts a death down in whole seconds from the moment this machine saw it, then "Respawning...", and otherwise shows the player's health and up to four distinct debuffs. It polls health and statuses, allocating nothing.
+- **Co-op.** Only the slot's value is new on the wire. Health, statuses, worlds and deaths come from what each machine already has. `NetworkPartyPlayModeTests` checks both machines.
+- **Tests.**
+  - `PartyFramesPresenterTests` (7, new) and `NetworkPartyPlayModeTests` (2, new).
+  - `WorldHealthBarTests`: the player's badge left of its bar, and the badge following its slot and health.
+  - `UiSkinWriterTests`: the badges pixel by pixel.
+  - `UiThemeTests`: the four slot colours distinct and opaque, the number on each at 4.5:1 or more (6.61:1 on `Player1` in `UiTheme.md`).
+  - `UiContentTests`: the player prefab's badge themed, the HUD's three party frames and the component's parts.
+  - `HudLayoutTests`: the party frames, a bar with four pips and the longest lines, in the left edge region at every size.
 
 ### Phase 6: the in-game menu
 
@@ -647,6 +707,21 @@ The Character button arrives with Phase 7.
 - [ ] The Welcome panel and `firstRunDone`.
 - [ ] The first New game going through the Character screen.
 
+### Phase 12: the chat
+
+Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. It needs Phase 5's slots.
+
+- [ ] Open question settled: the chat's place and size, and how long its lines stay.
+- [ ] Previews of the chat at rest, open for typing, and with players' and party lines, at every display in the Scale table, signed off.
+- [ ] `ChatLog` and the HUD's chat (`ChatPresenter`, `ChatView`): lines in their sender's colour, the party's in `TextMuted`, fading, and the screen region in DesignSystem.md's Foundations with `HudLayoutTests`.
+- [ ] The Chat key in the bindings, the `Field` for typing, gameplay input off while it is open, and the text kept to the font's characters and 80 of them.
+- [ ] The messages: a client's line to the host, checked and relayed to every machine with the sender's slot.
+- [ ] The party lines: joined, left and down, on each machine.
+- [ ] PlayMode, with the in-process host and client:
+  - [ ] a client's line reaches the host, and the host's the client, each with its slot;
+  - [ ] the party lines show on each machine.
+- [ ] DesignSystem.md's Messages pattern and screen regions; KeyBindings.md's Chat key; Multiplayer.md's authority table.
+
 ### Later
 
 - **Player names,** typed on the Character screen, filtered to the font's characters and sent at join.
@@ -674,13 +749,15 @@ The Character button arrives with Phase 7.
   - **`UserSettingsTests`:** recent hosts, and `firstRunDone` from older files.
   - **`ContentTests`:** display names for worlds and entries.
   - **`UiThemeTests`:** the new roles, and the fill-on-track pairs at 3:1.
-  - **`UiSkinWriterTests`:** the new pieces, the badges different shapes on one canvas.
+  - **`UiSkinWriterTests`:** the new pieces, the badges discs outlined in black.
+  - **The chat (Phase 12):** `ChatLog` and its presenter with fakes, the text filter, and the field's input handling.
   - **`UiContentTests`:** every new prefab themed, controls at least 12 UI px with navigation on; the title sprites excepted from "the skin or nothing".
   - **Layout:** the HUD's regions, the in-game menu's cards and every screen fitting 480 x 270 at every display in the Scale table.
 - **PlayMode,** with the in-process host and client in Testlands:
   - world bars, pips and cast bars on both machines, and a late joiner's;
   - slots agreeing, and a leaver's slot reused;
   - notices raised on each machine only;
+  - chat lines relayed with their slot, and party lines on each machine (Phase 12);
   - the in-game menu's confirmations and rosters;
   - a Character screen pick reaching the client;
   - joining through Play together, cancelling, the host-gone dialog, and hosting an older session.
@@ -691,3 +768,4 @@ The Character button arrives with Phase 7.
 
 1. **Phase 3, other players' damage popups.** Settled on 2026-11-10: all three, as the player's choice. The "Allies' damage numbers" preference reads Shown (the default), Smaller (at `Caption`, the ticks' size: Galmuri has nothing smaller, so there is no third size) or Hidden (Phase 3 notes).
 2. **Phase 11, the game's name and logo.** A placeholder made by a recipe from the name in Galmuri, doubled and outlined, or a logo drawn in Aseprite once the game is named?
+3. **Phase 12, the chat's place, size and fading.** How wide and tall is the box under the party frames at 480 x 270, and how long does a line stay before it fades?

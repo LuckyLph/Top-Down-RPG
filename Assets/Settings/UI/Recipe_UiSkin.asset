@@ -26,3 +26,6 @@ MonoBehaviour:
   hatchSpacing: 4
   tickLength: 3
   notchSize: 5
+  badgeSize: 5
+  badgeLargeSize: 16
+  badgeOutline: 1

@@ -372,6 +372,39 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The recent hosts (Docs/UiRevamp.md, Phase 9) are empty by default and in a file from before there were any; each
+    /// host joined goes first, once whatever its case, the oldest drops past five, and each change is one write read back
+    /// by the next settings.
+    /// </summary>
+    [Test]
+    public void RecentHosts_NewestFirst_FiveAtMost_AndEmptyFromAnOlderFile()
+    {
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"inputBindingOverrides\":\"\"}" }).RecentHosts, Is.Empty);
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        Assert.That(settings.RecentHosts, Is.Empty);
+
+        foreach (string host in new[] { "10.0.0.1", "10.0.0.2", "10.0.0.3", "10.0.0.4", "10.0.0.5" })
+        {
+            Assert.That(settings.AddRecentHost(host), Is.True);
+        }
+
+        Assert.That(settings.RecentHosts, Is.EqualTo(new[] { "10.0.0.5", "10.0.0.4", "10.0.0.3", "10.0.0.2", "10.0.0.1" }));
+        int writes = store.WriteCount;
+        settings.AddRecentHost("10.0.0.3");
+        Assert.That(settings.RecentHosts, Is.EqualTo(new[] { "10.0.0.3", "10.0.0.5", "10.0.0.4", "10.0.0.2", "10.0.0.1" }), "A host joined again goes first, once.");
+        Assert.That(store.WriteCount, Is.EqualTo(writes + 1));
+        settings.AddRecentHost("ana-desktop:7778");
+        settings.AddRecentHost("ANA-desktop:7778");
+        Assert.That(settings.RecentHosts, Is.EqualTo(new[] { "ANA-desktop:7778", "10.0.0.3", "10.0.0.5", "10.0.0.4", "10.0.0.2" }), "Five at most, the oldest dropped, a host's case ignored.");
+        Assert.That(settings.AddRecentHost("  "), Is.False, "An empty host changes nothing.");
+
+        Assert.That(new UserSettings(store).RecentHosts, Is.EqualTo(settings.RecentHosts));
+        UserSettings crowded = new(new MemorySaveStore { Contents = "{\"version\":1,\"recentHosts\":[\"a\",\"b\",\"A\",\"\",\"c\",\"d\",\"e\",\"f\"]}" });
+        Assert.That(crowded.RecentHosts, Is.EqualTo(new[] { "a", "b", "c", "d", "e" }), "A file holding more, repeats or blanks reads five distinct hosts.");
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

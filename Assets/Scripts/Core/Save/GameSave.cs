@@ -23,7 +23,6 @@ public sealed class GameSave
     private readonly HashSet<string> warned = new();
     private readonly HashSet<string> checkedNames = new();
     private bool legacyChecked;
-    private bool hostGoneNotice;
 
     /// <summary>
     /// Creates a save that reads and writes the files of <paramref name="saveFolder"/>, stamping each write with
@@ -107,8 +106,7 @@ public sealed class GameSave
     /// Writes <paramref name="data"/>, stamped with the time, to its file (<see cref="FileNameOf"/>); returns false when
     /// it names no session or host, or the store fails. Before the first write over a stored file this build cannot
     /// read, a copy of it is kept (<see cref="ISaveStore.KeepCopy"/>), with a warning naming it; when the copy cannot be
-    /// made, nothing is written. Writing a copy whose host is gone leaves a notice for the menu
-    /// (<see cref="TakeHostGoneNotice"/>). Each write records whether it failed (<see cref="LastWriteFailed"/>).
+    /// made, nothing is written. Each write records whether it failed (<see cref="LastWriteFailed"/>).
     /// </summary>
     public bool Write(GameSaveData data)
     {
@@ -138,28 +136,7 @@ public sealed class GameSave
 
         checkedNames.Add(name);
         data.Stamp(wallClock.UtcNow);
-        if (!store.Write(data.ToJson()))
-        {
-            return false;
-        }
-
-        if (data.IsCopy && data.HostGone)
-        {
-            hostGoneNotice = true;
-        }
-
-        return true;
-    }
-
-    /// <summary>
-    /// Whether a joined client's copy was written with its host gone since the last call, clearing it: the menu then
-    /// says that Continue carries on alone.
-    /// </summary>
-    public bool TakeHostGoneNotice()
-    {
-        bool notice = hostGoneNotice;
-        hostGoneNotice = false;
-        return notice;
+        return store.Write(data.ToJson());
     }
 
     /// <summary>

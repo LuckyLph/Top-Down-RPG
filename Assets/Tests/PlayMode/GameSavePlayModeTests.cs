@@ -96,27 +96,27 @@ public class GameSavePlayModeTests
 
     /// <summary>
     /// With no save, an old save of an earlier build (version 1, which held an area), ignored with its warning, or only a
-    /// copy of this machine's place in a host's session that may still be there, the main menu's Continue button is
-    /// disabled and not selected.
+    /// copy of this machine's place in a host's session that may still be there, the main menu's Continue button and its
+    /// line hide and New game is selected (Docs/UiRevamp.md, Phase 9).
     /// </summary>
     [UnityTest]
-    public IEnumerator MainMenu_WithoutAUsableSave_DisablesContinue()
+    public IEnumerator MainMenu_WithoutAUsableSave_HidesContinue()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveFolder());
-        yield return AssertContinueDisabled();
+        yield return AssertContinueHidden();
 
         MemorySaveFolder oldSave = new();
         oldSave.LegacyStore.Contents = "{\"version\":1,\"areaSceneGuid\":\"0\",\"spawnId\":\"start\"}";
         LogAssert.Expect(LogType.Warning, new Regex("The save file of an earlier build has format version 1"));
         yield return SceneBootTestHelper.BootIntoMainMenu(oldSave);
-        yield return AssertContinueDisabled();
+        yield return AssertContinueHidden();
 
         MemorySaveFolder copyOnly = new();
         GameSaveData copy = new(0d, new[] { new GameSaveData.Player("someone", "world", Vector2.zero) }, new GameSaveData.World[0]);
         copy.SetHost("a-host-session", false);
         copyOnly.Seed(copy);
         yield return SceneBootTestHelper.BootIntoMainMenu(copyOnly);
-        yield return AssertContinueDisabled();
+        yield return AssertContinueHidden();
     }
 
     /// <summary>
@@ -255,16 +255,17 @@ public class GameSavePlayModeTests
     }
 
     /// <summary>
-    /// Asserts the main menu's Continue button is disabled and not selected, a frame after the menu started.
+    /// Asserts the main menu's Continue button and its line hide and New game is selected, a frame after the menu started.
     /// </summary>
-    private static IEnumerator AssertContinueDisabled()
+    private static IEnumerator AssertContinueHidden()
     {
         MainMenuController menu = Object.FindAnyObjectByType<MainMenuController>();
         yield return null;
 
         Assert.That(menu.ContinueButton, Is.Not.Null, "The menu should have a Continue button assigned.");
-        Assert.That(menu.ContinueButton.interactable, Is.False);
-        Assert.That(EventSystem.current.currentSelectedGameObject, Is.Not.SameAs(menu.ContinueButton.gameObject));
+        Assert.That(menu.ContinueButton.gameObject.activeSelf, Is.False);
+        Assert.That(menu.ContinueLineText.gameObject.activeSelf, Is.False);
+        Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.NewGameButton.gameObject));
     }
 
     /// <summary>

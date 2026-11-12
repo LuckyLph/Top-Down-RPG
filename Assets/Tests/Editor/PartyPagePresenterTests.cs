@@ -184,15 +184,15 @@ public class PartyPagePresenterTests
 
         page.CopyButton(0).onClick.Invoke();
         Assert.That(clipboard.Text, Is.EqualTo("192.168.1.20:7777"));
-        Assert.That(page.CopyLabel(0), Is.EqualTo(PartyPagePresenter.CopiedLabel));
+        Assert.That(page.CopyLabel(0), Is.EqualTo(HostInvite.CopiedLabel));
 
         wallClock.Advance(1.1);
         presenter.Tick();
-        Assert.That(page.CopyLabel(0), Is.EqualTo(PartyPagePresenter.CopiedLabel));
+        Assert.That(page.CopyLabel(0), Is.EqualTo(HostInvite.CopiedLabel));
 
         wallClock.Advance(0.2);
         presenter.Tick();
-        Assert.That(page.CopyLabel(0), Is.EqualTo(PartyPagePresenter.CopyLabel));
+        Assert.That(page.CopyLabel(0), Is.EqualTo(HostInvite.CopyLabel));
     }
 
     /// <summary>

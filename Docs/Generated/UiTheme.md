@@ -66,9 +66,9 @@ Each pair of text role and background role a themed text uses, at the smallest s
 | TextOnControl | Player1 | Body | 6.61:1 | 4.50:1 |
 | TextMuted | Surface | Body | 5.56:1 | 4.50:1 |
 | TextMuted | SurfaceRaised | Body | 9.80:1 | 4.50:1 |
-| Placeholder | ControlNormal | Heading | 4.91:1 | 4.50:1 |
-| Placeholder | ControlHighlighted | Heading | 7.00:1 | 4.50:1 |
-| Placeholder | Accent (selected) | Heading | 5.12:1 | 4.50:1 |
+| Placeholder | ControlNormal | Body | 4.91:1 | 4.50:1 |
+| Placeholder | ControlHighlighted | Body | 7.00:1 | 4.50:1 |
+| Placeholder | Accent (selected) | Body | 5.12:1 | 4.50:1 |
 | Accent | Surface | Body | 7.44:1 | 4.50:1 |
 | Accent | SurfaceEmpty | Caption | 5.24:1 | 4.50:1 |
 | Accent | SurfaceRaised | Caption | 13.11:1 | 4.50:1 |

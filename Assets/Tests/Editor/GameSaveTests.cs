@@ -176,15 +176,12 @@ public class GameSaveTests
         Assert.That(save.Write(copy), Is.True);
         Assert.That(folder.Names(), Is.EqualTo(new[] { $"joined-{HostSession}.json" }));
         Assert.That(save.HasSave, Is.False, "A copy whose host may still be there is used only while joined to it.");
-        Assert.That(save.TakeHostGoneNotice(), Is.False);
         Assert.That(save.TryLoadCopy(HostSession, out GameSaveData stored), Is.True);
         Assert.That(stored.HostGone, Is.False);
 
         wallClock.Advance(5d);
         copy.SetHost(HostSession, true);
         Assert.That(save.Write(copy), Is.True);
-        Assert.That(save.TakeHostGoneNotice(), Is.True, "Writing a copy with its host gone leaves the menu a notice.");
-        Assert.That(save.TakeHostGoneNotice(), Is.False, "The notice is taken once.");
         Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True, "A copy whose host is gone is a save Continue loads.");
         Assert.That(latest.IsCopy && latest.HostGone, Is.True);
 

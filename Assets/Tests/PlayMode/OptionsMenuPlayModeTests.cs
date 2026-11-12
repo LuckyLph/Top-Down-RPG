@@ -37,7 +37,7 @@ public class OptionsMenuPlayModeTests
         yield return null;
 
         Assert.That(options.IsShown, Is.True);
-        Assert.That(menu.ButtonsPanel.activeSelf, Is.False);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.False);
         Assert.That(controller.CurrentCategory, Is.EqualTo(OptionsMenuController.Category.Accessibility));
         GameObject selected = EventSystem.current.currentSelectedGameObject;
         Assert.That(selected, Is.Not.Null);
@@ -55,7 +55,7 @@ public class OptionsMenuPlayModeTests
         yield return null;
 
         Assert.That(options.IsShown, Is.False);
-        Assert.That(menu.ButtonsPanel.activeSelf, Is.True);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.True);
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.OptionsButton.gameObject));
     }
 

@@ -278,6 +278,7 @@ Settled on Phase 7's previews, where the colour rows became chips on each part's
 - **`JoinAddress`** (`Core/Network`): parses and checks `host` or `host:port`.
 - **`NetworkSession.JoinAsync`** takes a port and ends cleanly when cancelled.
 - **`MenuNotice`:** why the menu was reached (host gone, lost while joining). `NetworkSessionLifecycle` leaves it, and the main menu takes it, replacing `GameSave.TakeHostGoneNotice`'s line.
+- **`IGameFlow` and `ISessionConnection`** (Phase 9): the scene flow and the network session as the main menu's session starter and `NetworkSessionLifecycle` see them, so their tests fake both. **`LoadingMessage`** (Phase 9): the line `LoadingLine` draws over the fader, cleared as each transition finishes.
 - **`GameSave`:**
   - `List()` returns a summary per save: id, `savedAt`, time played, the local player's world and place, and whether it is a joined copy;
   - `Delete(name)` keeps a `.bak` through a new `ISaveFolder.Delete`;
@@ -324,8 +325,8 @@ Settled on Phase 7's previews, where the colour rows became chips on each part's
   - new components: `RowChips`, `SwatchChip`, `SwatchPicker` and `ButtonIcon`.
 - **Main menu:**
   - `MainMenuController` keeps `ContinueGame`, `StartNewGame`, `HostGame` and `JoinGame` as entry points, since the PlayMode tests drive them. Their logic moves into a plain `MenuSessionStarter` that the new screens share.
-  - `PlayTogetherController` and `SavedGamesController`, with their views;
-  - new components: `Field`, `SessionCard`, `DialogNotice` (a `Dialog` variant with a message and one or two plain buttons) and `TitleView`;
+  - `PlayTogetherController` and `SavedGamesController`, with their views; `ContinueLine`, the line under Continue and Host and continue (Phase 9);
+  - new components: `Field` (Phase 12) and its `FieldControl` variant for the join field (Phase 9), `SessionCard`, `DialogNotice` (a `Dialog` variant with a message and one or two plain buttons), `InviteBlock` (Phase 9: the Party page's invite block, shared with Play together through `HostInvite`) and `TitleView`;
   - `LoadingLine`, on a canvas above the fader in `Main`. It is placed through the Main scope's auto-inject list, so Core stays free of TextMesh Pro.
 - **`NoticeLine`** gains wrapping to two lines.
 
@@ -810,26 +811,60 @@ The Character button arrived with Phase 7.
 
 ### Phase 9: the main menu and Play together
 
-- [ ] Previews of the menu, Play together, the connecting modal and the dialogs, signed off.
-- [ ] The left panel:
-  - [ ] Continue's line;
-  - [ ] looping;
-  - [ ] the version.
+- [x] Previews of the menu, Play together, the connecting modal and the dialogs, signed off.
+- [x] The left panel:
+  - [x] Continue's line;
+  - [x] looping;
+  - [x] the version.
   The logo is the game's name in `Display` until Phase 11.
-- [ ] `MenuSessionStarter`, with the controller's entry points kept.
-- [ ] Play together's host column, using `HostAddresses`.
-- [ ] Its join column:
-  - [ ] `JoinAddress` and the `Field` component;
-  - [ ] the recent hosts in `settings.json`.
-- [ ] The connecting modal with Cancel, and `JoinAsync` with a port and cancellation.
-- [ ] `LoadingLine` over the fader.
-- [ ] The error messages, and `NoticeLine` wrapping to two lines.
-- [ ] `MenuNotice` and `DialogNotice` for a host gone and a join lost.
-- [ ] PlayMode:
-  - [ ] joining through the screen with an in-process host;
-  - [ ] cancelling while connecting;
-  - [ ] the host-gone dialog.
-- [ ] KeyBindings.md's Main menu, Multiplayer.md's joining steps.
+- [x] `MenuSessionStarter`, with the controller's entry points kept.
+- [x] Play together's host column, using `HostAddresses` through the invite block it shares with the Party page.
+- [x] Its join column:
+  - [x] `JoinAddress` and the `Field` component's `FieldControl` variant;
+  - [x] the recent hosts in `settings.json`.
+- [x] The connecting modal with Cancel, and `JoinAsync` with a port and cancellation.
+- [x] `LoadingLine` over the fader.
+- [x] The error messages, and `NoticeLine` wrapping to two lines, a sentence a line.
+- [x] `MenuNotice` and `DialogNotice` for a host gone and a join lost.
+- [x] PlayMode:
+  - [x] joining through the screen with an in-process host;
+  - [x] cancelling while connecting;
+  - [x] the host-gone dialog.
+- [x] KeyBindings.md's Main menu, Multiplayer.md's joining steps.
+
+#### Phase 9 notes
+
+- **Settled with the user on 2026-11-12,** in one round of previews at 640 x 360 (x3) and 480 x 270 (x4), with sheets of every display in the Scale table at x2, composed in the gitignored `Recordings/UiRevamp/Phase9` by a script built on Phase 6's, 7's and 8's:
+  - **What the left panel stands on until Phase 11's title view:** `A`, the full-screen `PanelRaised` the menu already stood on, the panel itself a `Panel` in `Surface` so it shows on it; `B`, the Overworld's grass albedo tiled at one texel a UI px under the `Scrim`, which would have needed an exception to "the skin or nothing" a phase early. The user chose `A`.
+  - **Claude's calls, accepted:** no description lines under Play together's headers, the field's placeholder ("Host's address, like 192.168.1.20") carrying the hint; columns without frames, sharing the options screen's 472 UI px block; the join field in the control look, `Accent` while selected; recent hosts as their addresses alone, one press joining; the notice line a sentence a line, at most 360 UI px wide, so the timeout's two sentences take two lines at every size; the connecting dialog without the proposal's "Escape cancels." line; addresses with their port in the dialog and the errors, the host alone in "Joining …'s game"; the panel 192 wide with 176 UI px `Heading` buttons in three groups; the name in `Display` and `Text`; Continue's line wrapping only for a long place; a dialog's first button primary; IPv4 addresses and host names; and `JoinAsync` taking a port.
+  - **Once built,** a temporary tool, since removed, rendered the real menu in edit mode in each previewed state (`Phase9/engine`, each beside its preview in `compare_*`). It matched them once the join field's face, which kept the chat field's `SurfaceRaised` colour under its tint, was set white.
+- **Layout.** `MainMenu.unity`'s `MainMenuCanvas` holds the `Background` (a full-screen `PanelRaised`), the `Menu` (a `Panel` with a vertical layout: 8 UI px of padding, 2 between, its `Frame` out of the layout), the `Version`, the options and Character screens, `PlayTogether` and the `Dialog` (a `DialogNotice`), in that order.
+  - **The panel:** the name (`Display`, 19 tall), a 4 UI px gap, Continue (a `ButtonLarge`, 20 tall), its line (`TextMuted`, 13 tall, more for a line that wraps), New game, a gap, Play together, a gap, Character, Options and Quit: 200 UI px tall with a save and 163 without. `MainMenuController.Place` stands it 16 from the left, 192 wide and as tall as its contents, centred down the canvas on whole UI px, as the canvas changes size.
+  - **The version** is `Application.version` in `TextMuted`, its bottom right corner 8 UI px from the canvas's.
+  - **Play together** (`PlayTogether.prefab`): a full-screen `PanelRaised` holding the title, the `Host` and `Join` columns (vertical layouts, 2 apart), the `Notice` (a `NoticeLine`, 360 x 22, its lines at its foot), Back and the connecting `Dialog`. `PlayTogetherView.Place` stands the block from `floor((width - 472) / 2)`, the columns 232 wide and 8 apart from 28 UI px down, the notice line centred 28 up and Back 8 up, on whole UI px. The host column is its header, Host and continue, the Continue line, Host a new game, a 4 UI px gap and the invite block; the join column its header, the field, Join, a gap, "Recent" and five recent host buttons (`ButtonSecondary`).
+- **Components.**
+  - **`DialogNotice`,** a variant of `Dialog` (`DialogNoticeView`): its message wraps at 224 UI px, each sentence starting a line (`BySentence`); its confirm became the primary button (`ControlNormal`) and its Cancel the secondary; the box is 8 + lines x 11 + 8 + 16 + 8 UI px tall, rounded up to even, centred on whole UI px, and a lone button is centred.
+  - **`FieldControl`,** a variant of `Field` in the control look: its face has no `ThemedGraphic` but a colour tint over white (`ControlNormal`, `Accent` while selected), its frame `Border`, its text `TextOnControl` and its placeholder `Placeholder`, centred down its 16 UI px. Selecting it does not start the typing (`shouldActivateOnSelect` off), so the arrows pass over it; Submit or a click does, and Escape keeps what was typed.
+  - **`InviteBlock`** (`InviteBlockView`), cut from the Party page so both pages share it: "Friends join at", the port and the address rows, its Copy buttons and port anchored at its right edge so it fits the Party page's 144 UI px and Play together's 232. `HostInvite`, a plain class each page builds over its block, reads the addresses as it shows, copies "address:port" and says "Copied" for `HudSettings.MessageSeconds` of real time, the logic `PartyPagePresenter` held.
+- **Starting sessions.** `MenuSessionStarter` (Menu scope) holds what `MainMenuController`'s entry points did, over two new Core seams so its tests fake them: `IGameFlow` (`GameFlow`) and `ISessionConnection` (`NetworkSession`). A failure comes back as its sentence; the main menu shows one in its dialog with Back, Play together on its notice line.
+  - **Joining** connects through `NetworkSession.JoinAsync(host, port, timeout, token)`, which records `JoinedAddress` (`host:port`) and leaves no session when cancelled. Once connected, the host goes first among the recent hosts (`UserSettings.AddRecentHost`: five at most, the host alone on the default port), `LoadingMessage` (Main scope) shows "Joining 100.101.102.103's game…" until the transition finishes, and the joined game starts.
+  - **Refusals** now name their kind (`JoinApproval.OtherBuild`, `Full`): `build:<the host's version>` and `full:<players>`, so the client says "The host runs 0.1.0 and you run 0.1.1." and "… is full: 4 of 4 players." in its own words.
+  - **`MainMenuController`'s entry points** stay for the PlayMode tests: `HostGame` is Host and continue, and `JoinGame` opens Play together and joins `NetworkSettings.DefaultAddress` (127.0.0.1), where the in-process host listens.
+- **Play together's controller.** `PlayTogetherController` (Menu scope) opens the screen with the Continue line (`ContinueLine`: the display name of the entry nearest the local player's saved place, the session's game time, and the save's time as today's, yesterday's or a date), the addresses read now, the recent hosts and the field holding the newest; Back's Up and Down follow the column the selection was last in. The field takes only letters, digits, '.', '-', '_' and ':', up to 259 of them.
+  - **The connecting dialog** counts whole seconds on the wall clock against the connect timeout, and selects Cancel the tick after the join started.
+  - **TextMesh Pro's field** fires its submit both when Enter ends the typing and when the UI's Submit reaches it while it is not typing (which also starts the typing on its next update, selecting it again). So only a submit while typing joins, Cancel ignores a press in the tick its join started, and Escape while typing, or in the frame after, only stops the typing.
+- **Notices.** `MenuNotice` (Main scope) replaced `GameSave.TakeHostGoneNotice` and the status line: `NetworkSessionLifecycle` leaves the host gone, or lost while joining when the joined game's own transition still ran, for a client following a host, with `JoinedAddress`; the main menu takes it as it starts. Without a save to continue, the host-gone dialog says only "The host left the game." with Back.
+- **The joining line.** `LoadingLine` (Gameplay) sits on `Main`'s `TransitionCanvas`, its text a child drawn after the `Fade`, so it fades in and out with the black; the canvas gained a `UiPixelScale` and joined the Main scope's auto-inject objects.
+- **Co-op.** Nothing new is sent: the recent hosts stay in this machine's `settings.json`, and the refusals' new form is read only by the same build.
+- **Found on the way.**
+  - The menu already stood on a full-screen `PanelRaised`, not the camera's clear colour, as the previews' write-up first said.
+  - A world's chunk is 64 cells, which the tests' saved places first missed.
+- **Left as they are.** IPv6 addresses are not taken. The Continue line's time played is the session's game time, so a joined client's copy shows its host's.
+- **Tests.**
+  - `JoinAddressTests` (5, new), `ContinueLineTests` (3, new), `MenuSessionStarterTests` (9, new), `PlayTogetherControllerTests` (12, new), `NetworkSessionLifecycleTests` (6, new), `MainMenuControllerTests` (8, new) and `MainMenuLayoutTests` (1, new: the menu, Play together full with a two-line notice, and the dialog at every display size), over the fakes `FakeGameFlow` and `FakeSessionConnection`, `MenuTestRig` and `MainMenuTestScreen` (the scene's canvas copied into a parent of a chosen size).
+  - `PlayTogetherPlayModeTests` (2, new): joining an in-process host through the screen, with the dialog, the joining line until the fade in and the host remembered, then the host-gone dialog; and cancelling while connecting.
+  - `NetworkSessionPlayModeTests`: the host-gone dialog and Continue alone, the lost-while-joining dialog, the refusals' kinds and the joined address. `GameSavePlayModeTests`: Continue hidden without a usable save.
+  - `UiContentTests`: the three components and Main's loading line. `UserSettingsTests`: the recent hosts. `JoinApprovalTests`: the refusals' kinds. `GameSaveTests`, `PartyPagePresenterTests` and `GameMenuLayoutTests` follow the moved notice and invite block.
 
 ### Phase 10: saved games
 

@@ -11,9 +11,10 @@ using VContainer.Unity;
 /// gameplay scope's <see cref="IWorldSession"/>), behind a screen fade. A trip of the local player between worlds, or
 /// to a waystone as it respawns, is a transition too, flagged <see cref="IsTravelling"/>: a local fade only, which
 /// loads and unloads nothing itself and never stops game time. Runs one transition at a time and ignores requests made
-/// while one runs.
+/// while one runs. The main menu's session starter and the network session's lifecycle see it as an
+/// <see cref="IGameFlow"/>.
 /// </summary>
-public sealed class GameFlow
+public sealed class GameFlow : IGameFlow
 {
     private readonly SceneLoader sceneLoader;
     private readonly ScreenFader screenFader;

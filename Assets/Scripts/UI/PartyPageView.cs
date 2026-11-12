@@ -1,29 +1,19 @@
 using System;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
 /// The in-game menu's Party page (Docs/UiRevamp.md, Phase 6), shown in the menu's place online: titled "Party", a
-/// <see cref="PartyRowView"/> per player, for the host an invite block ("Friends join at", the port, and each address
-/// with its network's name and a Copy button, or a line saying there is none), and Back. Passive: the presenter fills
-/// it. Its Copy buttons and Back loop top to bottom. <see cref="Resized"/> is raised when the rows or addresses shown
-/// change, so the menu lays it out again.
+/// <see cref="PartyRowView"/> per player, for the host the invite block (<see cref="InviteBlockView"/>, shared with Play
+/// together since Phase 9), and Back. Passive: the presenter fills it. Its Copy buttons and Back loop top to bottom.
+/// <see cref="Resized"/> is raised when the rows or addresses shown change, so the menu lays it out again.
 /// </summary>
 [DisallowMultipleComponent]
 public class PartyPageView : MonoBehaviour
 {
     [SerializeField, Tooltip("The page's laid-out column, under its title.")] private RectTransform content;
     [SerializeField, Tooltip("A row per player there can be, top to bottom.")] private PartyRowView[] rows = new PartyRowView[0];
-    [SerializeField, Tooltip("The host's invite block.")] private GameObject invite;
-    [SerializeField] private TMP_Text port;
-    [SerializeField, Tooltip("The line shown when no address was found.")] private GameObject none;
-    [SerializeField, Tooltip("An address row per address there can be.")] private GameObject[] addressRows = new GameObject[0];
-    [SerializeField] private TMP_Text[] addresses = new TMP_Text[0];
-    [SerializeField] private TMP_Text[] networks = new TMP_Text[0];
-    [SerializeField] private Button[] copyButtons = new Button[0];
-    [SerializeField] private TMP_Text[] copyTexts = new TMP_Text[0];
+    [SerializeField, Tooltip("The host's invite block, an InviteBlock component.")] private InviteBlockView inviteBlock;
     [SerializeField] private Button backButton;
 
     private readonly Selectable[] looped = new Selectable[8];
@@ -36,26 +26,24 @@ public class PartyPageView : MonoBehaviour
     public RectTransform Box => (RectTransform)transform;
     public RectTransform Content => content;
     public int RowCount => rows != null ? rows.Length : 0;
-    public int AddressCapacity => addressRows != null ? addressRows.Length : 0;
+    public InviteBlockView Invite => inviteBlock;
     public Button BackButton => backButton;
-    internal bool IsInviteShown => invite != null && invite.activeSelf;
+    internal bool IsInviteShown => inviteBlock != null && inviteBlock.gameObject.activeSelf;
     internal int ShownAddresses => shownAddresses;
 
     /// <summary>
     /// The first control of the page: its first Copy button shown, else Back.
     /// </summary>
-    public Selectable FirstSelectable => shownAddresses > 0 ? copyButtons[0] : backButton;
+    public Selectable FirstSelectable => shownAddresses > 0 ? inviteBlock.CopyButton(0) : backButton;
 
     /// <summary>
-    /// Logs an error when a part is missing or the address arrays differ in length.
+    /// Logs an error when a part is missing.
     /// </summary>
     private void Awake()
     {
-        int count = AddressCapacity;
-        if (content == null || rows == null || rows.Length == 0 || invite == null || port == null || none == null || backButton == null
-            || addresses.Length != count || networks.Length != count || copyButtons.Length != count || copyTexts.Length != count)
+        if (content == null || rows == null || rows.Length == 0 || inviteBlock == null || backButton == null)
         {
-            Debug.LogError($"{name} needs its content, rows, invite block with its port, none line and as many addresses, networks and Copy buttons as address rows, and Back.", this);
+            Debug.LogError($"{name} needs its content, rows, invite block and Back.", this);
         }
     }
 
@@ -72,7 +60,7 @@ public class PartyPageView : MonoBehaviour
     /// </summary>
     public Button CopyButton(int index)
     {
-        return copyButtons[index];
+        return inviteBlock.CopyButton(index);
     }
 
     /// <summary>
@@ -96,29 +84,13 @@ public class PartyPageView : MonoBehaviour
     }
 
     /// <summary>
-    /// Shows the invite block with <paramref name="portText"/> and the first <see cref="AddressCapacity"/> of
-    /// <paramref name="hostAddresses"/>, each with its Copy button reading <paramref name="copyLabel"/>, or the none
-    /// line without any; then makes the Copy buttons and Back loop.
+    /// Shows the invite block, which <see cref="HostInvite"/> filled with <paramref name="addressCount"/> addresses, and
+    /// makes its Copy buttons and Back loop.
     /// </summary>
-    public void ShowInvite(IReadOnlyList<HostAddress> hostAddresses, string portText, string copyLabel)
+    public void ShowInvite(int addressCount)
     {
-        invite.SetActive(true);
-        port.text = portText;
-        int count = Mathf.Min(hostAddresses.Count, AddressCapacity);
-        for (int i = 0; i < AddressCapacity; i++)
-        {
-            bool shown = i < count;
-            addressRows[i].SetActive(shown);
-            if (shown)
-            {
-                addresses[i].text = hostAddresses[i].Address;
-                networks[i].text = hostAddresses[i].Network;
-                copyTexts[i].text = copyLabel;
-            }
-        }
-
-        none.SetActive(count == 0);
-        SetAddresses(count, true);
+        inviteBlock.gameObject.SetActive(true);
+        SetAddresses(addressCount, true);
     }
 
     /// <summary>
@@ -126,19 +98,8 @@ public class PartyPageView : MonoBehaviour
     /// </summary>
     public void HideInvite()
     {
-        invite.SetActive(false);
+        inviteBlock.gameObject.SetActive(false);
         SetAddresses(0, false);
-    }
-
-    /// <summary>
-    /// Shows <paramref name="label"/> on the Copy button of the address at <paramref name="index"/>.
-    /// </summary>
-    public void SetCopyLabel(int index, string label)
-    {
-        if (index >= 0 && index < AddressCapacity && copyTexts[index] != null)
-        {
-            copyTexts[index].text = label;
-        }
     }
 
     /// <summary>
@@ -146,7 +107,7 @@ public class PartyPageView : MonoBehaviour
     /// </summary>
     internal string CopyLabel(int index)
     {
-        return copyTexts[index].text;
+        return inviteBlock.CopyLabel(index);
     }
 
     /// <summary>
@@ -154,7 +115,7 @@ public class PartyPageView : MonoBehaviour
     /// </summary>
     internal (string address, string network) Address(int index)
     {
-        return (addresses[index].text, networks[index].text);
+        return inviteBlock.Address(index);
     }
 
     /// <summary>
@@ -166,7 +127,7 @@ public class PartyPageView : MonoBehaviour
         int looping = 0;
         for (int i = 0; i < count; i++)
         {
-            looped[looping++] = copyButtons[i];
+            looped[looping++] = inviteBlock.CopyButton(i);
         }
 
         looped[looping++] = backButton;

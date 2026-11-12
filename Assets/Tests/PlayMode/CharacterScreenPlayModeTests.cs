@@ -29,7 +29,7 @@ public class CharacterScreenPlayModeTests
         menu.OpenCharacter();
         yield return null;
         Assert.That(view.IsShown, Is.True);
-        Assert.That(menu.ButtonsPanel.activeSelf, Is.False);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.False);
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.Not.Null);
         Assert.That(EventSystem.current.currentSelectedGameObject.GetComponentInParent<RowChipsView>(), Is.Not.Null, "The first row's button is selected.");
         Assert.That(view.Preview.texture, Is.SameAs(view.Stage.Texture));
@@ -40,7 +40,7 @@ public class CharacterScreenPlayModeTests
         view.BackButton.onClick.Invoke();
         yield return null;
         Assert.That(view.IsShown, Is.False);
-        Assert.That(menu.ButtonsPanel.activeSelf, Is.True);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.True);
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.CharacterButton.gameObject));
     }
 

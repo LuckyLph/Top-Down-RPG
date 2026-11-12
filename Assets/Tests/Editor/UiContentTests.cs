@@ -13,8 +13,8 @@ using UnityEngine.UI;
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
 /// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
 /// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), the command
-/// bar is built from its components (Phase 2), and the options screen's rail item and description line are built from
-/// the skin and the notice line (Phase 8).
+/// bar is built from its components (Phase 2), the options screen's rail item and description line are built from
+/// the skin and the notice line (Phase 8), and the main menu's dialog, join field and invite block from theirs (Phase 9).
 /// </summary>
 public class UiContentTests
 {
@@ -556,6 +556,106 @@ public class UiContentTests
         }
 
         Assert.That(screens, Is.GreaterThanOrEqualTo(2), "The options prefab and the main menu's screen.");
+    }
+
+    /// <summary>
+    /// The main menu's components (Docs/UiRevamp.md, Phase 9):
+    /// <list type="bullet">
+    /// <item><c>DialogNotice</c>, a variant of the dialog with its view: a wrapping message centred at the top and two
+    /// plain buttons, the first primary (ControlNormal, its label read on it) and the second secondary;</item>
+    /// <item><c>FieldControl</c>, a variant of the field in the control look: no face of its own but its colour block
+    /// (ControlNormal, Accent while selected), a frame in Border, its text in TextOnControl and its placeholder in
+    /// Placeholder, centred down it; selecting it does not start the typing, and Escape keeps what was typed;</item>
+    /// <item><c>InviteBlock</c> with its view, shared by the in-game menu's Party page and Play together, its Copy buttons
+    /// and port anchored at its right edge.</item>
+    /// </list>
+    /// Play together, in its prefab and in the main menu, is built from them: its field a FieldControl, its dialog a
+    /// DialogNotice, its notice a notice line; the main menu's dialog is a DialogNotice; and Main's loading line is a themed
+    /// Body text in Text, read on Outline, taking no pointer.
+    /// </summary>
+    [Test]
+    public void TheMainMenusComponents_AreBuiltFromTheirBases()
+    {
+        GameObject dialog = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}DialogNotice.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(dialog)), Is.EqualTo($"{Components}Dialog.prefab"), "A variant of the dialog.");
+        DialogNoticeView notice = dialog.GetComponent<DialogNoticeView>();
+        Assert.That(notice, Is.Not.Null);
+        Assert.That(notice.PrimaryButton.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlNormal), "The first button is primary.");
+        Assert.That(notice.PrimaryButton.GetComponentInChildren<ThemedText>().Background, Is.EqualTo(UiColour.ControlNormal));
+        Assert.That(notice.SecondaryButton.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlSecondary));
+        TMP_Text message = dialog.transform.Find("Box/Message").GetComponent<TMP_Text>();
+        Assert.That(message.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal));
+        Assert.That(message.alignment, Is.EqualTo(TextAlignmentOptions.Top));
+
+        GameObject fieldComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}FieldControl.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(fieldComponent)), Is.EqualTo($"{Components}Field.prefab"), "A variant of the field.");
+        TMP_InputField field = fieldComponent.GetComponent<TMP_InputField>();
+        Assert.That(fieldComponent.GetComponent<ThemedGraphic>(), Is.Null, "Its face is its colour block's.");
+        Assert.That(field.transition, Is.EqualTo(Selectable.Transition.ColorTint));
+        Assert.That(((Image)field.targetGraphic).color, Is.EqualTo(Color.white));
+        Assert.That(fieldComponent.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlNormal));
+        Assert.That(fieldComponent.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(field.textComponent.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextOnControl));
+        Assert.That(field.placeholder.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Placeholder));
+        Assert.That(field.textComponent.alignment, Is.EqualTo(TextAlignmentOptions.Left));
+        Assert.That(field.shouldActivateOnSelect, Is.False, "Arrows move over it; Submit or a click starts the typing.");
+        Assert.That(field.restoreOriginalTextOnEscape, Is.False);
+
+        GameObject invite = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}InviteBlock.prefab");
+        InviteBlockView block = invite.GetComponent<InviteBlockView>();
+        Assert.That(block.AddressCapacity, Is.EqualTo(HostAddresses.MaxShown));
+        for (int i = 0; i < block.AddressCapacity; i++)
+        {
+            Assert.That(((RectTransform)block.CopyButton(i).transform).anchorMin, Is.EqualTo(Vector2.one), "Copy keeps to the block's right edge at any width.");
+        }
+
+        Assert.That(((RectTransform)invite.transform.Find("Header/Port")).anchorMin, Is.EqualTo(Vector2.one));
+        foreach ((string where, PartyPageView page) in All<PartyPageView>())
+        {
+            Assert.That(ComesFrom(page.Invite.gameObject, $"{Components}InviteBlock.prefab"), Is.True, $"{where}'s invite block.");
+        }
+
+        int screens = 0;
+        foreach ((string where, PlayTogetherView together) in All<PlayTogetherView>())
+        {
+            screens++;
+            Assert.That(ComesFrom(together.Field.gameObject, $"{Components}FieldControl.prefab"), Is.True, $"{where}'s field.");
+            Assert.That(ComesFrom(together.Dialog.gameObject, $"{Components}DialogNotice.prefab"), Is.True, $"{where}'s dialog.");
+            Assert.That(ComesFrom(together.Notice.gameObject, $"{Components}NoticeLine.prefab"), Is.True, $"{where}'s notice line.");
+            Assert.That(ComesFrom(together.Invite.gameObject, $"{Components}InviteBlock.prefab"), Is.True, $"{where}'s invite block.");
+        }
+
+        Assert.That(screens, Is.EqualTo(2), "The prefab and the main menu's screen.");
+        foreach ((string where, MainMenuController menu) in All<MainMenuController>())
+        {
+            Assert.That(ComesFrom(new SerializedObject(menu).FindProperty("dialog").objectReferenceValue, $"{Components}DialogNotice.prefab"), Is.True, $"{where}'s dialog.");
+        }
+
+        UnityEngine.SceneManagement.Scene main = EditorSceneManager.OpenScene("Assets/Scenes/Main.unity", OpenSceneMode.Additive);
+        try
+        {
+            LoadingLine loading = null;
+            foreach (GameObject root in main.GetRootGameObjects())
+            {
+                if (loading == null)
+                {
+                    loading = root.GetComponentInChildren<LoadingLine>(true);
+                }
+            }
+
+            Assert.That(loading, Is.Not.Null, "Main holds the loading line.");
+            TMP_Text line = (TMP_Text)new SerializedObject(loading).FindProperty("line").objectReferenceValue;
+            ThemedText themed = line.GetComponent<ThemedText>();
+            Assert.That(themed.Theme, Is.EqualTo(theme));
+            Assert.That(themed.Colour, Is.EqualTo(UiColour.Text));
+            Assert.That(themed.Background, Is.EqualTo(UiColour.Outline));
+            Assert.That(line.raycastTarget, Is.False);
+            Assert.That(loading.GetComponent<UiPixelScale>(), Is.Not.Null, "Its canvas keeps the UI scale.");
+        }
+        finally
+        {
+            EditorSceneManager.CloseScene(main, true);
+        }
     }
 
     /// <summary>

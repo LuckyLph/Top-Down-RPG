@@ -9,7 +9,7 @@ using VContainer;
 /// its colour choices (Docs/PlayerCharacter.md, Phase 5), the option picked for each of its part slots (Phase 6), the
 /// UI size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), how
 /// allies' popups show (Docs/UiRevamp.md, Phase 3), whether the chat shows timestamps and where its window was moved
-/// (Phase 12), and this install's player id
+/// (Phase 12), the hosts joined last (Phase 9), and this install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -18,6 +18,7 @@ using VContainer;
 public sealed class UserSettings
 {
     public const string FileName = "settings.json";
+    public const int MaxRecentHosts = 5;
 
     private readonly ISaveStore store;
     private string inputBindingOverrides = string.Empty;
@@ -31,6 +32,7 @@ public sealed class UserSettings
     private AllyPopups allyPopups;
     private bool chatTimestamps;
     private ChatWindowPlace chatWindow;
+    private readonly List<string> recentHosts = new();
     private bool isReadOnly;
 
     /// <summary>
@@ -269,6 +271,35 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// The hosts this machine joined last, newest first, at most <see cref="MaxRecentHosts"/> (Docs/UiRevamp.md,
+    /// Phase 9): each as Play together shows it, the host alone on the default port, else <c>host:port</c>.
+    /// </summary>
+    public IReadOnlyList<string> RecentHosts => recentHosts;
+
+    /// <summary>
+    /// Puts <paramref name="host"/> first among the recent hosts, taking it from where it stood (whatever its case) and
+    /// dropping the oldest past <see cref="MaxRecentHosts"/>, and writes the file unless it came from a newer build.
+    /// Returns whether it was written; nothing changes for an empty host.
+    /// </summary>
+    public bool AddRecentHost(string host)
+    {
+        string kept = host?.Trim() ?? string.Empty;
+        if (kept.Length == 0)
+        {
+            return false;
+        }
+
+        recentHosts.RemoveAll(existing => string.Equals(existing, kept, StringComparison.OrdinalIgnoreCase));
+        recentHosts.Insert(0, kept);
+        if (recentHosts.Count > MaxRecentHosts)
+        {
+            recentHosts.RemoveRange(MaxRecentHosts, recentHosts.Count - MaxRecentHosts);
+        }
+
+        return Write();
+    }
+
+    /// <summary>
     /// Keeps <paramref name="overrides"/> and writes the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     public bool SetInputBindingOverrides(string overrides)
@@ -479,7 +510,7 @@ public sealed class UserSettings
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups, chatTimestamps, chatWindow).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups, chatTimestamps, chatWindow, recentHosts).ToJson());
     }
 
     /// <summary>
@@ -534,6 +565,15 @@ public sealed class UserSettings
             if (pick.Slot.Length > 0 && pick.Part.Length > 0 && CharacterPart(pick.Slot).Length == 0)
             {
                 characterParts.Add(pick);
+            }
+        }
+
+        foreach (string host in data.RecentHosts)
+        {
+            string kept = host?.Trim() ?? string.Empty;
+            if (kept.Length > 0 && recentHosts.Count < MaxRecentHosts && !recentHosts.Exists(existing => string.Equals(existing, kept, StringComparison.OrdinalIgnoreCase)))
+            {
+                recentHosts.Add(kept);
             }
         }
     }

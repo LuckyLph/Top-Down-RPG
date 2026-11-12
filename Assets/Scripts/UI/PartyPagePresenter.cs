@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -13,18 +12,14 @@ using VContainer.Unity;
 /// <item>"Joining" while the player's machine is still loading, "In another world" while <see cref="PlayerWorlds"/> puts it
 /// in another world than the local player, "Down" while it is dead, and otherwise its health.</item>
 /// </list>
-/// For the host it also shows the addresses friends join at (<see cref="HostAddresses"/>, read as the page opens) with
-/// the port; a Copy button puts "address:port" on the clipboard and reads "Copied" for
-/// <see cref="HudSettings.MessageSeconds"/> of real time. It polls health, which a client's copies change without events;
+/// For the host it also shows the addresses friends join at, read as the page opens, with Copy (<see cref="HostInvite"/>,
+/// shared with Play together since Phase 9). It polls health, which a client's copies change without events;
 /// <see cref="Tick"/> allocates nothing.
 /// </summary>
 public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
 {
     public const string You = "You";
     public const string Host = "Host";
-    public const string CopyLabel = "Copy";
-    public const string CopiedLabel = "Copied";
-    public const string PortFormat = "port {0}";
     public const int HostSlot = 1;
 
     private readonly PartyPageView view;
@@ -33,15 +28,8 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
     private readonly PlayerWorlds playerWorlds;
     private readonly IClock clock;
     private readonly ISessionStatus session;
-    private readonly HostAddresses hostAddresses;
-    private readonly IClipboard clipboard;
-    private readonly IWallClock wallClock;
-    private readonly HudSettings settings;
+    private readonly HostInvite invite;
     private readonly PartyMember[] order = new PartyMember[PlayerSlots.Count];
-    private readonly List<HostAddress> addresses = new();
-    private string portText = string.Empty;
-    private int copied = -1;
-    private DateTime copiedUntil;
     private bool started;
 
     /// <summary>
@@ -66,10 +54,7 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
         this.playerWorlds = playerWorlds;
         this.clock = clock;
         this.session = session;
-        this.hostAddresses = hostAddresses;
-        this.clipboard = clipboard;
-        this.wallClock = wallClock;
-        this.settings = settings;
+        invite = view != null ? new HostInvite(view.Invite, hostAddresses, clipboard, wallClock, settings) : null;
     }
 
     public bool IsOpen { get; private set; }
@@ -80,7 +65,7 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
     internal int ShownCount { get; private set; }
 
     /// <summary>
-    /// Follows the registry, builds the port's text and wires the Copy buttons.
+    /// Follows the registry and readies the invite block.
     /// </summary>
     public void Start()
     {
@@ -91,12 +76,7 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
 
         started = true;
         roster.Start();
-        portText = string.Format(PortFormat, hostAddresses.Port);
-        for (int i = 0; i < view.AddressCapacity; i++)
-        {
-            int index = i;
-            view.CopyButton(i).onClick.AddListener(() => Copy(index));
-        }
+        invite.Start();
     }
 
     /// <summary>
@@ -125,15 +105,13 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
         }
 
         IsOpen = true;
-        copied = -1;
         if (session.IsActive && session.IsHost)
         {
-            hostAddresses.Read(addresses);
-            view.ShowInvite(addresses, portText, CopyLabel);
+            view.ShowInvite(invite.Show());
         }
         else
         {
-            addresses.Clear();
+            invite.Hide();
             view.HideInvite();
         }
 
@@ -146,7 +124,7 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
     public void Close()
     {
         IsOpen = false;
-        ResetCopied();
+        invite?.Hide();
     }
 
     /// <summary>
@@ -160,27 +138,7 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
         }
 
         Refresh();
-        if (copied >= 0 && wallClock.UtcNow >= copiedUntil)
-        {
-            ResetCopied();
-        }
-    }
-
-    /// <summary>
-    /// Puts "address:port" of the address at <paramref name="index"/> on the clipboard and shows "Copied" on its button.
-    /// </summary>
-    internal void Copy(int index)
-    {
-        if (!IsOpen || index < 0 || index >= addresses.Count)
-        {
-            return;
-        }
-
-        ResetCopied();
-        clipboard.Copy($"{addresses[index].Address}:{hostAddresses.Port}");
-        view.SetCopyLabel(index, CopiedLabel);
-        copied = index;
-        copiedUntil = wallClock.UtcNow + TimeSpan.FromSeconds(settings.MessageSeconds);
+        invite.Tick();
     }
 
     /// <summary>
@@ -220,17 +178,5 @@ public sealed class PartyPagePresenter : IStartable, ITickable, IDisposable
         }
 
         Array.Clear(order, 0, order.Length);
-    }
-
-    /// <summary>
-    /// Puts the copied button's label back.
-    /// </summary>
-    private void ResetCopied()
-    {
-        if (copied >= 0)
-        {
-            view.SetCopyLabel(copied, CopyLabel);
-            copied = -1;
-        }
     }
 }

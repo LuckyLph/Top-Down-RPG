@@ -17,7 +17,7 @@ using Object = UnityEngine.Object;
 /// home chunk that is; before unloading a chunk it releases it and waits until the host has hidden that chunk's objects
 /// from it. The host keeps every chunk a client holds.
 /// </summary>
-public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IPlayerIdSource, IClientVisibility, INetworkClock, IHostLink, IDisposable
+public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, IClientReadiness, IChunkHandshake, ISessionStatus, IPlayerIdSource, IClientVisibility, INetworkClock, IHostLink, ISessionConnection, IDisposable
 {
     public const string ClientJoinedMessage = "TopDownRPG.ClientJoined";
     public const string ChunkReadyMessage = "TopDownRPG.ChunkReady";
@@ -93,6 +93,12 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     public string JoinRefusal { get; private set; }
 
     /// <summary>
+    /// The address of the last join, <c>host:port</c> (Docs/UiRevamp.md, Phase 9), which the session's lifecycle
+    /// names when the connection is lost; empty before any.
+    /// </summary>
+    public string JoinedAddress { get; private set; } = string.Empty;
+
+    /// <summary>
     /// The host's network time in seconds (a client's estimate of it); zero outside a session.
     /// </summary>
     public double ServerTime => networkManager.IsListening ? networkManager.ServerTime.Time : 0d;
@@ -128,22 +134,23 @@ public sealed class NetworkSession : IGameAuthority, INetworkObjectSpawner, ICli
     }
 
     /// <summary>
-    /// Connects as a client to <paramref name="address"/> (the default address when blank), sending this build's
-    /// version and this install's player id, and waits up to <paramref name="timeoutSeconds"/> of real time for the
-    /// connection. Returns false at once when a session runs or the client cannot start; on a refusal, disconnect or
-    /// timeout it records any refusal in <see cref="JoinRefusal"/>, shuts down and returns false; on cancellation it
-    /// shuts down and rethrows.
+    /// Connects as a client to <paramref name="host"/> on <paramref name="port"/> (Docs/UiRevamp.md, Phase 9),
+    /// sending this build's version and this install's player id, and waits up to <paramref name="timeoutSeconds"/> of
+    /// real time for the connection. Returns false at once when a session runs, the host is blank or the client cannot
+    /// start; on a refusal, disconnect or timeout it records any refusal in <see cref="JoinRefusal"/>, shuts down and
+    /// returns false; on cancellation it shuts down and rethrows, leaving no session behind.
     /// </summary>
-    public async Awaitable<bool> JoinAsync(string address, float timeoutSeconds, CancellationToken cancellation)
+    public async Awaitable<bool> JoinAsync(string host, ushort port, float timeoutSeconds, CancellationToken cancellation)
     {
-        if (IsActive || transport == null)
+        if (IsActive || transport == null || string.IsNullOrWhiteSpace(host))
         {
             return false;
         }
 
         ResetSessionState();
-        string hostAddress = string.IsNullOrWhiteSpace(address) ? settings.DefaultAddress : address.Trim();
-        transport.SetConnectionData(hostAddress, settings.Port);
+        string hostAddress = host.Trim();
+        JoinedAddress = new JoinAddress(hostAddress, port).ToString();
+        transport.SetConnectionData(hostAddress, port);
         networkManager.NetworkConfig.ConnectionData = JoinApproval.CreatePayload(Application.version, LocalPlayerId);
         if (!networkManager.StartClient())
         {

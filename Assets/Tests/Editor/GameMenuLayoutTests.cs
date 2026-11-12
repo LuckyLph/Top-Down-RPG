@@ -82,7 +82,7 @@ public class GameMenuLayoutTests
         }
 
         party.SetRowCount(party.RowCount);
-        party.ShowInvite(new[] { new HostAddress("100.101.102.103", HostAddresses.HomeNetwork), new HostAddress("100.101.102.104", HostAddresses.Tailscale) }, "port 7777", PartyPagePresenter.CopyLabel);
+        party.ShowInvite(party.Invite.Show(new[] { new HostAddress("100.101.102.103", HostAddresses.HomeNetwork), new HostAddress("100.101.102.104", HostAddresses.Tailscale) }, "port 7777", HostInvite.CopyLabel));
         view.ControlsPage.SetChatShown(true);
 
         string at = $"{width} x {height}";

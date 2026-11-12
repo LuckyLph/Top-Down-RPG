@@ -7,7 +7,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "TopDownRPG/Network Settings", fileName = "NetworkSettings")]
 public class NetworkSettings : ScriptableObject
 {
-    [SerializeField, Tooltip("Address a client connects to when the join field is left empty.")]
+    [SerializeField, Tooltip("Address the main menu's JoinGame entry point joins (a host on this machine), and the host's own connection address.")]
     private string defaultAddress = "127.0.0.1";
 
     [SerializeField, Tooltip("Address the host listens on. 0.0.0.0 accepts connections from the local network.")]

@@ -159,6 +159,7 @@ public class NetworkGameMenuPlayModeTests
         clientController = new GameMenuController(
             clientView,
             gameplay.Resolve<OptionsMenuController>(),
+            gameplay.Resolve<CharacterScreenController>(),
             clientParty,
             new MenuStack(new NoMenuInput()),
             SceneBootTestHelper.ResolveFromMain<GameplayInputGate>(),

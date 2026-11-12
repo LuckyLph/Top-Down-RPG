@@ -19,6 +19,7 @@ public class UiContentTests
 {
     private static readonly string[] PrefabFolders = { "Assets/Prefabs/UI", "Assets/Prefabs/Mobs", "Assets/Prefabs/Player" };
     private const string Components = "Assets/Prefabs/UI/Components/";
+    private const string IconsFolder = "Assets/Sprites/UI/Icons";
 
     private readonly List<(string where, GameObject root)> roots = new();
     private readonly List<UnityEngine.SceneManagement.Scene> opened = new();
@@ -223,7 +224,9 @@ public class UiContentTests
     }
 
     /// <summary>
-    /// Every UI image draws a sprite of the skin (Assets/Sprites/UI/Skin) or none: the views give icons at runtime.
+    /// Every UI image draws a sprite of the skin (Assets/Sprites/UI/Skin), one of the licensed icons
+    /// (Assets/Sprites/UI/Icons, the Character screen's turn arrows, Docs/UiRevamp.md, Phase 7) or none: the views give
+    /// the other icons at runtime.
     /// </summary>
     [Test]
     public void EveryImage_DrawsTheSkinOrNothing()
@@ -232,13 +235,27 @@ public class UiContentTests
         foreach ((string where, Image image) in All<Image>())
         {
             string sprite = image.sprite != null ? AssetDatabase.GetAssetPath(image.sprite) : null;
-            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/"))
+            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/") && !sprite.StartsWith(IconsFolder + "/"))
             {
                 problems.Add($"{where}: {Path(image.transform)} draws {sprite}.");
             }
         }
 
         Assert.That(problems, Is.Empty, string.Join("\n", problems));
+    }
+
+    /// <summary>
+    /// The licensed icons (Assets/Sprites/UI/Icons, Docs/UiRevamp.md, Phase 7) keep their licence beside them:
+    /// Pixelarticons' MIT notice, which the art rule's exception for licensed UI icons asks for.
+    /// </summary>
+    [Test]
+    public void TheLicensedIcons_KeepTheirLicenceBesideThem()
+    {
+        string[] icons = System.IO.Directory.GetFiles(IconsFolder, "*.png");
+        string licence = System.IO.Path.Combine(IconsFolder, "Pixelarticons - MIT.txt");
+        Assert.That(icons, Is.Not.Empty);
+        Assert.That(System.IO.File.Exists(licence), Is.True);
+        Assert.That(System.IO.File.ReadAllText(licence), Does.Contain("Copyright (c) 2019 Gerrit Halfmann"));
     }
 
     /// <summary>
@@ -450,7 +467,6 @@ public class UiContentTests
         KeyBindingRowView view = row.GetComponent<KeyBindingRowView>();
         Image mark = view.ToggleMark;
         Assert.That(mark, Is.Not.Null);
-        Assert.That(view.Swatch, Is.Null);
         Assert.That(mark.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Check))));
         Assert.That(mark.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
         Assert.That(mark.enabled, Is.False, "Unmarked until the row shows its preference on.");

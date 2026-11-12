@@ -30,6 +30,9 @@ public class GameMenuControllerTests
     private FakeSessionStatus session;
     private MenuStack menus;
     private OptionsMenuController options;
+    private CharacterScreenView characterView;
+    private FakeCharacterPreview preview;
+    private CharacterScreenController character;
     private UiScaleSettings scaleSettings;
     private PlayerRegistry players;
     private LocalPlayerTracker localPlayer;
@@ -66,6 +69,10 @@ public class GameMenuControllerTests
         scaleSettings = UiScaleSettings.Create();
         options = new OptionsMenuController(optionsView, bindings, menus, new UISelection(null), settings, new UiScale(scaleSettings, settings));
         options.Start();
+        characterView = canvas.GetComponentInChildren<CharacterScreenView>(true);
+        preview = new FakeCharacterPreview();
+        character = new CharacterScreenController(characterView, preview, menus, new UISelection(null), settings);
+        character.Start();
         players = new PlayerRegistry();
         localPlayer = new LocalPlayerTracker();
         wallClock = new ManualWallClock();
@@ -76,7 +83,7 @@ public class GameMenuControllerTests
         party.Start();
         controls = new ControlsPagePresenter(menuView.ControlsPage, bindings);
         controls.Start();
-        controller = new GameMenuController(menuView, options, party, menus, inputGate, timeFreeze, gameFlow, session, new UISelection(null), saving, exit, players, localPlayer, wallClock, hud);
+        controller = new GameMenuController(menuView, options, character, party, menus, inputGate, timeFreeze, gameFlow, session, new UISelection(null), saving, exit, players, localPlayer, wallClock, hud);
         controller.Start();
     }
 
@@ -90,6 +97,7 @@ public class GameMenuControllerTests
         controller.Dispose();
         controls.Dispose();
         party.Dispose();
+        character.Dispose();
         options.Dispose();
         bindings.Dispose();
         playerInput.Dispose();
@@ -199,12 +207,13 @@ public class GameMenuControllerTests
         Assert.That(menuView.ResumeButton.navigation.mode, Is.EqualTo(Navigation.Mode.Explicit));
         Assert.That(menuView.ResumeButton.navigation.selectOnUp, Is.EqualTo(menuView.QuitButton));
         Assert.That(menuView.QuitButton.navigation.selectOnDown, Is.EqualTo(menuView.ResumeButton));
-        Assert.That(menuView.ResumeButton.navigation.selectOnDown, Is.EqualTo(menuView.ControlsButton), "Party is hidden offline.");
+        Assert.That(menuView.ResumeButton.navigation.selectOnDown, Is.EqualTo(menuView.CharacterButton), "Character comes after Resume.");
+        Assert.That(menuView.CharacterButton.navigation.selectOnDown, Is.EqualTo(menuView.ControlsButton), "Party is hidden offline.");
         controller.Close();
 
         session.IsActive = true;
         TickWith(menu: true);
-        Assert.That(menuView.ResumeButton.navigation.selectOnDown, Is.EqualTo(menuView.PartyButton));
+        Assert.That(menuView.CharacterButton.navigation.selectOnDown, Is.EqualTo(menuView.PartyButton));
         Assert.That(menuView.OptionsButton.navigation.selectOnDown, Is.EqualTo(menuView.LeaveButton), "Save game is hidden joined.");
     }
 

@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Passive in-game menu (Docs/UiRevamp.md, Phase 6): one raised panel at the centre of the space between the notice band
-/// and the command bar, holding its title ("Paused" or "Menu") and a column of buttons, Resume, Party, Controls,
+/// and the command bar, holding its title ("Paused" or "Menu") and a column of buttons, Resume, Character, Party, Controls,
 /// Options, Save game, Leave game and Quit to desktop, looping; in its place the Party page or the Controls page; a
 /// scrim behind it all, dimming the game only while the game is paused; and a confirmation (question, confirm and
 /// cancel). The component stays on an active object and shows or hides its panel. Whichever page shows is laid out and
@@ -35,6 +35,7 @@ public class GameMenuView : MonoBehaviour
     [SerializeField, Tooltip("The column of buttons inside it.")] private RectTransform buttons;
     [SerializeField] private TMP_Text title;
     [SerializeField] private Button resumeButton;
+    [SerializeField] private Button characterButton;
     [SerializeField] private Button partyButton;
     [SerializeField] private Button controlsButton;
     [SerializeField] private Button optionsButton;
@@ -54,6 +55,7 @@ public class GameMenuView : MonoBehaviour
     private Page shownPage;
 
     public Button ResumeButton => resumeButton;
+    public Button CharacterButton => characterButton;
     public Button PartyButton => partyButton;
     public Button ControlsButton => controlsButton;
     public Button OptionsButton => optionsButton;
@@ -79,7 +81,7 @@ public class GameMenuView : MonoBehaviour
     private void Awake()
     {
         if (panel == null || scrim == null || menuBox == null || buttons == null || title == null || resumeButton == null
-            || partyButton == null || controlsButton == null || optionsButton == null || saveButton == null || saveText == null
+            || characterButton == null || partyButton == null || controlsButton == null || optionsButton == null || saveButton == null || saveText == null
             || leaveButton == null || quitButton == null || partyPage == null || controlsPage == null || confirmPanel == null
             || confirmText == null || confirmYesButton == null || confirmYesText == null || confirmNoButton == null)
         {
@@ -177,6 +179,7 @@ public class GameMenuView : MonoBehaviour
 
         int count = 0;
         Add(resumeButton, ref count);
+        Add(characterButton, ref count);
         Add(partyButton, ref count);
         Add(controlsButton, ref count);
         Add(optionsButton, ref count);

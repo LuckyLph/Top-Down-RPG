@@ -4,7 +4,8 @@ using UnityEngine.UI;
 using VContainer;
 
 /// <summary>
-/// The main menu's buttons: new game, continue the latest save, host, join an address, options and quit. Every session
+/// The main menu's buttons: new game, continue the latest save, host, join an address, Character (the Character screen,
+/// Docs/UiRevamp.md, Phase 7), options and quit. Every session
 /// runs in seamless worlds (Docs/WorldStreaming.md) and has a save file of its own (Docs/KnownGaps.md, Phase 5): New
 /// Game starts a new session and enters the starting world's entry; Continue, and Host Game when there is a save,
 /// continue the latest (<see cref="GameSave.TryLoadLatest"/>), the local player starting at its saved place
@@ -22,6 +23,7 @@ public class MainMenuController : MonoBehaviour
     [SerializeField] private TMP_InputField joinAddressField;
     [SerializeField] private TMP_Text statusText;
     [SerializeField] private GameObject buttonsPanel;
+    [SerializeField] private Button characterButton;
     [SerializeField] private Button optionsButton;
 
     private GameFlow gameFlow;
@@ -30,17 +32,19 @@ public class MainMenuController : MonoBehaviour
     private SessionSave sessionSave;
     private PlayerStarts playerStarts;
     private OptionsMenuController options;
+    private CharacterScreenController character;
     private UISelection selection;
     private bool isJoining;
 
     internal Button ContinueButton => continueButton;
     internal string Status => statusText != null ? statusText.text : string.Empty;
     internal Button OptionsButton => optionsButton;
+    internal Button CharacterButton => characterButton;
     internal GameObject ButtonsPanel => buttonsPanel;
 
     /// <summary>
     /// Receives the scene flow, network session, save, the session's saved state and where players start, the options
-    /// screen and the UI selection services.
+    /// and Character screens and the UI selection services.
     /// </summary>
     [Inject]
     public void Construct(
@@ -50,6 +54,7 @@ public class MainMenuController : MonoBehaviour
         SessionSave savedSession,
         PlayerStarts starts,
         OptionsMenuController optionsMenu,
+        CharacterScreenController characterScreen,
         UISelection uiSelection)
     {
         gameFlow = flow;
@@ -58,11 +63,12 @@ public class MainMenuController : MonoBehaviour
         sessionSave = savedSession;
         playerStarts = starts;
         options = optionsMenu;
+        character = characterScreen;
         selection = uiSelection;
     }
 
     /// <summary>
-    /// Logs an error when the Continue button, the buttons panel or the Options button is missing.
+    /// Logs an error when the Continue button, the buttons panel, the Character button or the Options button is missing.
     /// </summary>
     private void Awake()
     {
@@ -71,9 +77,9 @@ public class MainMenuController : MonoBehaviour
             Debug.LogError($"{nameof(MainMenuController)} has no Continue button assigned.", this);
         }
 
-        if (buttonsPanel == null || optionsButton == null)
+        if (buttonsPanel == null || characterButton == null || optionsButton == null)
         {
-            Debug.LogError($"{nameof(MainMenuController)} needs its buttons panel and Options button assigned.", this);
+            Debug.LogError($"{nameof(MainMenuController)} needs its buttons panel, Character button and Options button assigned.", this);
         }
     }
 
@@ -268,6 +274,33 @@ public class MainMenuController : MonoBehaviour
         if (selection != null)
         {
             selection.Select(optionsButton);
+        }
+    }
+
+    /// <summary>
+    /// Swaps the menu buttons for the Character screen, unless a transition runs; they come back, with Character
+    /// selected, when it closes.
+    /// </summary>
+    public void OpenCharacter()
+    {
+        if (character == null || gameFlow == null || gameFlow.IsTransitioning || character.IsOpen)
+        {
+            return;
+        }
+
+        SetButtonsShown(false);
+        character.Open(HandleCharacterClosed);
+    }
+
+    /// <summary>
+    /// Brings the menu buttons back with Character selected when the Character screen closes.
+    /// </summary>
+    private void HandleCharacterClosed()
+    {
+        SetButtonsShown(true);
+        if (selection != null)
+        {
+            selection.Select(characterButton);
         }
     }
 

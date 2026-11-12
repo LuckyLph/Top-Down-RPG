@@ -291,6 +291,39 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The Character screen's Reset all (Docs/UiRevamp.md, Phase 7) forgets the look, every part and every colour in one
+    /// write, raising each change once, and reads back as the defaults; with nothing picked it writes nothing.
+    /// </summary>
+    [Test]
+    public void ResetCharacter_ForgetsEveryPickInOneWrite()
+    {
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        Assert.That(settings.ResetCharacter(), Is.False);
+        Assert.That(store.WriteCount, Is.Zero);
+        settings.SetCharacterLook("Bandit");
+        settings.SetCharacterPart("Hair", "Long");
+        settings.SetCharacterPart("Cape", "Cape");
+        settings.SetCharacterColour("Tunic", "Red");
+        int writes = store.WriteCount;
+        int looks = 0;
+        int parts = 0;
+        int colours = 0;
+        settings.CharacterLookChanged += () => looks++;
+        settings.CharacterPartsChanged += () => parts++;
+        settings.CharacterColoursChanged += () => colours++;
+
+        Assert.That(settings.ResetCharacter(), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(writes + 1));
+        Assert.That((looks, parts, colours), Is.EqualTo((1, 1, 1)));
+        UserSettings reread = new(store);
+        Assert.That(reread.CharacterLook, Is.Empty);
+        Assert.That(reread.CharacterPart("Hair"), Is.Empty);
+        Assert.That(reread.CharacterPart("Cape"), Is.Empty);
+        Assert.That(reread.CharacterColour("Tunic"), Is.Empty);
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

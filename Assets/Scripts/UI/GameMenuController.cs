@@ -9,8 +9,9 @@ using VContainer.Unity;
 /// <item><b>Open:</b> titled "Paused" offline, where it holds the <see cref="TimeFreeze"/> and dims the game, and "Menu"
 /// online, where nothing pauses and nothing dims; it blocks gameplay input through <see cref="GameplayInputGate"/> and
 /// lets go of both when it closes or is disposed with the Gameplay scope.</item>
-/// <item><b>Buttons,</b> looping: Resume, Party (online), Controls, Options, Save game (offline and hosting), Leave game
-/// and Quit to desktop. Party and Controls show their pages in the menu's place, and Back returns from them; Options,
+/// <item><b>Buttons,</b> looping: Resume, Character, Party (online), Controls, Options, Save game (offline and hosting),
+/// Leave game and Quit to desktop. Party and Controls show their pages in the menu's place, and Back returns from them;
+/// Character opens the Character screen in its place (Docs/UiRevamp.md, Phase 7), with the local player's weapon; Options,
 /// and the Controls page's Change keys, open the options screen in its place.</item>
 /// <item><b>Save game</b> writes the game through <see cref="IGameSaving"/>, its label reading "Saved" or
 /// "Couldn't save" for <see cref="HudSettings.MessageSeconds"/> of real time; it cannot be pressed where this machine
@@ -50,6 +51,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
 
     private readonly GameMenuView view;
     private readonly OptionsMenuController options;
+    private readonly CharacterScreenController character;
     private readonly PartyPagePresenter party;
     private readonly MenuStack menus;
     private readonly GameplayInputGate inputGate;
@@ -71,14 +73,15 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
     private DateTime saveAnswerUntil;
 
     /// <summary>
-    /// Creates a closed menu controller over <paramref name="view"/>, opening <paramref name="options"/> and the Party
-    /// page's <paramref name="party"/> in its place, asking <paramref name="session"/> whether to pause and which buttons
+    /// Creates a closed menu controller over <paramref name="view"/>, opening <paramref name="options"/>,
+    /// <paramref name="character"/> and the Party page's <paramref name="party"/> in its place, asking <paramref name="session"/> whether to pause and which buttons
     /// show, saving through <paramref name="saving"/>, leaving through <paramref name="exit"/>, and counting the other
     /// players of <paramref name="players"/> for the host's confirmation.
     /// </summary>
     public GameMenuController(
         GameMenuView view,
         OptionsMenuController options,
+        CharacterScreenController character,
         PartyPagePresenter party,
         MenuStack menus,
         GameplayInputGate inputGate,
@@ -95,6 +98,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
     {
         this.view = view;
         this.options = options;
+        this.character = character;
         this.party = party;
         this.menus = menus;
         this.inputGate = inputGate;
@@ -145,6 +149,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
         view.HideConfirm();
         view.ShowPage(GameMenuView.Page.Menu);
         view.ResumeButton.onClick.AddListener(Close);
+        view.CharacterButton.onClick.AddListener(OpenCharacter);
         view.PartyButton.onClick.AddListener(OpenParty);
         view.ControlsButton.onClick.AddListener(OpenControls);
         view.OptionsButton.onClick.AddListener(OpenOptions);
@@ -244,7 +249,8 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
     }
 
     /// <summary>
-    /// Hides the menu, its pages and the options screen if it is open, gives gameplay input back and resumes the game.
+    /// Hides the menu, its pages and the options or Character screen if one is open, gives gameplay input back and
+    /// resumes the game.
     /// </summary>
     public void Close()
     {
@@ -258,6 +264,11 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
         if (options.IsOpen)
         {
             options.Close();
+        }
+
+        if (character.IsOpen)
+        {
+            character.Close();
         }
 
         party.Close();
@@ -346,6 +357,34 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
 
         view.SetShown(false);
         options.Open(HandleOptionsClosed);
+    }
+
+    /// <summary>
+    /// Hides the menu and opens the Character screen in its place, its preview in the local player's weapon's gear.
+    /// </summary>
+    private void OpenCharacter()
+    {
+        if (!OnMenu)
+        {
+            return;
+        }
+
+        view.SetShown(false);
+        character.Open(HandleCharacterClosed, localPlayer.Current?.Weapon != null ? localPlayer.Current.Weapon.CurrentWeapon : null);
+    }
+
+    /// <summary>
+    /// Shows the menu again when the Character screen closes while it is still open, with Character selected.
+    /// </summary>
+    private void HandleCharacterClosed()
+    {
+        if (!isOpen)
+        {
+            return;
+        }
+
+        view.SetShown(true);
+        selection.Select(view.CharacterButton);
     }
 
     /// <summary>

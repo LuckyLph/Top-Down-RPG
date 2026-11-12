@@ -361,6 +361,44 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// Forgets the look, every part and every colour picked, so the character is the catalog's first look in its own
+    /// parts and colours (the Character screen's Reset all, Docs/UiRevamp.md, Phase 7), in one write; raises
+    /// <see cref="CharacterLookChanged"/>, <see cref="CharacterPartsChanged"/> and <see cref="CharacterColoursChanged"/>
+    /// for those that changed. Returns whether it was written.
+    /// </summary>
+    public bool ResetCharacter()
+    {
+        bool look = characterLook.Length > 0;
+        bool parts = characterParts.Count > 0;
+        bool colours = characterColours.Count > 0;
+        if (!look && !parts && !colours)
+        {
+            return false;
+        }
+
+        characterLook = string.Empty;
+        characterParts.Clear();
+        characterColours.Clear();
+        bool written = Write();
+        if (look)
+        {
+            CharacterLookChanged?.Invoke();
+        }
+
+        if (parts)
+        {
+            CharacterPartsChanged?.Invoke();
+        }
+
+        if (colours)
+        {
+            CharacterColoursChanged?.Invoke();
+        }
+
+        return written;
+    }
+
+    /// <summary>
     /// Writes every setting to the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     private bool Write()

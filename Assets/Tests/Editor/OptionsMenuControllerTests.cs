@@ -5,10 +5,9 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
 /// <summary>
-/// Tests for <see cref="OptionsMenuController"/> on the real options menu prefab and project input actions: the
-/// Character section's Look row over the project's looks and its colour rows over the project's colours, the binding
-/// rows, Back and close handling, interactive
-/// rebinding, per-row reset and reset all with confirmation.
+/// Tests for <see cref="OptionsMenuController"/> on the real options menu prefab and project input actions: the Display
+/// section's rows, the binding rows, Back and close handling, interactive rebinding, per-row reset and reset all with
+/// confirmation.
 /// </summary>
 public class OptionsMenuControllerTests : InputTestFixture
 {
@@ -68,35 +67,27 @@ public class OptionsMenuControllerTests : InputTestFixture
     }
 
     /// <summary>
-    /// Starting builds the Character section's Look row, a part row for each of the adventurer's eight part slots its
-    /// player picks (not the weapon's, which shows the equipped weapon's gear) and a colour row for each of the fifteen
-    /// colour choices its sheets or parts carry, then the Display section's UI size row (Docs/DesignSystem.md, Phase 3)
-    /// and its Reduce flashing and Reduce motion toggle rows (Phase 6), the allies' damage numbers row
-    /// (Docs/UiRevamp.md, Phase 3) and the Chat timestamps and Chat window rows (Phase 12), then ten binding rows under
-    /// four section headers, labelled with each action and its current binding, the chat key last, and leaves the
-    /// screen hidden.
+    /// Starting builds the Display section's UI size row (Docs/DesignSystem.md, Phase 3) and its Reduce flashing and
+    /// Reduce motion toggle rows (Phase 6), the allies' damage numbers row (Docs/UiRevamp.md, Phase 3) and the Chat
+    /// timestamps and Chat window rows (Phase 12), then ten binding rows under four section headers, labelled with each
+    /// action and its current binding, the chat key last, and leaves the screen hidden. The look, parts and colours are
+    /// the Character screen's (Phase 7).
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
     {
         Assert.That(view.IsShown, Is.False);
         Assert.That(controller.RowCount, Is.EqualTo(10));
-        Assert.That(controller.PartRowCount, Is.EqualTo(8));
-        Assert.That(controller.ColourRowCount, Is.EqualTo(15));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(46), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row, two toggle rows, the allies' damage numbers row and the two chat rows, four section headers and ten rows.");
-        Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
-        Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
-        Assert.That(view.RowsContainer.GetChild(2).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetPartRow(0)));
-        Assert.That(view.RowsContainer.GetChild(10).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetColourRow(0)));
-        Assert.That(view.RowsContainer.GetChild(25).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.DisplaySection));
-        Assert.That(view.RowsContainer.GetChild(26).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.UiSizeRow));
-        Assert.That(view.RowsContainer.GetChild(27).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceFlashingRow));
-        Assert.That(view.RowsContainer.GetChild(28).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceMotionRow));
-        Assert.That(view.RowsContainer.GetChild(29).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.AllyPopupsRow));
-        Assert.That(view.RowsContainer.GetChild(30).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ChatTimestampsRow));
-        Assert.That(view.RowsContainer.GetChild(31).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ChatWindowRow));
-        Assert.That(view.RowsContainer.GetChild(32).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
-        Assert.That(view.RowsContainer.GetChild(44).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Other"));
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(21), "The Display header, its UI size row, two toggle rows, the allies' damage numbers row and the two chat rows, four section headers and ten rows.");
+        Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.DisplaySection));
+        Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.UiSizeRow));
+        Assert.That(view.RowsContainer.GetChild(2).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceFlashingRow));
+        Assert.That(view.RowsContainer.GetChild(3).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceMotionRow));
+        Assert.That(view.RowsContainer.GetChild(4).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.AllyPopupsRow));
+        Assert.That(view.RowsContainer.GetChild(5).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ChatTimestampsRow));
+        Assert.That(view.RowsContainer.GetChild(6).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ChatWindowRow));
+        Assert.That(view.RowsContainer.GetChild(7).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.GetChild(19).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Other"));
         Assert.That(controller.GetRow(9).Label.text, Is.EqualTo("Chat"));
         Assert.That(controller.GetRow(9).BindingText.text, Is.EqualTo("Enter"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
@@ -263,122 +254,6 @@ public class OptionsMenuControllerTests : InputTestFixture
         view.ResetAllButton.onClick.Invoke();
         row.BindingButton.onClick.Invoke();
         Assert.That(settings.AllyPopups, Is.EqualTo(AllyPopups.Shown), "Nothing changes while a confirmation shows.");
-    }
-
-    /// <summary>
-    /// The part rows, the adventurer's slots in order (Docs/PlayerCharacter.md, Phases 6 and 7), show the option the local
-    /// settings pick, the first by default; a button keeps the slot's next option, after the last the first, kept as no
-    /// pick; a reset goes back to the first; and a row follows a change made elsewhere, an unknown option showing the
-    /// first.
-    /// </summary>
-    [Test]
-    public void ThePartRows_ShowAndCycleTheSettingsParts()
-    {
-        string[] labels = new string[controller.PartRowCount];
-        for (int i = 0; i < labels.Length; i++)
-        {
-            labels[i] = controller.GetPartRow(i).Label.text;
-        }
-
-        Assert.That(labels, Is.EqualTo(new[] { "Hair", "Headwear", "Top", "Cape", "Legs", "Boots", "Hands", "Bag" }));
-        KeyBindingRowView hair = controller.GetPartRow(0);
-        KeyBindingRowView legs = controller.GetPartRow(4);
-        KeyBindingRowView bag = controller.GetPartRow(7);
-        Assert.That(bag.BindingText.text, Is.EqualTo("None"));
-        Assert.That(hair.BindingText.text, Is.EqualTo("Tousled"));
-
-        controller.Open(null);
-        hair.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterPart("Hair"), Is.EqualTo("Crop"));
-        Assert.That(hair.BindingText.text, Is.EqualTo("Crop"));
-        legs.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterPart("Legs"), Is.EqualTo("Shorts"));
-        legs.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterPart("Legs"), Is.Empty, "After the last option, the first.");
-        Assert.That(legs.BindingText.text, Is.EqualTo("Trousers"));
-        bag.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterPart("Bag"), Is.EqualTo("Satchel"));
-
-        hair.ResetButton.onClick.Invoke();
-        Assert.That(settings.CharacterPart("Hair"), Is.Empty);
-        settings.SetCharacterPart("Hair", "Spiky");
-        Assert.That(hair.BindingText.text, Is.EqualTo("Spiky"));
-        settings.SetCharacterPart("Hair", "Mohawk");
-        Assert.That(hair.BindingText.text, Is.EqualTo("Tousled"));
-    }
-
-    /// <summary>
-    /// The colour rows, the choices the adventurer's sheets carry in the colours' order, show the swatch the local
-    /// settings pick, each choice's own by default; a button keeps the next swatch of its choice's list in the settings,
-    /// after the last the first, the choice's own kept as no pick; a reset goes back to the choice's own; and a row
-    /// follows a change made elsewhere, an unknown swatch showing the choice's own.
-    /// </summary>
-    [Test]
-    public void TheColourRows_ShowAndCycleTheSettingsSwatches()
-    {
-        string[] labels = new string[controller.ColourRowCount];
-        for (int i = 0; i < labels.Length; i++)
-        {
-            labels[i] = controller.GetColourRow(i).Label.text;
-        }
-
-        Assert.That(labels, Is.EqualTo(new[] { "Skin", "Hair", "Eyes", "Tunic", "Shirt", "Trousers", "Boots", "Belt", "Buckle", "Gloves", "Strap", "Pouch", "Headwear", "Cape", "Lining" }));
-        KeyBindingRowView tunic = controller.GetColourRow(3);
-        KeyBindingRowView shirt = controller.GetColourRow(4);
-        Assert.That(tunic.BindingText.text, Is.EqualTo("Blue"));
-        Assert.That(shirt.BindingText.text, Is.EqualTo("Beige"));
-
-        controller.Open(null);
-        tunic.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterColour("Tunic"), Is.EqualTo("Red"));
-        Assert.That(tunic.BindingText.text, Is.EqualTo("Red"));
-        shirt.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterColour("Shirt"), Is.EqualTo("Linen"), "The cloth after the shirt's own beige.");
-
-        CharacterColours colours = view.Colours;
-        int cloths = colours.Swatches(colours.IndexOf("Tunic")).Count;
-        for (int i = 1; i < cloths; i++)
-        {
-            tunic.BindingButton.onClick.Invoke();
-        }
-
-        Assert.That(settings.CharacterColour("Tunic"), Is.Empty, "After the last cloth, the first, the tunic's own.");
-        Assert.That(tunic.BindingText.text, Is.EqualTo("Blue"));
-
-        shirt.ResetButton.onClick.Invoke();
-        Assert.That(settings.CharacterColour("Shirt"), Is.Empty);
-        Assert.That(shirt.BindingText.text, Is.EqualTo("Beige"));
-
-        settings.SetCharacterColour("Tunic", "Teal");
-        Assert.That(tunic.BindingText.text, Is.EqualTo("Teal"));
-        settings.SetCharacterColour("Tunic", "Plaid");
-        Assert.That(tunic.BindingText.text, Is.EqualTo("Blue"));
-    }
-
-    /// <summary>
-    /// The Look row shows the look the local settings name (the first, the adventurer, by default); its button keeps the
-    /// project's next look in the settings, after the last the first again, and its reset the first; the row follows a
-    /// change made elsewhere.
-    /// </summary>
-    [Test]
-    public void TheLookRow_ShowsAndCyclesTheSettingsLook()
-    {
-        KeyBindingRowView row = controller.LookRow;
-        Assert.That(row.Label.text, Is.EqualTo(OptionsMenuController.LookLabel));
-        Assert.That(row.BindingText.text, Is.EqualTo("Adventurer"));
-
-        controller.Open(null);
-        row.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterLook, Is.EqualTo("Bandit"));
-        Assert.That(row.BindingText.text, Is.EqualTo("Bandit"));
-        row.BindingButton.onClick.Invoke();
-        Assert.That(settings.CharacterLook, Is.EqualTo("Adventurer"), "After the last look, the first.");
-
-        settings.SetCharacterLook("Bandit");
-        Assert.That(row.BindingText.text, Is.EqualTo("Bandit"));
-        row.ResetButton.onClick.Invoke();
-        Assert.That(settings.CharacterLook, Is.EqualTo("Adventurer"));
-        Assert.That(row.BindingText.text, Is.EqualTo("Adventurer"));
     }
 
     /// <summary>

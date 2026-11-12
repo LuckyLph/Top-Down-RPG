@@ -103,7 +103,7 @@ MonoBehaviour:
   bindingButton: {fileID: 4442974550150763892}
   bindingText: {fileID: 5467240077128672307}
   resetButton: {fileID: 3879745967668789247}
-  swatch: {fileID: 0}
+  toggleMark: {fileID: 0}
 --- !u!1 &4758617348098585668
 GameObject:
   m_ObjectHideFlags: 0

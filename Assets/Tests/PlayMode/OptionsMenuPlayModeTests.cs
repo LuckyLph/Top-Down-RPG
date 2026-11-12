@@ -12,11 +12,10 @@ public class OptionsMenuPlayModeTests
 {
     /// <summary>
     /// Opening options hides the menu buttons; Back restores the buttons with
-    /// Options selected. The screen lists the Character header, its Look row, the adventurer's eight part rows and
-    /// fifteen colour rows (Docs/PlayerCharacter.md, Phases 5 to 7), the Display header, its UI size row
-    /// (Docs/DesignSystem.md, Phase 3), its Reduce flashing and Reduce motion rows (Phase 6), its allies' damage numbers
-    /// row (Docs/UiRevamp.md, Phase 3) and its two chat rows (Phase 12), four section headers and ten rows; opening it
-    /// selects its first row, the Look row.
+    /// Options selected. The screen lists the Display header, its UI size row (Docs/DesignSystem.md, Phase 3), its
+    /// Reduce flashing and Reduce motion rows (Phase 6), its allies' damage numbers row (Docs/UiRevamp.md, Phase 3) and
+    /// its two chat rows (Phase 12), four section headers and ten rows, the look, parts and colours being the Character
+    /// screen's (Phase 7); opening it selects its first row, the UI size row.
     /// </summary>
     [UnityTest]
     public IEnumerator MainMenuOptions_ReplaceTheButtons_AndBackBringsThemBackWithOptionsSelected()
@@ -28,7 +27,7 @@ public class OptionsMenuPlayModeTests
 
         Assert.That(options, Is.Not.Null, "The main menu has an options screen.");
         Assert.That(options.IsShown, Is.False);
-        Assert.That(options.RowsContainer.childCount, Is.EqualTo(46), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row, two toggle rows, the allies' damage numbers row and the two chat rows, four section headers and ten rows.");
+        Assert.That(options.RowsContainer.childCount, Is.EqualTo(21), "The Display header, its UI size row, two toggle rows, the allies' damage numbers row and the two chat rows, four section headers and ten rows.");
 
         menu.OpenOptions();
         yield return null;
@@ -37,7 +36,7 @@ public class OptionsMenuPlayModeTests
         Assert.That(menu.ButtonsPanel.activeSelf, Is.False);
         GameObject selected = EventSystem.current.currentSelectedGameObject;
         Assert.That(selected, Is.Not.Null);
-        Assert.That(selected.GetComponentInParent<KeyBindingRowView>(), Is.SameAs(options.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>()), "The first row, the Look row, is selected for keyboard and gamepad navigation.");
+        Assert.That(selected.GetComponentInParent<KeyBindingRowView>(), Is.SameAs(options.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>()), "The first row, the UI size row, is selected for keyboard and gamepad navigation.");
 
         options.BackButton.onClick.Invoke();
         yield return null;

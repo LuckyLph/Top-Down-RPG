@@ -65,7 +65,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Vitals strip | The session line and the local player's health, shown on a full screen opened in game online |
 | Party page | The in-game menu's page of the players online, and for the host the addresses friends join at (Phase 6) |
 | Controls page | The in-game menu's page of the controls and their keys (Phase 6) |
-| Preview stage | The local character drawn off screen into a render texture, for the Character screen and the title view |
+| Preview stage | The local character drawn into a texture by a command buffer, with no camera or light, for the Character screen and the title view (Phase 7) |
 | Title view | The still picture of the Overworld behind the main menu, rendered by a recipe |
 
 ## Goals
@@ -113,7 +113,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Confirmations | Leaving or quitting asks only when it loses something, each sentence on its own line:<br>• as the host with others connected: "End the game for 2 other players?" ("1 other player"), then "The game is saved." or, after a failed save, "The game couldn't be saved.";<br>• otherwise after a failed save: "The game couldn't be saved. Leave anyway?" ("Quit anyway?"), and joined "Your place couldn't be saved.".<br>Offline, alone as the host, or joined, with the last save written, it goes ahead at once. |
 | Full screens in game | Options and the Character screen stay opaque raised panels. Online, they show the vitals strip, and their notice line says "You're taking damage." when the local player is hit. |
 | Options | **Layout:** a rail of categories beside a pane of rows.<br>• **Accessibility:** UI size, Reduce flashing, Reduce motion. It was the Display section; the settings file is unchanged.<br>• **Controls:** the bindings.<br>**Behaviour:**<br>• Moving onto a category shows its rows.<br>• The focused row's one-line description shows at the pane's foot.<br>• Reset shows only on a row that differs from its default.<br>• The footer's reset is the category's ("Reset controls").<br>• Opened in game, the screen returns to the category used last this session. |
-| Character screen | **Layout:** a screen of its own, shared by the main menu and the in-game menu as the options screen is. A preview sits on the left (Turn left, Turn right and Pose), and rows on the right grouped by part, each part's colours under it.<br>**Grouping:** read from the dyes the sheets and parts carry, not from a hand-made list.<br>**Colours:** a colour row opens a swatch picker.<br>The Character section leaves the options screen. This lifts PlayerCharacter.md's non-goal "An in-game character creator". |
+| Character screen | **Layout** (settled on Phase 7's previews, where the plan's colour rows became chips): a full screen of its own, shared by the main menu and the in-game menu as the options screen is. The preview on the left, in a box of 80 x 80 art px at x3 on 640 x 360 and x2 on 480 x 270, with Turn left and Turn right, two arrow icons, either side of the pose's button; on the right **one row per part**, the option worn on its button, its colours as chips, and Reset.<br>**Grouping:** read from the dyes, not from a hand-made list: a colour goes on the one part's row whose options carry it, else on Body.<br>**Colours:** a chip opens a swatch picker, which shows the focused swatch on the preview before it is picked.<br>**Foot line:** names the focused chip or turn button.<br>The Character section leaves the options screen. This lifts PlayerCharacter.md's non-goal "An in-game character creator". |
 | Main menu | **The panel:** raised, on the left, over the title view. It holds the logo, then:<br>• Continue, with a line saying where, how long played and when saved;<br>• New game, Saved games, Play together, Character, Options and Quit, looping.<br>**Without a save,** Continue and Saved games hide.<br>**The build version** shows at the bottom right. |
 | Play together | One screen with two columns:<br>• **Host:** Host and continue, Host a new game, Host another saved game, then the addresses friends join with, each with Copy, and the port.<br>• **Join:** an address field taking `host` or `host:port`, checked before connecting and remembered; Join; and up to five recent hosts as buttons.<br>**Connecting** shows a modal with a count and Cancel. |
 | Host addresses | Shown openly on the Party page, two at most. They are read from this machine's network interfaces: the home network and a virtual LAN. None is the public internet address behind the router, and none is ever sent anywhere. |
@@ -121,7 +121,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Title view | A still picture of the Overworld at dusk, rendered by an editor recipe into a sprite of 768 x 432 art px, which covers every canvas in the Scale table. The local character stands in it, drawn by the preview stage. |
 | First run | On the first launch, a Welcome panel offers UI size, Reduce flashing and Reduce motion before the menu. The first New game goes through the Character screen, whose Back reads "Start". Later New games do not. |
 | Online pause | Kept as it is: the game never pauses online. |
-| New art | All from recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, the slot badge, a disc at 5 and 16 px, and a window's move and resize grips (Phase 12);<br>• **a new title view recipe.**<br>No Aseprite work is needed. |
+| New art | From recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, the slot badge, a disc at 5 and 16 px, and a window's move and resize grips (Phase 12);<br>• **a new title view recipe.**<br>And two licensed icons: Pixelarticons' left and right arrows (MIT), the Character screen's turn buttons, which the user asked for in place of generated icons (Phase 7). CLAUDE.md's art rule allows licensed UI icons kept with their licence.<br>No Aseprite work is needed. |
 | New theme roles | `HealthPlayer`, `HealthLost`, and `Player1` to `Player4`. Each is measured in `UiTheme.md` like every other role. |
 
 ## Behaviour
@@ -221,16 +221,25 @@ Settled on Phase 6's previews, where the side column and cards became one panel 
 
 ### The Character screen
 
-- **Preview.** On the left, at a whole multiple of its art pixels (x4 at 640 x 360, x3 at 480 x 270).
-  - Turn left and Turn right go through the 8 directions.
-  - Pose cycles idle, run and the equipped weapon's attack.
-  - It animates on an unscaled clock, so it moves while the game is paused.
-- **Row groups.** Look first, then:
-  - **Body,** with the dyes the base sheets carry (`CharacterAnimationSet.Dyes`: Skin, Eyes, Belt, Buckle);
-  - **a group per part slot,** with its part row and the colours its worn option carries (`CharacterParts.Dyes`: Top with Tunic and Shirt, Cape with Cape and Lining, and so on).
-  - The colour rows of a part not worn hide, and their picks stay in `settings.json`.
-- **Swatch picker.** Submit on a colour row opens a popover of 12 UI px chips, 2 apart. The focused chip is framed in `Accent`, and its name shows under the grid. Arrows move, Submit picks and closes, and Escape closes.
-- **Applying.** Changes apply and save at once, in game too. Each row has Reset, and Reset all asks first.
+Settled on Phase 7's previews, where the colour rows became chips on each part's row and the preview's buttons arrows around the pose's name.
+
+- **Layout.** A full raised panel titled "Character", every part on whole UI px:
+  - **The preview** on the left, in a box of 80 x 80 art px at the largest whole multiple that fits (`CharacterScreenView.MultipleFor`): x3 at 640 x 360, a box of 242 UI px with its frame, and x2 at 480 x 270. Every pose stays whole in it: the greatsword's cleave reaches 38 art px to a side and 23 under the feet. Under it, centred, Turn left and Turn right (24 x 18, Pixelarticons' arrows) either side of the pose's button (56 x 18).
+  - **The rows** beside it, 340 UI px wide where the canvas has room (294 at 480 x 270), 16 tall and 2 apart, the box and the rows centred together.
+  - **The foot line** over Reset all and Back.
+  - Online, **the vitals strip** at the top right, its right edge on the rows'.
+- **Preview.**
+  - Turn left and Turn right go through the 8 directions toward the screen's left or right: from south, Turn left faces south-west.
+  - The pose's button reads and cycles "Standing", "Running" (halfway between the run's and the sprint's speeds) and "Attacking": the shown weapon's attacks in turn, 0.5 s apart. In game the weapon is the local player's, its gear on the character; in the main menu the starting weapon.
+  - It animates on an unscaled clock, so it moves while the game is paused, and it plays the idle animations as the player's character does.
+- **Rows.** Look first (with more than one look), then:
+  - **Body,** with the colours no single part owns: the skin (which tops, legs and bare hands all show), the eyes, the belt and the buckle;
+  - **a row per part slot** a player picks (not the weapon's): the option worn on its button, and as chips the colours that option carries (Top: Tunic and Shirt; Cape: Cape and Lining; Bag: Strap and Pouch). A colour named after its part (Hair, Headwear, Cape, Boots) is that row's.
+  - A part not worn shows no chips, and its picks stay in `settings.json`. A look without parts (the Bandit) shows only the Look row.
+- **Swatch picker.** Submit on a chip opens a popover under it, or over it near the bottom: the choice's name in `Accent`, its swatches as 12 UI px chips 2 apart in rows of six, the one shown selected and framed in `Accent`, its name under the grid. Arrows move, wrapping in their row and column, and show each swatch on the preview; Submit keeps it and closes; Escape, or the selection leaving the picker, closes it and puts the colours back.
+- **Foot line.** Names the focused chip ("Tunic: Blue") or turn button in `TextMuted`; online "You're taking damage." in `Accent` over it for 3 s after a hit.
+- **Applying.** Changes apply and save at once, in game too. A row's Reset puts back its look, or its part and every colour of it, the hidden ones included; Reset all asks first, then puts back the look, every part and every colour.
+- **Focus.** Opening selects the first row's button. Left and Right move along a row, Left from its first control to the pose's button; Up and Down move to the same kind of control in the row above or below (its nearest chip, else its button); Down from the last row reaches Reset all, and Right from Turn right the first row. Closing selects the button that opened it.
 
 ### The main menu and Play together
 
@@ -265,7 +274,8 @@ Settled on Phase 6's previews, where the side column and cards became one panel 
 - **`UiCharacters`** (`Core/UI`, Phase 12): the characters the UI's fonts hold, which the font writer puts in the atlases and the chat keeps typed text to.
 - **`UserSettingsData`** gains `recentHosts` and `firstRunDone`. A file from before reads them empty and false, or true when it already holds bindings or picks. The format version stays 1.
 - **`WorldDefinition`** gains a display name for the world and for each entry (content rule 5, checked by `ContentTests`).
-- **An unscaled `IClock`** for the preview stage.
+- **`UnscaledClock`** (`Core/Clock`, Phase 7): an `IClock` on unscaled time, for the preview stage.
+- **`UserSettings.ResetCharacter`** (Phase 7): the look, every part and every colour forgotten in one write, for Reset all; **`UISelection.Current`**, the object selected, for the foot line.
 
 ### Gameplay
 
@@ -296,10 +306,11 @@ Settled on Phase 6's previews, where the side column and cards became one panel 
   - `IGameSaving` (the save recorder), `IGameExit` and `IClipboard`, the menu's seams;
   - new components: `PartyRow`, `BarSmall` and `KeyCap`.
 - **Options:** `OptionsMenuView` with the rail; new components `RailItem` and `DescriptionLine`; a description per action on `RebindableActionList`.
-- **Character:**
-  - `CharacterScreenController` and its view, taking the Character section's rows from `OptionsMenuController`;
-  - `CharacterPreviewStage` and the `CharacterPreview` component;
-  - the `SwatchPicker` component.
+- **Character (Phase 7):**
+  - `CharacterScreenController` and `CharacterScreenView`, taking the Character section's rows from `OptionsMenuController`; `CharacterGroups` reads the rows from the dyes;
+  - `CharacterPreviewStage` (`ICharacterPreview`), drawing the character into the texture the screen's box shows;
+  - `VitalsStripPresenter` (Gameplay scope) and the `VitalsStrip` component;
+  - new components: `RowChips`, `SwatchChip`, `SwatchPicker` and `ButtonIcon`.
 - **Main menu:**
   - `MainMenuController` keeps `ContinueGame`, `StartNewGame`, `HostGame` and `JoinGame` as entry points, since the PlayMode tests drive them. Their logic moves into a plain `MenuSessionStarter` that the new screens share.
   - `PlayTogetherController` and `SavedGamesController`, with their views;
@@ -348,6 +359,7 @@ Settled on Phase 6's previews, where the side column and cards became one panel 
   - the authority table gains the player slot.
 - **Prefabs and scenes** are rebuilt through the editor, with `[FormerlySerializedAs]` on any kept field that moves: `PlayerHudCanvas.prefab`, `GameMenuCanvas.prefab`, `OptionsMenu.prefab` and `MainMenu.unity`. Each diff is checked for save churn.
 - **The waystone notice** leaves the damage popup layer.
+- **`RowSwatch`** goes with the options screen's colour rows (Phase 7): the Character screen shows colours as chips. `KeyBindingRowView` lost its swatch chip (`SetSwatch`) with it.
 - **Tests** that count options rows (`OptionsMenuControllerTests`, `OptionsMenuPlayModeTests`, which count 41 items) or drive the old main menu buttons are updated in the phase that changes them.
 
 ## Phases
@@ -638,7 +650,7 @@ Fixes on today's layout, before anything moves.
 
 ### Phase 6: the in-game menu
 
-The Character button arrives with Phase 7.
+The Character button arrived with Phase 7.
 
 - [x] Previews offline, hosting and joined at every display in the Scale table, signed off.
 - [x] The panel:
@@ -691,18 +703,64 @@ The Character button arrives with Phase 7.
 
 ### Phase 7: the Character screen
 
-- [ ] A spike of the preview stage: a character drawn off screen with its own camera and light into a render texture, its outfit composed as in game, on an unscaled clock. Its findings go in Phase 7 notes.
-- [ ] Previews of the screen and the swatch picker, signed off.
-- [ ] `CharacterScreenController` and its view:
-  - [ ] the rows moved out of `OptionsMenuController`;
-  - [ ] grouped by part from the dyes;
-  - [ ] colour rows hidden for parts not worn.
-- [ ] `SwatchPicker`.
-- [ ] The preview, with turn and pose.
-- [ ] The Character button on the main menu and in the in-game menu, and the vitals strip online.
-- [ ] The Character section leaves the options screen.
-- [ ] PlayMode: a pick made on the screen in game reaches the client's copy.
-- [ ] PlayerCharacter.md's non-goal, AsepriteCharacters.md's Look row, KeyBindings.md's options screen.
+- [x] A spike of the preview stage: a character drawn off screen into a render texture, its outfit composed as in game, on an unscaled clock. A command buffer draws it, with no camera or light (Phase 7 notes).
+- [x] Previews of the screen and the swatch picker, signed off.
+- [x] `CharacterScreenController` and its view:
+  - [x] the rows moved out of `OptionsMenuController`;
+  - [x] grouped by part from the dyes;
+  - [x] colours hidden for parts not worn.
+- [x] `SwatchPicker`.
+- [x] The preview, with turn and pose.
+- [x] The Character button on the main menu and in the in-game menu, and the vitals strip online.
+- [x] The Character section leaves the options screen.
+- [x] PlayMode: a pick made on the screen in game reaches the client's copy.
+- [x] PlayerCharacter.md's non-goal, AsepriteCharacters.md's Look row, KeyBindings.md's options screen.
+
+#### Phase 7 notes
+
+- **The spike** drew the adventurer off screen into a texture, in an outfit `CharacterOutfits` composed, on a manual clock:
+  - **No camera or light is needed.** A command buffer draws the character's sprite renderer, which stays off, with the lit sprite shader's unlit pass. The idle's 597 texels match the sheet's exactly, and a red tunic recolours exactly the texels a camera's render recolours, at 0.015 ms of CPU a draw against 1.25 ms for a camera's render request. No light, sun shadow, lamp shadow or night reaches it.
+  - **A camera and its light, the plan, cost three things:** a sorting layer no light targets (on the units' layer the world's night light darkened the character); a way out of `SunShadowFeature`, which builds a sun shadow mask for every game camera while the sun casts; and a preview camera type, which the editor draws unlit and a player lit. In the editor, a sorting layer added while scenes are open joins every enabled `Light2D`'s target layers (`Light2D.OnSortingLayerAdded`).
+  - **Light later,** the title view's dusk (Phase 11), can be the renderer's tint: a global light only multiplies.
+  - **The poses' reach,** in art px from the feet, to either side, under and over: standing and running 20, 11 and 42; the sword's attacks 27, 9 and 45; the longbow's 34, 10 and 44; the greatsword's 38, 23 and 52. The proposal's box at x4 (51 x 58 art px) cut every attack, so the box holds them all: 80 x 80 art px, at x3 on 640 x 360 and x2 on 480 x 270, where x4 would not fit.
+  - **The outfit:** in game the preview wears the local player's picks and its weapon's gear on the same `CharacterOutfits`, so it shares the player's outfit and nothing more is composed. In the main menu the Menu scope composes its own: about a second off the main thread, and 14.5 to 16.7 MiB until the menu goes.
+  - **The clock:** `CharacterVisuals` takes the injected clock, the Main scope's scaled `UnityClock`; the stage gives its visuals an `UnscaledClock` each time it shows.
+- **Settled with the user on 2026-11-12,** on previews at 640 x 360 (x3) and 480 x 270 (x4) and sheets of every display in the Scale table at x2, composed in the gitignored `Recordings/UiRevamp/Phase7` from frames the stage drew in the engine:
+  - **Round 1:** the plan's rows (a header per part, its part row and its colour rows, scrolling at every size) beside a compact layout of one row per part with its colours as chips. The user chose the compact one (`B`).
+  - **Rounds 2 to 5,** asked for: icons on the preview's buttons, then standard icons rather than generated ones (`B2`, `B3`), then the pose's name back in words with Pixelarticons' arrows kept (`B4`), and the names "Standing", "Running" and "Attacking" (`B5`).
+  - **Claude's calls, accepted:** the picker shows the focused swatch on the preview; the foot line names the focused chip or turn button; a colour goes on its one part's row, else on Body; the session line "Online · not paused"; the character facing south as the screen opens.
+  - **Once built,** a temporary tool, since removed, rendered the real screen in edit mode, its themed components woken by reflection (`Phase7/engine`). It matched the previews once each row's `LayoutElement` held its height (below).
+- **Layout.** `CharacterScreen.prefab` holds a full-screen `PanelRaised` and, beside it, the `Stage`. The panel holds the title, the `VitalsStrip` (hidden), the `PreviewBox` (a `Panel`, its `RawImage` inset by a pixel), the `Controls` row, the `Rows` column, the foot line's two lines (`FocusLine` in `TextMuted`, `WarningLine` in `Accent`), the footer, the `SwatchPicker` and the `Dialog` for Reset all.
+  - `CharacterScreenView.Place` runs as the screen shows and when the canvas changes size: the multiple (`MultipleFor`: the box and the controls must fit between 28 UI px from the top and 44 from the bottom, the rows keeping 284), the box at it, the rows beside it at up to 340 wide, the two centred together, the controls centred under the box, the footer and the foot line centred, the value buttons 130 wide on wide rows and 112 on narrow ones, all on whole UI px.
+  - The screen is an instance in `GameMenuCanvas` after the options screen, and in `MainMenu`'s canvas. The main menu's buttons went 2 apart to take the Character button before Options and still fit 480 x 270.
+- **The stage.** `CharacterPreviewStage` holds the character, an inactive `Visuals` child (its renderer off, `CharacterVisuals`, `CharacterPalette`) and a `PlayerLook`, injected by the canvas's auto-injection in both scopes.
+  - **Show** gives the visuals the unscaled clock, shows the weapon's gear (the starting sword in the main menu) and follows the local settings; **Hide** stops following.
+  - **Each frame** while shown it sets the movement before the visuals animate (`Update`), and after them (`[DefaultExecutionOrder(100)]`) draws their sprite into its 80 x 80 texture (`ARGB32`, sRGB, point filtered): a command buffer sets a view of the stage's own space, so the canvas's scale and place above it are undone, and draws the renderer's material with its unlit pass, found by its light mode.
+  - **Previews:** `PreviewColour` shows the settings' colours with one swatch changed, and `ShowPickedColours` the settings' again.
+- **Components.**
+  - **`RowChips`** (`RowChipsView`): a label, the value's column (a `Button`, kept as a column when hidden, as on Body), four `SwatchChip`s and Reset. Its `LayoutElement` holds 16 UI px with no flexible height: its layout group's forced height made the rows flexible, and the first build stretched them over the column.
+  - **`SwatchChip`** (`SwatchChipView`): a 12 UI px button whose face shows the swatch, with no colour transition, framed in `Border`; selected, a frame in `Accent`, framed in `Border`, rings it in the 2 UI px between chips.
+  - **`SwatchPicker`**, a variant of `PanelRaised` framed in `Accent` (`SwatchPickerView`): its title, twelve chips and the name line, placed on whole UI px and wiring its chips' grid.
+  - **`ButtonIcon`**, a variant of `Button`: its text off, a 16 x 14 icon in `TextOnControl`.
+  - **`VitalsStrip`** (`VitalsStripView`): the session line in `TextMuted` and an 84 x 12 `BarSmall` with "72 / 100" outlined over it.
+- **The controller.** `CharacterScreenController`, in both scopes:
+  - builds a row per `CharacterGroups` group as it starts, and on every change to the look, the parts or the colours shows each row for the look, its value and its chips, and wires the explicit navigation of the rows, the preview's controls and the footer;
+  - opens the picker on a chip's swatches, previews the focused one, keeps a pressed one (the choice's own as no pick), and closes it on Back or when the selection leaves it, putting the colours back;
+  - names the focus on the foot line from `UISelection.Current`, only when the selection moves.
+  - `GameMenuController` opens it in the menu's place with the local player's weapon and selects Character when it closes; `MainMenuController.OpenCharacter` swaps the buttons for it as Options does.
+- **The vitals strip.** `VitalsStripPresenter` (Gameplay scope) shows it while the screen is open online, with the local player's health, and puts "You're taking damage." on the foot line for `HudSettings.NoticeSeconds` of real time after a hit. The Phase 8 options screen can share it.
+- **Co-op.** Nothing new is sent: a pick changes the local settings, which the local player's `PlayerLook` follows and its `PlayerNetworkSync` sends as before.
+- **Art.** `Assets/Sprites/UI/Icons` holds Pixelarticons' `arrow-left` and `arrow-right`, drawn on a 24 grid in 2-unit pixels and kept at one UI px a pixel, 16 x 14, with `Pixelarticons - MIT.txt` beside them. Their figure, run and sword icons, tried for the pose, did not fit a 16 px button.
+- **Found on the way.**
+  - A `ShaderTagId` made in a `MonoBehaviour`'s static field initializer throws as Unity constructs the component (TagToID), so the stage makes its tags when it looks the pass up.
+  - The options screen is one section shorter: 21 rows and headers where it had 46, the UI size row first.
+- **Left as they are.**
+  - **The chips have no hover state:** their button changes no colour, so the swatch always shows; the pointer selects one on press, which frames it.
+  - **The arrow icons are 14 px tall in a 16 px face,** a pixel short of the text buttons' margins.
+- **Tests.**
+  - `CharacterScreenControllerTests` (9, new), `CharacterScreenLayoutTests` (1, new), `CharacterPreviewStageTests` (3, new) and `CharacterScreenPlayModeTests` (2, new).
+  - `NetworkLooksPlayModeTests`: a pick on the host's screen, a swatch and a part, reaches the client's copy, and the preview wears the host player's outfit.
+  - `UserSettingsTests`: Reset all in one write. `GameMenuControllerTests`: Character after Resume. `OptionsMenuControllerTests` and `OptionsMenuPlayModeTests`: 21 rows. `UiContentTests`: the licensed icons and their licence. `CharacterPrefabTests`: the screen's colours.
 
 ### Phase 8: the options screen
 

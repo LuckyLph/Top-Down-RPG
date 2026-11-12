@@ -142,6 +142,10 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<ChatPartyLines>().AsSelf();
         builder.RegisterComponentInHierarchy<OptionsMenuView>();
         builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
+        builder.RegisterComponentInHierarchy<CharacterScreenView>();
+        builder.Register<ICharacterPreview>(resolver => resolver.Resolve<CharacterScreenView>().Stage, Lifetime.Singleton);
+        builder.RegisterEntryPoint<CharacterScreenController>().AsSelf();
+        builder.RegisterEntryPoint<VitalsStripPresenter>().AsSelf();
         builder.RegisterComponentInHierarchy<GameMenuView>();
         builder.RegisterComponentInHierarchy<PartyPageView>();
         builder.RegisterComponentInHierarchy<ControlsPageView>();

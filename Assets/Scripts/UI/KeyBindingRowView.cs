@@ -4,8 +4,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// One row of the options screen: a label, a button showing its value (an action's binding, a choice, On or Off) and a
-/// button that resets it. A swatch row also shows its swatch in a chip, and a toggle row shows its state as a box,
-/// marked while on, beside the On or Off its button reads.
+/// button that resets it. A toggle row shows its state as a box, marked while on, beside the On or Off its button
+/// reads.
 /// </summary>
 [DisallowMultipleComponent]
 public class KeyBindingRowView : MonoBehaviour
@@ -14,8 +14,6 @@ public class KeyBindingRowView : MonoBehaviour
     [SerializeField] private Button bindingButton;
     [SerializeField] private TMP_Text bindingText;
     [SerializeField] private Button resetButton;
-    [SerializeField, Tooltip("The chip a swatch row shows its swatch in, beside its button; none on other rows.")]
-    private Image swatch;
     [SerializeField, Tooltip("The mark a toggle row shows in its box while it is on; none on other rows.")]
     private Image toggleMark;
 
@@ -23,7 +21,6 @@ public class KeyBindingRowView : MonoBehaviour
     public Button ResetButton => resetButton;
     internal TMP_Text Label => label;
     internal TMP_Text BindingText => bindingText;
-    internal Image Swatch => swatch;
     internal Image ToggleMark => toggleMark;
 
     /// <summary>
@@ -56,17 +53,6 @@ public class KeyBindingRowView : MonoBehaviour
         if (bindingText != null)
         {
             bindingText.text = text;
-        }
-    }
-
-    /// <summary>
-    /// Shows <paramref name="colour"/> in the row's swatch chip, when it has one.
-    /// </summary>
-    public void SetSwatch(Color colour)
-    {
-        if (swatch != null)
-        {
-            swatch.color = colour;
         }
     }
 

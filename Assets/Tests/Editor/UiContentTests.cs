@@ -14,7 +14,8 @@ using UnityEngine.UI;
 /// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
 /// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), the command
 /// bar is built from its components (Phase 2), the options screen's rail item and description line are built from
-/// the skin and the notice line (Phase 8), and the main menu's dialog, join field and invite block from theirs (Phase 9).
+/// the skin and the notice line (Phase 8), the main menu's dialog, join field and invite block from theirs (Phase 9), and
+/// the session card and the Saved games screen from theirs (Phase 10).
 /// </summary>
 public class UiContentTests
 {
@@ -655,6 +656,70 @@ public class UiContentTests
         finally
         {
             EditorSceneManager.CloseScene(main, true);
+        }
+    }
+
+    /// <summary>
+    /// The Saved games screen's parts (Docs/UiRevamp.md, Phase 10):
+    /// <list type="bullet">
+    /// <item><c>SessionCard</c>, a variant of the panel with its view: a frame in Border and, hidden, one in Accent; the
+    /// place in Text and the copy's tag and the times in TextMuted, read on SurfaceRaised, taking no pointer; and its
+    /// actions, hidden and blind to the pointer until the card is selected, Play and Host primary buttons and Delete a
+    /// secondary one, each 48 x 16 UI px;</item>
+    /// <item>the screen, in its prefab and in the main menu, makes its cards from the session card, its list a scroll
+    /// list, its notice a notice line and its confirmation a dialog;</item>
+    /// <item>the main menu's Saved games is a large button and Play together's Host another saved game a button.</item>
+    /// </list>
+    /// </summary>
+    [Test]
+    public void TheSessionCardAndSavedGames_AreBuiltFromTheirBases()
+    {
+        GameObject cardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}SessionCard.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(cardPrefab)), Is.EqualTo($"{Components}Panel.prefab"), "A variant of the panel.");
+        SessionCardView card = cardPrefab.GetComponent<SessionCardView>();
+        Assert.That(card, Is.Not.Null);
+        Assert.That(cardPrefab.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(card.SelectedFrame.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(card.SelectedFrame.enabled, Is.False, "The Accent frame shows only while the card is selected.");
+        Assert.That(card.PlaceText.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(card.TagText.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(card.DetailsText.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        foreach (TMP_Text text in new[] { card.PlaceText, card.TagText, card.DetailsText })
+        {
+            Assert.That(text.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.SurfaceRaised), $"{text.name} is read on the screen's raised panel.");
+            Assert.That(text.raycastTarget, Is.False, $"{text.name} leaves the click to the card.");
+        }
+
+        Assert.That(card.Actions.alpha, Is.Zero);
+        Assert.That(card.Actions.blocksRaycasts, Is.False);
+        Assert.That(ComesFrom(card.PlayButton.gameObject, $"{Components}Button.prefab") && ComesFrom(card.HostButton.gameObject, $"{Components}Button.prefab"), Is.True);
+        Assert.That(ComesFrom(card.DeleteButton.gameObject, $"{Components}ButtonSecondary.prefab"), Is.True);
+        foreach (Button button in new[] { card.PlayButton, card.HostButton, card.DeleteButton })
+        {
+            Assert.That(((RectTransform)button.transform).sizeDelta, Is.EqualTo(new Vector2(48f, 16f)), button.name);
+        }
+
+        int screens = 0;
+        foreach ((string where, SavedGamesView saved) in All<SavedGamesView>())
+        {
+            screens++;
+            SerializedObject serialized = new(saved);
+            Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("cardPrefab").objectReferenceValue), Is.EqualTo($"{Components}SessionCard.prefab"), $"{where}'s cards.");
+            Assert.That(ComesFrom(saved.Scroll.gameObject, $"{Components}ScrollList.prefab"), Is.True, $"{where}'s list.");
+            Assert.That(ComesFrom(saved.Notice.gameObject, $"{Components}NoticeLine.prefab"), Is.True, $"{where}'s notice line.");
+            Assert.That(ComesFrom(serialized.FindProperty("confirmPanel").objectReferenceValue, $"{Components}Dialog.prefab"), Is.True, $"{where}'s confirmation.");
+            Assert.That(ComesFrom(saved.ConfirmYesButton.gameObject, $"{Components}ButtonDanger.prefab"), Is.True, $"{where}'s Delete is a danger button.");
+        }
+
+        Assert.That(screens, Is.EqualTo(2), "The prefab and the main menu's screen.");
+        foreach ((string where, MainMenuController menu) in All<MainMenuController>())
+        {
+            Assert.That(ComesFrom(new SerializedObject(menu).FindProperty("savedGamesButton").objectReferenceValue, $"{Components}ButtonLarge.prefab"), Is.True, $"{where}'s Saved games.");
+        }
+
+        foreach ((string where, PlayTogetherView together) in All<PlayTogetherView>())
+        {
+            Assert.That(ComesFrom(together.HostSavedButton.gameObject, $"{Components}Button.prefab"), Is.True, $"{where}'s Host another saved game.");
         }
     }
 

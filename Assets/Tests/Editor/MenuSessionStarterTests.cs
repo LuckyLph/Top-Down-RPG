@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="MenuSessionStarter"/> (Docs/UiRevamp.md, Phase 9) over a fake game flow and network connection:
-/// a new game, Continue and hosting, each start refused while a transition runs or a join is in progress; a join that
+/// a new game, Continue and hosting, playing and hosting a given save (Phase 10), each start refused while a transition
+/// runs or a join is in progress; a join that
 /// connects, remembered first among the recent hosts with the joining line shown; each failure's sentence; and a join
 /// cancelled.
 /// </summary>
@@ -85,16 +86,55 @@ public class MenuSessionStarterTests
     }
 
     /// <summary>
+    /// Play and Host take the save they are given, not the latest (Docs/UiRevamp.md, Phase 10): Play starts it offline
+    /// at the local player's saved place under its own id, Host hosts it; a joined client's copy, its host gone or not,
+    /// goes on as a session of its own; a save that cannot be read says so and starts nothing.
+    /// </summary>
+    [Test]
+    public void PlayAndHost_StartTheSaveGiven_NotTheLatest()
+    {
+        string older = rig.WriteSave(MenuTestRig.NearNorth, 600d, "older");
+        rig.WallClock.Advance(60d);
+        rig.WriteSave(new Vector2(12f, 14f), 900d, "newer");
+        rig.WallClock.Advance(60d);
+        string copy = rig.WriteCopy(new Vector2(20f, 30f), 300d, "host-session", false);
+
+        Assert.That(rig.Starter.Play(older), Is.Null);
+        Assert.That(rig.SessionSave.Id, Is.EqualTo("older"));
+        Assert.That(rig.Flow.StartedPosition, Is.EqualTo(rig.Home.ToWorld(MenuTestRig.NearNorth)));
+        Assert.That(rig.Connection.HostsStarted, Is.Zero, "Play stays offline.");
+
+        Assert.That(rig.Starter.Host(older), Is.Null);
+        Assert.That(rig.Connection.HostsStarted, Is.EqualTo(1));
+        Assert.That(rig.SessionSave.Id, Is.EqualTo("older"));
+        Assert.That(rig.Flow.StartedPosition, Is.EqualTo(rig.Home.ToWorld(MenuTestRig.NearNorth)));
+
+        rig.Connection.Shutdown();
+        Assert.That(rig.Starter.Play(copy), Is.Null, "A copy whose host may still be there plays on its own.");
+        Assert.That(rig.SessionSave.Id, Is.Not.Empty.And.Not.EqualTo("host-session"), "The copy goes on as a session of its own.");
+        Assert.That(rig.Flow.StartedPosition, Is.EqualTo(rig.Home.ToWorld(new Vector2(20f, 30f))));
+
+        int starts = rig.Flow.WorldStarts;
+        Assert.That(rig.Starter.Play("session-gone.json"), Is.EqualTo(MenuSessionStarter.UnreadableSave));
+        Assert.That(rig.Starter.Host("session-gone.json"), Is.EqualTo(MenuSessionStarter.UnreadableSave));
+        Assert.That(rig.Flow.WorldStarts, Is.EqualTo(starts));
+        Assert.That(rig.Connection.HostsStarted, Is.EqualTo(1), "Hosting does not start for a save that cannot be read.");
+    }
+
+    /// <summary>
     /// Nothing starts while a transition runs.
     /// </summary>
     [Test]
     public void NothingStarts_WhileATransitionRuns()
     {
+        string saved = rig.WriteSave(MenuTestRig.NearNorth, 600d);
         rig.Flow.IsTransitioning = true;
 
         Assert.That(rig.Starter.CanStart, Is.False);
         Assert.That(rig.Starter.StartNew(), Is.Null);
         Assert.That(rig.Starter.Host(false), Is.Null);
+        Assert.That(rig.Starter.Play(saved), Is.Null);
+        Assert.That(rig.Starter.Host(saved), Is.Null);
         Assert.That(rig.Starter.JoinAsync(new JoinAddress("192.168.1.20", 7777), CancellationToken.None).GetAwaiter().GetResult(), Is.Null);
         Assert.That(rig.Flow.WorldStarts + rig.Connection.HostsStarted + rig.Connection.Joins, Is.Zero);
     }

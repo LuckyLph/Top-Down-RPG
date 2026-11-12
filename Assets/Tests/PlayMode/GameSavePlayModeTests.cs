@@ -8,9 +8,10 @@ using UnityEngine.TestTools;
 /// <summary>
 /// PlayMode tests for the world save from the main menu (Docs/WorldStreaming.md: Persistence): New Game enters the
 /// starting world and saves the local player's place and weapon; an editor boot straight into a world is a throwaway
-/// session that leaves the save alone; without a usable save Continue is off; Continue and
-/// Host Game start from the save, the local player at its saved world and position holding its saved weapon, and the
-/// host's weapon switch is saved; a player the host knows by its player id joins at its saved place, once the host has
+/// session that leaves the save alone; without a usable save Continue and Saved games are off, and a joined copy counts
+/// as one; Continue and Host Game start from the save, the local player at its saved world and position holding its
+/// saved weapon, and the host's weapon switch is saved; Saved games hosts an older session than the latest
+/// (Docs/UiRevamp.md, Phase 10); a player the host knows by its player id joins at its saved place, once the host has
 /// loaded that world, holding its saved weapon on both machines, and its place is kept as it leaves.
 /// </summary>
 public class GameSavePlayModeTests
@@ -95,12 +96,13 @@ public class GameSavePlayModeTests
     }
 
     /// <summary>
-    /// With no save, an old save of an earlier build (version 1, which held an area), ignored with its warning, or only a
-    /// copy of this machine's place in a host's session that may still be there, the main menu's Continue button and its
-    /// line hide and New game is selected (Docs/UiRevamp.md, Phase 9).
+    /// With no save, or an old save of an earlier build (version 1, which held an area), ignored with its warning, the
+    /// main menu's Continue button, its line and Saved games hide and New game is selected (Docs/UiRevamp.md, Phases 9
+    /// and 10); a copy of this machine's place in a host's session that may still be there plays on its own, so with only
+    /// that copy they show.
     /// </summary>
     [UnityTest]
-    public IEnumerator MainMenu_WithoutAUsableSave_HidesContinue()
+    public IEnumerator MainMenu_WithoutAUsableSave_HidesContinueAndSavedGames()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu(new MemorySaveFolder());
         yield return AssertContinueHidden();
@@ -116,7 +118,72 @@ public class GameSavePlayModeTests
         copy.SetHost("a-host-session", false);
         copyOnly.Seed(copy);
         yield return SceneBootTestHelper.BootIntoMainMenu(copyOnly);
-        yield return AssertContinueHidden();
+        MainMenuController menu = Object.FindAnyObjectByType<MainMenuController>();
+        yield return null;
+        Assert.That(menu.ContinueButton.gameObject.activeSelf && menu.SavedGamesButton.gameObject.activeSelf, Is.True, "A copy plays on its own.");
+        Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.ContinueButton.gameObject));
+    }
+
+    /// <summary>
+    /// Play together's Host another saved game opens Saved games to host, and a card's Host hosts that older session
+    /// rather than the latest: the host's player starts at that session's saved place in its world, under that
+    /// session's id, and the host's first save goes to that session's file.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator HostingAnOlderSession_FromSavedGames_LandsAtThatSessionsPlace()
+    {
+        MemorySaveFolder saveStore = new();
+        yield return SceneBootTestHelper.BootIntoMainMenu(saveStore);
+        GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
+        NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
+        WorldDefinition sandbox = FindWorld(gameFlow, "Sandbox");
+        WorldDefinition starting = gameFlow.Scenes.StartingWorld;
+        GameSaveData older = SaveWith(sandbox, session.LocalPlayerId, sandbox.ToWorld(SavedSandboxPlace));
+        older.SetSession("older-session");
+        older.Stamp(new System.DateTime(2026, 11, 1, 12, 0, 0, System.DateTimeKind.Utc));
+        string olderFile = saveStore.Seed(older);
+        GameSaveData newer = SaveWith(starting, session.LocalPlayerId, starting.EntryPosition(gameFlow.Scenes.StartingWorldEntry));
+        newer.SetSession("newer-session");
+        newer.Stamp(new System.DateTime(2026, 11, 2, 12, 0, 0, System.DateTimeKind.Utc));
+        saveStore.Seed(newer);
+        int writesBefore = saveStore.WriteCount;
+
+        MainMenuController menu = Object.FindAnyObjectByType<MainMenuController>();
+        menu.OpenPlayTogether();
+        PlayTogetherView together = Object.FindAnyObjectByType<PlayTogetherView>();
+        Assert.That(together.HostSavedButton.gameObject.activeSelf, Is.True, "There is a save besides the latest.");
+        together.HostSavedButton.onClick.Invoke();
+        SavedGamesView saved = Object.FindAnyObjectByType<SavedGamesView>();
+        Assert.That(saved.IsShown, Is.True);
+        Assert.That(saved.CardCount, Is.EqualTo(2));
+        Assert.That(saved.Card(1).PlayButton.gameObject.activeSelf, Is.False, "Opened to host, the cards have no Play.");
+        Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(saved.Card(0).HostButton.gameObject));
+        saved.Card(1).HostButton.onClick.Invoke();
+        Assert.That(session.IsHost, Is.True);
+        yield return SceneBootTestHelper.WaitForTransition(gameFlow);
+
+        AssertLocalPlayerAt(gameFlow, sandbox, sandbox.ToWorld(SavedSandboxPlace));
+        Assert.That(SceneBootTestHelper.ResolveFromMain<SessionSave>().Id, Is.EqualTo("older-session"));
+        yield return SceneBootTestHelper.WaitUntil(() => saveStore.WriteCount > writesBefore, "the host to save as its player enters the world");
+        Assert.That(saveStore.LastWrittenName, Is.EqualTo(olderFile), "The host saves into the older session's file.");
+    }
+
+    /// <summary>
+    /// The PlayMode tests' in-memory folder deletes a save as the disk's does, keeping its text as its one copy, a
+    /// second delete replacing it.
+    /// </summary>
+    [Test]
+    public void MemorySaveFolder_DeletesASave_KeepingOneCopy()
+    {
+        MemorySaveFolder folder = new();
+        Assert.That(folder.Delete("session-a.json"), Is.False);
+        folder.Open("session-a.json").Write("first");
+        Assert.That(folder.Delete("session-a.json"), Is.True);
+        Assert.That(folder.Names(), Is.Empty);
+        Assert.That(folder.DeletedCopyOf("session-a.json"), Is.EqualTo("first"));
+        folder.Open("session-a.json").Write("second");
+        Assert.That(folder.Delete("session-a.json"), Is.True);
+        Assert.That(folder.DeletedCopyOf("session-a.json"), Is.EqualTo("second"));
     }
 
     /// <summary>
@@ -255,7 +322,8 @@ public class GameSavePlayModeTests
     }
 
     /// <summary>
-    /// Asserts the main menu's Continue button and its line hide and New game is selected, a frame after the menu started.
+    /// Asserts the main menu's Continue button, its line and Saved games hide and New game is selected, a frame after the
+    /// menu started.
     /// </summary>
     private static IEnumerator AssertContinueHidden()
     {
@@ -265,6 +333,7 @@ public class GameSavePlayModeTests
         Assert.That(menu.ContinueButton, Is.Not.Null, "The menu should have a Continue button assigned.");
         Assert.That(menu.ContinueButton.gameObject.activeSelf, Is.False);
         Assert.That(menu.ContinueLineText.gameObject.activeSelf, Is.False);
+        Assert.That(menu.SavedGamesButton.gameObject.activeSelf, Is.False);
         Assert.That(EventSystem.current.currentSelectedGameObject, Is.SameAs(menu.NewGameButton.gameObject));
     }
 

@@ -7,8 +7,8 @@ using UnityEngine.UI;
 /// Play together (Docs/UiRevamp.md, Phase 9), a full raised screen titled "Play together" over the main menu: a 472 UI
 /// px block of two columns centred on whole UI px, as on the options screen.
 /// <list type="bullet">
-/// <item><b>Host a game:</b> Host and continue with the Continue line under it, Host a new game, and the invite block
-/// (<see cref="InviteBlockView"/>).</item>
+/// <item><b>Host a game:</b> Host and continue with the Continue line under it, Host a new game, Host another saved
+/// game (Phase 10), and the invite block (<see cref="InviteBlockView"/>).</item>
 /// <item><b>Join a game:</b> the address field (the `FieldControl` component), Join, and "Recent" over up to five recent
 /// hosts.</item>
 /// </list>
@@ -32,6 +32,7 @@ public class PlayTogetherView : MonoBehaviour
     [SerializeField] private Button hostContinueButton;
     [SerializeField] private TMP_Text continueLine;
     [SerializeField] private Button hostNewButton;
+    [SerializeField, Tooltip("Host another saved game, shown while there is a save besides the latest.")] private Button hostSavedButton;
     [SerializeField] private InviteBlockView invite;
     [SerializeField, Tooltip("The join column, a vertical layout.")] private RectTransform joinColumn;
     [SerializeField] private TMP_InputField field;
@@ -45,6 +46,7 @@ public class PlayTogetherView : MonoBehaviour
 
     public Button HostContinueButton => hostContinueButton;
     public Button HostNewButton => hostNewButton;
+    public Button HostSavedButton => hostSavedButton;
     public InviteBlockView Invite => invite;
     public TMP_InputField Field => field;
     public Button JoinButton => joinButton;
@@ -62,7 +64,7 @@ public class PlayTogetherView : MonoBehaviour
     /// </summary>
     private void Awake()
     {
-        if (panel == null || hostColumn == null || hostContinueButton == null || continueLine == null || hostNewButton == null || invite == null
+        if (panel == null || hostColumn == null || hostContinueButton == null || continueLine == null || hostNewButton == null || hostSavedButton == null || invite == null
             || joinColumn == null || field == null || joinButton == null || recentLabel == null || recentButtons.Length == 0 || recentTexts.Length != recentButtons.Length
             || notice == null || backButton == null || dialog == null)
         {
@@ -120,6 +122,14 @@ public class PlayTogetherView : MonoBehaviour
             float width = ColumnWidth - continueLine.margin.x - continueLine.margin.z;
             element.preferredHeight = Mathf.Max(1f, Mathf.Round(continueLine.GetPreferredValues(line, width, 0f).y / LineHeight)) * LineHeight + 2f;
         }
+    }
+
+    /// <summary>
+    /// Shows or hides Host another saved game.
+    /// </summary>
+    public void SetHostSavedShown(bool shown)
+    {
+        hostSavedButton.gameObject.SetActive(shown);
     }
 
     /// <summary>

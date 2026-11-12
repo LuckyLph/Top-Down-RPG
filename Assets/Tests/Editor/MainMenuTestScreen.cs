@@ -10,8 +10,8 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// A copy of the main menu scene's canvas for the main menu's EditMode tests (Docs/UiRevamp.md, Phase 9): cloned from
 /// <c>MainMenu.unity</c> into a plain parent of a chosen size in UI px (its canvas components stripped, so the parent
-/// sizes it), with its <see cref="MainMenuController"/> and a <see cref="PlayTogetherController"/> built over a
-/// <see cref="MenuTestRig"/>. <see cref="Start"/> runs the controller's Awake and Start, which edit mode skips.
+/// sizes it), with its <see cref="MainMenuController"/>, a <see cref="PlayTogetherController"/> and a
+/// <see cref="SavedGamesController"/> (Phase 10) built over a <see cref="MenuTestRig"/>. <see cref="Start"/> runs the controller's Awake and Start, which edit mode skips.
 /// </summary>
 internal sealed class MainMenuTestScreen : IDisposable
 {
@@ -50,8 +50,10 @@ internal sealed class MainMenuTestScreen : IDisposable
         Notice = notice ?? new MenuNotice();
         Menu = Root.GetComponent<MainMenuController>();
         Together = Root.GetComponentInChildren<PlayTogetherView>(true);
-        PlayTogether = rig.CreatePlayTogether(Together);
-        Menu.Construct(rig.Starter, PlayTogether, rig.Line, Notice, null, null, rig.Selection, rig.Menus);
+        Saved = Root.GetComponentInChildren<SavedGamesView>(true);
+        SavedGames = rig.CreateSavedGames(Saved);
+        PlayTogether = rig.CreatePlayTogether(Together, SavedGames);
+        Menu.Construct(rig.Starter, PlayTogether, SavedGames, rig.Line, Notice, null, null, rig.Selection, rig.Menus);
     }
 
     public GameObject Parent { get; }
@@ -59,6 +61,8 @@ internal sealed class MainMenuTestScreen : IDisposable
     public MainMenuController Menu { get; }
     public PlayTogetherView Together { get; }
     public PlayTogetherController PlayTogether { get; }
+    public SavedGamesView Saved { get; }
+    public SavedGamesController SavedGames { get; }
     public MenuNotice Notice { get; }
     public RectTransform Area => (RectTransform)Root.transform;
 
@@ -72,11 +76,12 @@ internal sealed class MainMenuTestScreen : IDisposable
     }
 
     /// <summary>
-    /// Disposes Play together; the rig destroys the objects.
+    /// Disposes Play together and Saved games; the rig destroys the objects.
     /// </summary>
     public void Dispose()
     {
         PlayTogether.Dispose();
+        SavedGames.Dispose();
     }
 
     /// <summary>

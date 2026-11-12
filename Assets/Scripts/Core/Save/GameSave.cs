@@ -5,10 +5,11 @@ using UnityEngine;
 /// <summary>
 /// Reads and writes the save files (<see cref="GameSaveData"/>), one per session, in an <see cref="ISaveFolder"/>
 /// (Docs/KnownGaps.md, Phase 5): a session's own as <c>session-&lt;id&gt;.json</c>, a joined client's copy of its own
-/// place in a host's session as <c>joined-&lt;host session id&gt;.json</c>. The latest save
-/// (<see cref="TryLoadLatest"/>) is the readable one saved last by its <see cref="GameSaveData.SavedAt"/>, among the
-/// sessions and the copies whose host is gone; a copy whose host may still be there is used only while joined to it. A
-/// file that cannot be parsed, or has a format this build does not read, is ignored with a warning (once a run) and
+/// place in a host's session as <c>joined-&lt;host session id&gt;.json</c>. <see cref="List"/> gives every readable
+/// save, newest first by its <see cref="GameSaveData.SavedAt"/>, for the Saved games screen (Docs/UiRevamp.md, Phase
+/// 10); the latest (<see cref="TryLoadLatest"/>) is the first of them, a session or a copy, since a copy plays on its own
+/// whether its host is gone or not. <see cref="Delete"/> takes a save out of the list, kept as one copy. A file that
+/// cannot be parsed, or has a format this build does not read, is ignored with a warning (once a run) and
 /// kept as a copy beside it before anything writes over it. The single save file of earlier builds is imported once as
 /// a session, its terrain edits (which named layers by index) dropped with a warning, and renamed; one this build does
 /// not import is ignored with a warning and left alone.
@@ -63,33 +64,61 @@ public sealed class GameSave
     }
 
     /// <summary>
-    /// The save Continue loads: of the readable files, the sessions and the copies whose host is gone, the one saved
-    /// last (a tie going to the name that sorts last). Imports the earlier builds' save file first, once. False when
-    /// there is none.
+    /// Every readable save, the sessions and the joined clients' copies, newest first by when each was saved (a tie
+    /// going first to the name that sorts last). Imports the earlier builds' save file first, once. A file that cannot be
+    /// read is left out, with its warning once a run.
     /// </summary>
-    public bool TryLoadLatest(out GameSaveData data)
+    public IReadOnlyList<SavedGame> List()
     {
         ImportLegacyOnce();
-        data = null;
-        string latestName = null;
-        DateTime latest = DateTime.MinValue;
+        List<SavedGame> saves = new();
         foreach (string name in folder.Names())
         {
-            if (!TryRead(name, out GameSaveData candidate) || (candidate.IsCopy && !candidate.HostGone))
+            if (TryRead(name, out GameSaveData data))
             {
-                continue;
-            }
-
-            DateTime savedAt = candidate.SavedAtUtc();
-            if (data == null || savedAt > latest || (savedAt == latest && string.CompareOrdinal(name, latestName) > 0))
-            {
-                data = candidate;
-                latest = savedAt;
-                latestName = name;
+                saves.Add(new SavedGame(name, data));
             }
         }
 
+        saves.Sort(NewestFirst);
+        return saves;
+    }
+
+    /// <summary>
+    /// The save Continue loads: the first of <see cref="List"/>, the readable save saved last, a session or a joined
+    /// client's copy. False when there is none.
+    /// </summary>
+    public bool TryLoadLatest(out GameSaveData data)
+    {
+        IReadOnlyList<SavedGame> saves = List();
+        data = saves.Count > 0 ? saves[0].Data : null;
         return data != null;
+    }
+
+    /// <summary>
+    /// The save in the file <paramref name="name"/>, as <see cref="List"/> names it; false when it does not exist or
+    /// cannot be read.
+    /// </summary>
+    public bool TryLoad(string name, out GameSaveData data)
+    {
+        ImportLegacyOnce();
+        data = null;
+        return !string.IsNullOrEmpty(name) && TryRead(name, out data);
+    }
+
+    /// <summary>
+    /// Deletes the save file <paramref name="name"/>, keeping one copy of it beside it (<see cref="ISaveFolder.Delete"/>);
+    /// false when there is no such file or the disk refuses.
+    /// </summary>
+    public bool Delete(string name)
+    {
+        if (string.IsNullOrEmpty(name) || !folder.Delete(name))
+        {
+            return false;
+        }
+
+        checkedNames.Remove(name);
+        return true;
     }
 
     /// <summary>
@@ -265,6 +294,16 @@ public sealed class GameSave
         GameSaveData imported = new(legacy.Time, legacy.Players, worlds);
         imported.SetSession(sessionId);
         return imported;
+    }
+
+    /// <summary>
+    /// Orders <paramref name="a"/> before <paramref name="b"/> when it was saved later, or at the same time under a name
+    /// that sorts later.
+    /// </summary>
+    private static int NewestFirst(SavedGame a, SavedGame b)
+    {
+        int bySavedAt = b.SavedAtUtc().CompareTo(a.SavedAtUtc());
+        return bySavedAt != 0 ? bySavedAt : string.CompareOrdinal(b.Name, a.Name);
     }
 
     /// <summary>

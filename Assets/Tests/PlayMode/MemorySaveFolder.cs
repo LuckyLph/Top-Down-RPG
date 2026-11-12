@@ -4,11 +4,13 @@ using System.Collections.Generic;
 /// <summary>
 /// In-memory <see cref="ISaveFolder"/> for tests: its files by name, each counting its writes and keeping copies as
 /// <see cref="MemorySaveStore"/> does, the earlier builds' single save file (<see cref="LegacyStore"/>) and what retiring
-/// it moved aside, the name and text of the file written last, and a way to seed a session's save.
+/// it moved aside, the name and text of the file written last, the copy a delete kept of each file, and a way to seed
+/// a session's save.
 /// </summary>
 public sealed class MemorySaveFolder : ISaveFolder
 {
     private readonly Dictionary<string, File> files = new();
+    private readonly Dictionary<string, string> deleted = new();
     private int seeded;
 
     public MemorySaveStore LegacyStore { get; } = new();
@@ -67,6 +69,31 @@ public sealed class MemorySaveFolder : ISaveFolder
     public IReadOnlyList<string> KeptCopiesOf(string name)
     {
         return files.TryGetValue(name, out File file) ? file.KeptCopies : Array.Empty<string>();
+    }
+
+    /// <summary>
+    /// Takes the text out of the file named <paramref name="name"/>, keeping it as that file's one deleted copy
+    /// (<see cref="DeletedCopyOf"/>), which replaces the copy an earlier delete kept; false when it holds nothing.
+    /// </summary>
+    public bool Delete(string name)
+    {
+        if (!files.TryGetValue(name, out File file) || file.Contents == null)
+        {
+            return false;
+        }
+
+        deleted[name] = file.Contents;
+        file.Contents = null;
+        return true;
+    }
+
+    /// <summary>
+    /// The text the last delete of the file named <paramref name="name"/> kept, as <c>&lt;name&gt;.bak</c> would hold it;
+    /// null when it was never deleted.
+    /// </summary>
+    public string DeletedCopyOf(string name)
+    {
+        return deleted.TryGetValue(name, out string text) ? text : null;
     }
 
     /// <summary>

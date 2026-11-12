@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using UnityEngine;
@@ -11,6 +12,8 @@ using UnityEngine;
 /// <item>a new game starts a new session at the starting world's entry;</item>
 /// <item>Continue, and hosting to continue, load the latest save (<see cref="GameSave.TryLoadLatest"/>), the local
 /// player starting at its saved place (<see cref="PlayerStarts"/>);</item>
+/// <item>the Saved games screen plays or hosts a given save (<see cref="Play"/>, <see cref="Host(string)"/>;
+/// Docs/UiRevamp.md, Phase 10), a joined client's copy going on as a session of its own;</item>
 /// <item>hosting a new game starts a new session hosted;</item>
 /// <item>joining connects to a host, remembers it among the recent hosts, shows "Joining …'s game…" over the fader and
 /// starts the joined game in whichever world the host puts this player.</item>
@@ -22,6 +25,7 @@ public sealed class MenuSessionStarter
 {
     public const string NoWorld = "There is no world to start.";
     public const string NoSave = "No saved game to continue.";
+    public const string UnreadableSave = "That saved game could not be read.";
     public const string HostFailedFormat = "Could not host on port {0}. Close any other copy of the game and try again.";
     public const string UnreachableFormat = "Could not reach {0} in {1} s. Check the address, and that the host is in a game.";
     public const string FullFormat = "{0} is full: {1} of {1} players.";
@@ -64,6 +68,11 @@ public sealed class MenuSessionStarter
     /// Whether there is a save to continue.
     /// </summary>
     public bool HasSave => gameSave.HasSave;
+
+    /// <summary>
+    /// Every save, newest first (<see cref="GameSave.List"/>).
+    /// </summary>
+    public IReadOnlyList<SavedGame> SavedGames => gameSave.List();
 
     /// <summary>
     /// The port a join goes to when the address names none.
@@ -114,6 +123,26 @@ public sealed class MenuSessionStarter
     }
 
     /// <summary>
+    /// Plays the save in the file <paramref name="name"/> offline, the local player at its saved place; null when it
+    /// started, else why not.
+    /// </summary>
+    public string Play(string name)
+    {
+        if (!CanStart)
+        {
+            return null;
+        }
+
+        if (!gameSave.TryLoad(name, out GameSaveData data))
+        {
+            return UnreadableSave;
+        }
+
+        sessionSave.StartFrom(data);
+        return StartLocalPlayerSession();
+    }
+
+    /// <summary>
     /// Starts hosting, then continues the latest save when <paramref name="continueLatest"/> and there is one, or else
     /// starts a new session; null when it started, else why not, logging an error when hosting failed.
     /// </summary>
@@ -124,6 +153,35 @@ public sealed class MenuSessionStarter
             return null;
         }
 
+        GameSaveData data = null;
+        if (continueLatest)
+        {
+            gameSave.TryLoadLatest(out data);
+        }
+
+        return StartHosting(data);
+    }
+
+    /// <summary>
+    /// Starts hosting the save in the file <paramref name="name"/>, the local player at its saved place; null when it
+    /// started, else why not, logging an error when hosting failed.
+    /// </summary>
+    public string Host(string name)
+    {
+        if (!CanStart)
+        {
+            return null;
+        }
+
+        return gameSave.TryLoad(name, out GameSaveData data) ? StartHosting(data) : UnreadableSave;
+    }
+
+    /// <summary>
+    /// Starts hosting, then the session of <paramref name="data"/>, or a new one for null; null when it started, else
+    /// why not, logging an error when hosting failed.
+    /// </summary>
+    private string StartHosting(GameSaveData data)
+    {
         if (gameFlow.Scenes == null || gameFlow.Scenes.StartingWorld == null)
         {
             Debug.LogError($"{nameof(GameScenes)} has no starting world; hosting needs one.");
@@ -136,7 +194,7 @@ public sealed class MenuSessionStarter
             return string.Format(CultureInfo.InvariantCulture, HostFailedFormat, session.Settings.Port);
         }
 
-        if (continueLatest && gameSave.TryLoadLatest(out GameSaveData data))
+        if (data != null)
         {
             sessionSave.StartFrom(data);
         }

@@ -7,7 +7,9 @@ using UnityEngine;
 /// was played and when it was saved, such as "Clearing · 3 h 12 min · today 14:02". The place is the display name of
 /// the entry nearest the local player's saved place (its world's name when the world has no named entry); the time
 /// played is the session's game time; the save's time is today's, yesterday's, a date this year or a date with its
-/// year, on a 24-hour clock in this machine's time zone. Menu-scope singleton, on this machine only.
+/// year, on a 24-hour clock in this machine's time zone. The Saved games screen's cards read any save's place and
+/// details the same way (<see cref="PlaceOf(GameSaveData)"/>, <see cref="DetailsOf"/>; Docs/UiRevamp.md, Phase 10).
+/// Menu-scope singleton, on this machine only.
 /// </summary>
 public sealed class ContinueLine
 {
@@ -42,8 +44,25 @@ public sealed class ContinueLine
             return false;
         }
 
-        line = Format(PlaceOf(data, settings.PlayerId, scenes), data.Time, data.SavedAtUtc().ToLocalTime(), wallClock.UtcNow.ToLocalTime());
+        line = Format(PlaceOf(data), data.Time, data.SavedAtUtc().ToLocalTime(), wallClock.UtcNow.ToLocalTime());
         return true;
+    }
+
+    /// <summary>
+    /// Where the local player stands in <paramref name="data"/>: the display name of the entry nearest its saved place,
+    /// else its world's; empty when the world is not listed.
+    /// </summary>
+    public string PlaceOf(GameSaveData data)
+    {
+        return PlaceOf(data, settings.PlayerId, scenes);
+    }
+
+    /// <summary>
+    /// How long <paramref name="data"/> was played and when it was saved, read now: "3 h 12 min · today 14:02".
+    /// </summary>
+    public string DetailsOf(GameSaveData data)
+    {
+        return Played(data.Time) + Separator + Saved(data.SavedAtUtc().ToLocalTime(), wallClock.UtcNow.ToLocalTime());
     }
 
     /// <summary>

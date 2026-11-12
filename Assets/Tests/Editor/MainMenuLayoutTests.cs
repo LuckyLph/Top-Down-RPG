@@ -5,10 +5,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Tests for the main menu's and Play together's layout (Docs/UiRevamp.md, Phase 9) at the UI size of every display in
-/// the Scale table, every size step included: the menu's panel on the left with every button inside it and the version
-/// clear of it; Play together's two columns centred, full (a save's line, two addresses, five recent hosts) and clear of
-/// a two-line notice over Back; and the host-gone dialog's box; all inside the screen and on whole UI px.
+/// Tests for the main menu's, Play together's and Saved games' layout (Docs/UiRevamp.md, Phases 9 and 10) at the UI size
+/// of every display in the Scale table, every size step included: the menu's panel on the left with every button inside
+/// it, Saved games included, and the version clear of it; Play together's two columns centred, full (a save's line, Host
+/// another saved game, two addresses, five recent hosts) and clear of a two-line notice over Back; the host-gone
+/// dialog's box; and Saved games' list of eight cards centred above a two-line notice and Back, with its Delete
+/// confirmation's box; all inside the screen and on whole UI px.
 /// </summary>
 public class MainMenuLayoutTests
 {
@@ -28,11 +30,11 @@ public class MainMenuLayoutTests
     }
 
     /// <summary>
-    /// Every display's main menu, Play together and dialog keep their parts inside the screen and apart, 480 x 270 among
-    /// them.
+    /// Every display's main menu, Play together, dialog and Saved games keep their parts inside the screen and apart,
+    /// 480 x 270 among them.
     /// </summary>
     [Test]
-    public void AtEveryDisplay_TheMenuAndPlayTogetherFit()
+    public void AtEveryDisplay_TheMenuPlayTogetherAndSavedGamesFit()
     {
         UiScaleSettings settings = AssetDatabase.LoadAssetAtPath<UiScaleSettings>("Assets/Data/UI/UiScale.asset");
         HashSet<Vector2Int> sizes = new();
@@ -56,13 +58,19 @@ public class MainMenuLayoutTests
     }
 
     /// <summary>
-    /// Lays the menu out on a <paramref name="width"/> x <paramref name="height"/> UI px parent with a save, then Play
-    /// together with its columns full and a two-line notice, then the host-gone dialog, and checks each part.
+    /// Lays the menu out on a <paramref name="width"/> x <paramref name="height"/> UI px parent with eight saves, then Play
+    /// together with its columns full and a two-line notice, then the host-gone dialog, then Saved games with a two-line
+    /// notice and its Delete confirmation, and checks each part.
     /// </summary>
     private void CheckAt(int width, int height, List<string> problems)
     {
         rig = new MenuTestRig();
-        rig.WriteSave(MenuTestRig.NearNorth, 3d * 3600d + 12d * 60d);
+        for (int i = 0; i < 8; i++)
+        {
+            rig.WallClock.Advance(60d);
+            rig.WriteSave(MenuTestRig.NearNorth, 3d * 3600d + 12d * 60d + i, $"save-{i}");
+        }
+
         rig.AddAddresses();
         for (int i = 0; i < UserSettings.MaxRecentHosts; i++)
         {
@@ -111,7 +119,60 @@ public class MainMenuLayoutTests
         screen.Menu.ShowNotice(MenuNoticeKind.HostGone, "100.101.102.103:7777");
         Rect box = screen.RectOf(screen.Menu.Dialog.Box);
         CheckInside(where, "the dialog's box", box, 0f, 0f, area.width, area.height, problems);
+        screen.Menu.HandleBack();
+
+        CheckSavedGames(where, area, problems);
         TearDown();
+    }
+
+    /// <summary>
+    /// Opens Saved games over eight saves and checks its list (in the 472 UI px block from 28 down, every card as wide as
+    /// the list less the scrollbar's room), a two-line notice and Back under it, and the Delete confirmation's box.
+    /// </summary>
+    private void CheckSavedGames(string where, Rect area, List<string> problems)
+    {
+        screen.Menu.OpenSavedGames();
+        SavedGamesView saved = screen.Saved;
+        if (!saved.IsShown || saved.CardCount != 8)
+        {
+            problems.Add($"{where}: Saved games did not open on eight cards.");
+            return;
+        }
+
+        saved.SetNotice(string.Format(MenuSessionStarter.HostFailedFormat, 7777));
+        saved.Place();
+        Rect list = screen.RectOf(saved.List);
+        Rect notice = screen.RectOf(saved.Notice.rectTransform);
+        Rect back = screen.RectOf((RectTransform)saved.BackButton.transform);
+        float left = Mathf.Floor((area.width - SavedGamesView.BlockWidth) * 0.5f);
+        if (list.xMin != left || list.yMin != SavedGamesView.ContentTop || list.width != SavedGamesView.BlockWidth)
+        {
+            problems.Add($"{where}: the saved games' list spans {list}, not {SavedGamesView.BlockWidth} wide from ({left}, {SavedGamesView.ContentTop}).");
+        }
+
+        CheckInside(where, "the saved games' list", list, 0f, 0f, area.width, notice.yMin, problems);
+        if (saved.Notice.GetPreferredValues(saved.Notice.text, notice.width, 0f).y > notice.height + 0.01f)
+        {
+            problems.Add($"{where}: the saved games' two-line notice does not fit its notice line.");
+        }
+
+        CheckInside(where, "the saved games' notice line", notice, 0f, list.yMax, area.width, back.yMin, problems);
+        CheckInside(where, "the saved games' Back", back, 0f, notice.yMax, area.width, area.height, problems);
+        Rect card = screen.RectOf((RectTransform)saved.Card(0).transform);
+        if (card.xMin != list.xMin || card.yMin != list.yMin || card.width != SavedGamesView.BlockWidth - 6f || card.height != 30f)
+        {
+            problems.Add($"{where}: the first card spans {card}, not 466 x 30 at the list's top left.");
+        }
+
+        Rect actions = screen.RectOf((RectTransform)saved.Card(0).Actions.transform);
+        CheckInside(where, "the first card's actions", actions, card.xMin, card.yMin, card.xMax, card.yMax, problems);
+        saved.Card(0).DeleteButton.onClick.Invoke();
+        Rect box = screen.RectOf(saved.ConfirmBox);
+        CheckInside(where, "the Delete confirmation's box", box, 0f, 0f, area.width, area.height, problems);
+        if (box.height < 62f)
+        {
+            problems.Add($"{where}: the Delete confirmation's box is {box.height} UI px tall, too short for its two lines.");
+        }
     }
 
     /// <summary>

@@ -11,14 +11,17 @@ using VContainer.Unity;
 /// Menu-scope entry point for Play together (Docs/UiRevamp.md, Phase 9), on this machine only.
 /// <list type="bullet">
 /// <item><b>Host:</b> Host and continue (shown with a save, its Continue line under it) and Host a new game start hosting
-/// through <see cref="MenuSessionStarter"/>; the invite block shows this machine's addresses with Copy
+/// through <see cref="MenuSessionStarter"/>; Host another saved game (Phase 10, shown while there is a save besides the
+/// latest) opens the Saved games screen to host (<see cref="SavedGamesController"/>) in the screen's place, and its
+/// closing shows the column again for the saves left; the invite block shows this machine's addresses with Copy
 /// (<see cref="HostInvite"/>).</item>
 /// <item><b>Join:</b> the field holds the address joined last and takes only what an address holds (letters, digits,
 /// '.', '-', '_' and ':'); Join checks it (<see cref="JoinAddress"/>) and connects, showing the connecting dialog with a
 /// count of the seconds and Cancel; a recent host's button joins it at once.</item>
 /// <item><b>Messages:</b> a malformed address, a host that cannot be reached, refused or failing to start says why on
 /// the notice line; a malformed address leaves the field selected.</item>
-/// <item><b>Focus:</b> opening selects Host and continue, else Host a new game; Up and Down move along a column, Left and
+/// <item><b>Focus:</b> opening selects Host and continue, else Host a new game; closing Saved games selects Host another
+/// saved game, else Host a new game; Up and Down move along a column, Left and
 /// Right across to the same row of the other, and Down from a column's last control reaches Back. Back (or Escape)
 /// cancels a join, else stops typing in the field, else closes the screen.</item>
 /// </list>
@@ -31,6 +34,7 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
 
     private readonly PlayTogetherView view;
     private readonly MenuSessionStarter starter;
+    private readonly SavedGamesController savedGames;
     private readonly ContinueLine continueLine;
     private readonly UserSettings settings;
     private readonly IWallClock wallClock;
@@ -50,6 +54,8 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
     private bool selectCancel;
     private int typingFrame = -100;
     private List<Selectable> backColumn;
+    private int addressCount;
+    private int recentCount;
     private bool started;
 
     /// <summary>
@@ -57,7 +63,8 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
     /// <paramref name="continueLine"/>, its invite from <paramref name="hostAddresses"/> copied through
     /// <paramref name="clipboard"/>, the recent hosts from <paramref name="settings"/>, timed on
     /// <paramref name="wallClock"/> with <paramref name="hudSettings"/>' message time, as a layer of
-    /// <paramref name="menus"/>, moving focus through <paramref name="selection"/>.
+    /// <paramref name="menus"/>, moving focus through <paramref name="selection"/>, and hosting another saved game
+    /// through <paramref name="savedGames"/>.
     /// </summary>
     public PlayTogetherController(
         PlayTogetherView view,
@@ -69,10 +76,12 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
         HudSettings hudSettings,
         UserSettings settings,
         MenuStack menus,
-        UISelection selection)
+        UISelection selection,
+        SavedGamesController savedGames)
     {
         this.view = view;
         this.starter = starter;
+        this.savedGames = savedGames;
         this.continueLine = continueLine;
         this.settings = settings;
         this.wallClock = wallClock;
@@ -98,6 +107,7 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
         invite.Start();
         view.HostContinueButton.onClick.AddListener(HostAndContinue);
         view.HostNewButton.onClick.AddListener(HostNew);
+        view.HostSavedButton.onClick.AddListener(OpenSavedGames);
         view.JoinButton.onClick.AddListener(Join);
         view.BackButton.onClick.AddListener(Close);
         view.Field.onSubmit.AddListener(HandleFieldSubmit);
@@ -135,6 +145,7 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
 
         view.HostContinueButton.onClick.RemoveListener(HostAndContinue);
         view.HostNewButton.onClick.RemoveListener(HostNew);
+        view.HostSavedButton.onClick.RemoveListener(OpenSavedGames);
         view.JoinButton.onClick.RemoveListener(Join);
         view.BackButton.onClick.RemoveListener(Close);
         view.Field.onSubmit.RemoveListener(HandleFieldSubmit);
@@ -146,10 +157,10 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
     }
 
     /// <summary>
-    /// Shows the screen: Host and continue with its line when there is a save, the addresses read now, the recent hosts,
-    /// the field holding <paramref name="address"/> (the host joined last when null), and no message. Selects Join when
-    /// <paramref name="selectJoin"/>, else Host and continue, else Host a new game. <paramref name="closed"/> runs once it
-    /// closes.
+    /// Shows the screen: Host and continue with its line when there is a save, Host another saved game while there is a
+    /// save besides the latest, the addresses read now, the recent hosts, the field holding <paramref name="address"/>
+    /// (the host joined last when null), and no message. Selects Join when <paramref name="selectJoin"/>, else Host and
+    /// continue, else Host a new game. <paramref name="closed"/> runs once it closes.
     /// </summary>
     public void Open(Action closed, string address = null, bool selectJoin = false)
     {
@@ -160,16 +171,14 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
 
         IsOpen = true;
         onClosed = closed;
-        string line = starter.HasSave && continueLine.TryGet(out string text) ? text : null;
-        view.SetContinue(line);
-        int addresses = invite.Show();
+        addressCount = invite.Show();
         IReadOnlyList<string> recent = settings.RecentHosts;
-        int recentCount = view.SetRecent(recent);
+        recentCount = view.SetRecent(recent);
         view.Field.text = address ?? (recent.Count > 0 ? recent[0] : string.Empty);
         view.SetNotice(null);
         view.Dialog.Hide();
         view.SetShown(true);
-        Wire(line != null, addresses, recentCount);
+        ShowHostColumn();
         menus.Push(this);
         selection.Select(selectJoin ? view.JoinButton : hostColumn[0]);
     }
@@ -275,6 +284,52 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
         }
 
         StartJoin(address);
+    }
+
+    /// <summary>
+    /// Host another saved game: opens the Saved games screen to host, in the screen's place, unless a start cannot go
+    /// ahead.
+    /// </summary>
+    internal void OpenSavedGames()
+    {
+        if (!IsOpen || IsConnecting || !starter.CanStart || savedGames == null || savedGames.IsOpen)
+        {
+            return;
+        }
+
+        view.SetNotice(null);
+        view.SetShown(false);
+        savedGames.Open(HandleSavedGamesClosed, true);
+    }
+
+    /// <summary>
+    /// The Saved games screen closed: shows the screen again, its host column for the saves left, with Host another saved
+    /// game selected, or Host a new game once it hid.
+    /// </summary>
+    private void HandleSavedGamesClosed()
+    {
+        if (!IsOpen)
+        {
+            return;
+        }
+
+        view.SetShown(true);
+        ShowHostColumn();
+        selection.Select(view.HostSavedButton.gameObject.activeSelf ? view.HostSavedButton : view.HostNewButton);
+    }
+
+    /// <summary>
+    /// Shows Host and continue with its line when there is a save and Host another saved game while there is a save
+    /// besides the latest, then lays the screen out and wires the columns.
+    /// </summary>
+    private void ShowHostColumn()
+    {
+        int saves = starter.SavedGames.Count;
+        string line = saves > 0 && continueLine.TryGet(out string text) ? text : null;
+        view.SetContinue(line);
+        view.SetHostSavedShown(saves > 1);
+        view.Place();
+        Wire(line != null, saves > 1, addressCount, recentCount);
     }
 
     /// <summary>
@@ -423,10 +478,11 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
 
     /// <summary>
     /// Wires the explicit navigation: the host column (Host and continue when <paramref name="hasSave"/>, Host a new game,
-    /// <paramref name="addresses"/> Copy buttons), the join column (the field, Join, <paramref name="recentCount"/> recent
-    /// hosts), each looping through Back, and Left and Right across the same row of the other column.
+    /// Host another saved game when <paramref name="hasOtherSave"/>, <paramref name="addresses"/> Copy buttons), the join
+    /// column (the field, Join, <paramref name="recent"/> recent hosts), each looping through Back, and Left and Right
+    /// across the same row of the other column.
     /// </summary>
-    private void Wire(bool hasSave, int addresses, int recentCount)
+    private void Wire(bool hasSave, bool hasOtherSave, int addresses, int recent)
     {
         hostColumn.Clear();
         joinColumn.Clear();
@@ -436,6 +492,11 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
         }
 
         hostColumn.Add(view.HostNewButton);
+        if (hasOtherSave)
+        {
+            hostColumn.Add(view.HostSavedButton);
+        }
+
         for (int i = 0; i < addresses; i++)
         {
             hostColumn.Add(view.Invite.CopyButton(i));
@@ -443,7 +504,7 @@ public sealed class PlayTogetherController : IStartable, ITickable, IDisposable,
 
         joinColumn.Add(view.Field);
         joinColumn.Add(view.JoinButton);
-        for (int i = 0; i < recentCount; i++)
+        for (int i = 0; i < recent; i++)
         {
             joinColumn.Add(view.RecentButton(i));
         }

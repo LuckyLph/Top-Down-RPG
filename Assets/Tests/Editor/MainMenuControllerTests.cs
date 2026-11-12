@@ -4,8 +4,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Tests for the main menu (<see cref="MainMenuController"/>, Docs/UiRevamp.md, Phase 9) on a copy of the scene's
-/// canvas, over a fake game flow and network connection: Continue and its line with a save, hidden without, the
-/// version, the buttons looping, Play together in the panel's place, the host-gone and lost-while-joining dialogs from a
+/// canvas, over a fake game flow and network connection: Continue, its line and Saved games (Phase 10) with a save,
+/// hidden without, the version, the buttons looping, Play together and Saved games in the panel's place, the panel shown
+/// again for the saves left, the host-gone and lost-while-joining dialogs from a
 /// <see cref="MenuNotice"/>, a start that cannot go ahead said in the dialog, and the JoinGame entry point.
 /// </summary>
 public class MainMenuControllerTests
@@ -34,8 +35,8 @@ public class MainMenuControllerTests
     }
 
     /// <summary>
-    /// With a save, Continue shows with its line and is selected, the version shows, and the six buttons loop top to
-    /// bottom.
+    /// With a save, Continue shows with its line and is selected, Saved games shows after New game, the version shows,
+    /// and the seven buttons loop top to bottom.
     /// </summary>
     [Test]
     public void WithASave_ContinueAndItsLineShow_AndTheButtonsLoop()
@@ -50,7 +51,8 @@ public class MainMenuControllerTests
         Assert.That(line, Does.StartWith("North road · 3 h 12 min · "));
         Assert.That(menu.VersionText.text, Is.EqualTo(Application.version));
         Assert.That(rig.Selection.Current, Is.EqualTo(menu.ContinueButton.gameObject));
-        Selectable[] order = { menu.ContinueButton, menu.NewGameButton, menu.PlayTogetherButton, menu.CharacterButton, menu.OptionsButton, Quit() };
+        Assert.That(menu.SavedGamesButton.gameObject.activeSelf, Is.True);
+        Selectable[] order = { menu.ContinueButton, menu.NewGameButton, menu.SavedGamesButton, menu.PlayTogetherButton, menu.CharacterButton, menu.OptionsButton, Quit() };
         for (int i = 0; i < order.Length; i++)
         {
             Assert.That(order[i].navigation.selectOnDown, Is.EqualTo(order[(i + 1) % order.Length]), $"Down from {order[i].name}");
@@ -59,7 +61,8 @@ public class MainMenuControllerTests
     }
 
     /// <summary>
-    /// Without a save, Continue and its line hide, New game is selected and loops with Quit.
+    /// Without a save, Continue, its line and Saved games hide, New game is selected and loops with Quit, and Play
+    /// together follows it.
     /// </summary>
     [Test]
     public void WithoutASave_ContinueHides_AndNewGameIsSelected()
@@ -69,10 +72,56 @@ public class MainMenuControllerTests
 
         Assert.That(menu.ContinueButton.gameObject.activeSelf, Is.False);
         Assert.That(menu.ContinueLineText.gameObject.activeSelf, Is.False);
+        Assert.That(menu.SavedGamesButton.gameObject.activeSelf, Is.False);
         Assert.That(rig.Selection.Current, Is.EqualTo(menu.NewGameButton.gameObject));
+        Assert.That(menu.NewGameButton.navigation.selectOnDown, Is.EqualTo(menu.PlayTogetherButton));
         Assert.That(menu.NewGameButton.navigation.selectOnUp, Is.EqualTo(Quit()));
         Assert.That(Quit().navigation.selectOnDown, Is.EqualTo(menu.NewGameButton));
         Assert.That(menu.Dialog.IsShown, Is.False);
+    }
+
+    /// <summary>
+    /// Saved games opens in the panel's place, not to host; Back closes it and brings the panel back with Saved games
+    /// selected.
+    /// </summary>
+    [Test]
+    public void SavedGames_OpensInThePanelsPlace_AndBackSelectsItAgain()
+    {
+        rig.WriteSave(MenuTestRig.NearNorth, 600d);
+        Open();
+        MainMenuController menu = screen.Menu;
+
+        menu.SavedGamesButton.onClick.Invoke();
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.False);
+        Assert.That(screen.SavedGames.IsOpen && !screen.SavedGames.IsHosting, Is.True);
+        Assert.That(rig.Selection.Current, Is.EqualTo(screen.Saved.Card(0).PlayButton.gameObject));
+
+        screen.Saved.BackButton.onClick.Invoke();
+        Assert.That(screen.SavedGames.IsOpen, Is.False);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.True);
+        Assert.That(rig.Selection.Current, Is.EqualTo(menu.SavedGamesButton.gameObject));
+    }
+
+    /// <summary>
+    /// Deleting the last save closes Saved games and brings the panel back without Continue and Saved games, New game
+    /// selected.
+    /// </summary>
+    [Test]
+    public void DeletingTheLastSave_BringsThePanelBackWithoutContinueAndSavedGames()
+    {
+        rig.WriteSave(MenuTestRig.NearNorth, 600d);
+        Open();
+        MainMenuController menu = screen.Menu;
+
+        menu.OpenSavedGames();
+        screen.Saved.Card(0).DeleteButton.onClick.Invoke();
+        screen.Saved.ConfirmYesButton.onClick.Invoke();
+
+        Assert.That(screen.SavedGames.IsOpen, Is.False);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.True);
+        Assert.That(menu.ContinueButton.gameObject.activeSelf || menu.SavedGamesButton.gameObject.activeSelf, Is.False);
+        Assert.That(rig.Selection.Current, Is.EqualTo(menu.NewGameButton.gameObject));
+        Assert.That(menu.NewGameButton.navigation.selectOnUp, Is.EqualTo(Quit()));
     }
 
     /// <summary>

@@ -6,13 +6,15 @@ using UnityEngine;
 /// <summary>
 /// The save files as a folder on disk (<c>Saves</c> in the persistent data folder, a Multiplayer Play Mode virtual
 /// player's own, see <see cref="InstanceFiles"/>), each file a <see cref="FileSaveStore"/>, and the single
-/// <c>save.json</c> of earlier builds beside it, renamed <c>save.json.imported</c> once imported.
+/// <c>save.json</c> of earlier builds beside it, renamed <c>save.json.imported</c> once imported. A deleted file is kept
+/// as one <c>.bak</c> copy beside it.
 /// </summary>
 public sealed class FileSaveFolder : ISaveFolder
 {
     public const string DefaultFolderName = "Saves";
     public const string Extension = ".json";
     public const string ImportedSuffix = ".imported";
+    public const string DeletedSuffix = ".bak";
 
     private readonly string folderPath;
     private readonly string legacyPath;
@@ -65,6 +67,36 @@ public sealed class FileSaveFolder : ISaveFolder
     public ISaveStore Open(string name)
     {
         return new FileSaveStore(Path.Combine(folderPath, name));
+    }
+
+    /// <summary>
+    /// Moves the file <paramref name="name"/> to <c>&lt;name&gt;.bak</c> beside it, replacing a <c>.bak</c> an earlier
+    /// delete left; false when it does not exist, and false with an error logged when the disk refuses.
+    /// </summary>
+    public bool Delete(string name)
+    {
+        string path = Path.Combine(folderPath, name);
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        string copy = path + DeletedSuffix;
+        try
+        {
+            if (File.Exists(copy))
+            {
+                File.Delete(copy);
+            }
+
+            File.Move(path, copy);
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+        {
+            Debug.LogError($"Could not delete the save file '{path}': {exception.Message}");
+            return false;
+        }
     }
 
     /// <summary>

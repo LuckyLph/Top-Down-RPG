@@ -162,7 +162,7 @@ public class NetworkSessionPlayModeTests
         Assert.That(entered.Players, Has.Count.EqualTo(1), "the copy holds its own player alone");
         Assert.That(entered.Players[0].PlayerId, Is.EqualTo(session.LocalPlayerId));
         Assert.That(entered.Worlds, Is.Empty, "no world's state, which is the host's");
-        Assert.That(SceneBootTestHelper.ResolveFromMain<GameSave>().HasSave, Is.False, "while the host may be there, the copy is no save to continue");
+        Assert.That(SceneBootTestHelper.ResolveFromMain<GameSave>().HasSave, Is.True, "the copy plays on its own, its host there or not (Docs/UiRevamp.md, Phase 10)");
 
         LocalPlayer local = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
         Assert.That(local.Weapon.EquipFromCatalog(2), Is.True);

@@ -6,15 +6,15 @@ using VContainer;
 
 /// <summary>
 /// The main menu (Docs/UiRevamp.md, Phase 9): a panel on the left holding the game's name, then Continue with its line
-/// (<see cref="ContinueLine"/>: where, how long played, when saved), New game, Play together, Character, Options and Quit,
-/// looping; Continue and its line hide without a save, and New game is selected then. The build version shows at the
-/// bottom right. Escape does nothing here.
+/// (<see cref="ContinueLine"/>: where, how long played, when saved), New game, Saved games (Phase 10), Play together,
+/// Character, Options and Quit, looping; Continue, its line and Saved games hide without a save, and New game is selected
+/// then. The build version shows at the bottom right. Escape does nothing here.
 /// <list type="bullet">
 /// <item><b>Starting:</b> <see cref="ContinueGame"/>, <see cref="StartNewGame"/>, <see cref="HostGame"/> and
 /// <see cref="JoinGame"/> stay as entry points for the PlayMode tests, over <see cref="MenuSessionStarter"/>; a start
 /// that cannot go ahead says why in a dialog.</item>
-/// <item><b>Screens:</b> Play together, Character and Options open full screens in the panel's place, and closing one
-/// selects its button again.</item>
+/// <item><b>Screens:</b> Saved games, Play together, Character and Options open full screens in the panel's place, and
+/// closing one shows the panel again for the saves left and selects its button, or the first one when it hid.</item>
 /// <item><b>Notices:</b> a <see cref="MenuNotice"/> left by the session's lifecycle shows as a dialog
 /// (<see cref="DialogNoticeView"/>) as the menu opens: the host gone, with Continue alone and Back, or the connection
 /// lost while joining, with Play together and Back.</item>
@@ -37,6 +37,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     [SerializeField] private Button continueButton;
     [SerializeField, Tooltip("The line under Continue.")] private TMP_Text continueLine;
     [SerializeField] private Button newGameButton;
+    [SerializeField, Tooltip("Saved games, after New game, shown with a save.")] private Button savedGamesButton;
     [SerializeField] private Button playTogetherButton;
     [SerializeField] private Button characterButton;
     [SerializeField] private Button optionsButton;
@@ -44,9 +45,10 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     [SerializeField, Tooltip("The build version at the bottom right.")] private TMP_Text versionText;
     [SerializeField, Tooltip("The dialog for notices and starts that cannot go ahead.")] private DialogNoticeView dialog;
 
-    private readonly Selectable[] looped = new Selectable[6];
+    private readonly Selectable[] looped = new Selectable[7];
     private MenuSessionStarter starter;
     private PlayTogetherController playTogether;
+    private SavedGamesController savedGames;
     private ContinueLine line;
     private MenuNotice notice;
     private OptionsMenuController options;
@@ -57,6 +59,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
 
     internal Button ContinueButton => continueButton;
     internal Button NewGameButton => newGameButton;
+    internal Button SavedGamesButton => savedGamesButton;
     internal Button PlayTogetherButton => playTogetherButton;
     internal Button OptionsButton => optionsButton;
     internal Button CharacterButton => characterButton;
@@ -66,13 +69,14 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     internal RectTransform Panel => panel;
 
     /// <summary>
-    /// Receives the session starter, Play together, the Continue line, the menu notice, the options and Character
-    /// screens, the UI selection and the menu stack.
+    /// Receives the session starter, Play together, Saved games, the Continue line, the menu notice, the options and
+    /// Character screens, the UI selection and the menu stack.
     /// </summary>
     [Inject]
     public void Construct(
         MenuSessionStarter sessionStarter,
         PlayTogetherController playTogetherScreen,
+        SavedGamesController savedGamesScreen,
         ContinueLine continueLineSource,
         MenuNotice menuNotice,
         OptionsMenuController optionsMenu,
@@ -82,6 +86,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     {
         starter = sessionStarter;
         playTogether = playTogetherScreen;
+        savedGames = savedGamesScreen;
         line = continueLineSource;
         notice = menuNotice;
         options = optionsMenu;
@@ -95,8 +100,8 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     /// </summary>
     private void Awake()
     {
-        if (panel == null || continueButton == null || continueLine == null || newGameButton == null || playTogetherButton == null || characterButton == null
-            || optionsButton == null || quitButton == null || versionText == null || dialog == null)
+        if (panel == null || continueButton == null || continueLine == null || newGameButton == null || savedGamesButton == null || playTogetherButton == null
+            || characterButton == null || optionsButton == null || quitButton == null || versionText == null || dialog == null)
         {
             Debug.LogError($"{nameof(MainMenuController)} is missing one of its main menu references.", this);
             return;
@@ -104,6 +109,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
 
         continueButton.onClick.AddListener(ContinueGame);
         newGameButton.onClick.AddListener(StartNewGame);
+        savedGamesButton.onClick.AddListener(OpenSavedGames);
         playTogetherButton.onClick.AddListener(OpenPlayTogether);
         characterButton.onClick.AddListener(OpenCharacter);
         optionsButton.onClick.AddListener(OpenOptions);
@@ -129,6 +135,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
 
         continueButton.onClick.RemoveListener(ContinueGame);
         newGameButton.onClick.RemoveListener(StartNewGame);
+        savedGamesButton.onClick.RemoveListener(OpenSavedGames);
         playTogetherButton.onClick.RemoveListener(OpenPlayTogether);
         characterButton.onClick.RemoveListener(OpenCharacter);
         optionsButton.onClick.RemoveListener(OpenOptions);
@@ -244,6 +251,21 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     }
 
     /// <summary>
+    /// Saved games: swaps the panel for the Saved games screen, unless a start cannot go ahead; the panel comes back for
+    /// the saves left when it closes, Saved games selected while there is one.
+    /// </summary>
+    public void OpenSavedGames()
+    {
+        if (!EnsureInjected() || !starter.CanStart || savedGames == null || savedGames.IsOpen)
+        {
+            return;
+        }
+
+        SetPanelShown(false);
+        savedGames.Open(() => HandleScreenClosed(savedGamesButton), false);
+    }
+
+    /// <summary>
     /// Options: swaps the panel for the options screen, on its first category (Docs/UiRevamp.md, Phase 8), unless a
     /// transition runs; the panel comes back, with Options selected, when it closes.
     /// </summary>
@@ -314,6 +336,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
         bool hasSave = starter.HasSave && line.TryGet(out text);
         continueButton.gameObject.SetActive(hasSave);
         continueLine.gameObject.SetActive(hasSave);
+        savedGamesButton.gameObject.SetActive(hasSave);
         if (hasSave)
         {
             continueLine.text = text;
@@ -332,6 +355,11 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
         }
 
         looped[count++] = newGameButton;
+        if (hasSave)
+        {
+            looped[count++] = savedGamesButton;
+        }
+
         looped[count++] = playTogetherButton;
         looped[count++] = characterButton;
         looped[count++] = optionsButton;
@@ -370,12 +398,21 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     }
 
     /// <summary>
-    /// Brings the panel back with <paramref name="opener"/> selected when a screen closes.
+    /// Brings the panel back for the saves there are now when a screen closes, with <paramref name="opener"/> selected,
+    /// or the first button when it hid (the last save deleted).
     /// </summary>
     private void HandleScreenClosed(Button opener)
     {
         SetPanelShown(true);
-        selection.Select(opener);
+        Refresh();
+        if (opener.gameObject.activeSelf)
+        {
+            selection.Select(opener);
+        }
+        else
+        {
+            SelectFirst();
+        }
     }
 
     /// <summary>

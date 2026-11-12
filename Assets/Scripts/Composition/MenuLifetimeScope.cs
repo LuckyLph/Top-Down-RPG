@@ -17,8 +17,8 @@ public class MenuLifetimeScope : LifetimeScope
     /// <summary>
     /// Registers the scene's options menu view and controller, the Character screen's view, preview stage and
     /// controller with the outfits its preview wears (Docs/UiRevamp.md, Phase 7), the session starter, the Continue line,
-    /// Play together's view and controller with the clipboard its Copy buttons use (Phase 9), and its
-    /// <see cref="MainMenuController"/>. Logs an error and registers nothing without a parent scope, the gameplay
+    /// Play together's view and controller with the clipboard its Copy buttons use (Phase 9), the Saved games screen's
+    /// view and controller (Phase 10), and its <see cref="MainMenuController"/>. Logs an error and registers nothing without a parent scope, the gameplay
     /// settings or the HUD settings.
     /// </summary>
     protected override void Configure(IContainerBuilder builder)
@@ -58,6 +58,8 @@ public class MenuLifetimeScope : LifetimeScope
         builder.Register<SystemClipboard>(Lifetime.Singleton).As<IClipboard>();
         builder.RegisterComponentInHierarchy<PlayTogetherView>();
         builder.RegisterEntryPoint<PlayTogetherController>().AsSelf();
+        builder.RegisterComponentInHierarchy<SavedGamesView>();
+        builder.RegisterEntryPoint<SavedGamesController>().AsSelf();
         builder.RegisterComponentInHierarchy<MainMenuController>();
     }
 }

@@ -5,21 +5,26 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Tests for Play together (<see cref="PlayTogetherController"/>, Docs/UiRevamp.md, Phase 9) on the real prefab, over a
-/// fake game flow and network connection: what opening shows and selects, the focus order across the two columns and
-/// Back, the field's check, the connecting dialog's count and Cancel, each failure on the notice line, hosting that
+/// fake game flow and network connection: what opening shows and selects, Host another saved game (Phase 10) shown
+/// with a save besides the latest and opening Saved games to host in the screen's place, the focus order across the two
+/// columns and Back, the field's check, the connecting dialog's count and Cancel, each failure on the notice line, hosting that
 /// fails, the recent hosts, Copy, and Back.
 /// </summary>
 public class PlayTogetherControllerTests
 {
     private const string ScreenPath = "Assets/Prefabs/UI/PlayTogether.prefab";
+    private const string SavedGamesPath = "Assets/Prefabs/UI/SavedGames.prefab";
 
     private MenuTestRig rig;
     private PlayTogetherView view;
     private PlayTogetherController controller;
+    private SavedGamesView savedView;
+    private SavedGamesController savedGames;
     private int closes;
 
     /// <summary>
-    /// Builds the rig and a controller over an instance of the screen.
+    /// Builds the rig and a controller over an instance of the screen, hosting another saved game through an instance of
+    /// the Saved games screen.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -27,18 +32,78 @@ public class PlayTogetherControllerTests
         rig = new MenuTestRig();
         GameObject screen = rig.Track((GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(ScreenPath)));
         view = screen.GetComponent<PlayTogetherView>();
-        controller = rig.CreatePlayTogether(view);
+        GameObject saved = rig.Track((GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(SavedGamesPath)));
+        savedView = saved.GetComponent<SavedGamesView>();
+        savedGames = rig.CreateSavedGames(savedView);
+        controller = rig.CreatePlayTogether(view, savedGames);
         closes = 0;
     }
 
     /// <summary>
-    /// Disposes the controller and the rig.
+    /// Disposes the controllers and the rig.
     /// </summary>
     [TearDown]
     public void TearDown()
     {
         controller.Dispose();
+        savedGames.Dispose();
         rig.Dispose();
+    }
+
+    /// <summary>
+    /// Host another saved game hides with no save, and with only the latest, which Host and continue hosts; with a save
+    /// besides the latest it shows after Host a new game, in the host column's navigation.
+    /// </summary>
+    [Test]
+    public void HostAnotherSavedGame_ShowsWithASaveBesidesTheLatest()
+    {
+        Open();
+        Assert.That(view.HostSavedButton.gameObject.activeSelf, Is.False, "No save.");
+        controller.Close();
+
+        rig.WriteSave(MenuTestRig.NearNorth, 600d, "first");
+        Open();
+        Assert.That(view.HostSavedButton.gameObject.activeSelf, Is.False, "Only the latest.");
+        controller.Close();
+
+        rig.WallClock.Advance(60d);
+        rig.WriteSave(MenuTestRig.NearNorth, 900d, "second");
+        Open();
+        Assert.That(view.HostSavedButton.gameObject.activeSelf, Is.True);
+        Assert.That(view.HostNewButton.navigation.selectOnDown, Is.EqualTo(view.HostSavedButton));
+        Assert.That(view.HostSavedButton.navigation.selectOnUp, Is.EqualTo(view.HostNewButton));
+        Assert.That(view.HostSavedButton.navigation.selectOnRight, Is.Not.Null);
+    }
+
+    /// <summary>
+    /// Host another saved game opens Saved games to host in the screen's place; closing it shows the screen again with
+    /// Host another saved game selected, and once deletes leave only the latest, it hides and Host a new game is selected.
+    /// </summary>
+    [Test]
+    public void HostAnotherSavedGame_OpensSavedGamesToHost_AndClosingComesBack()
+    {
+        rig.WriteSave(MenuTestRig.NearNorth, 600d, "first");
+        rig.WallClock.Advance(60d);
+        rig.WriteSave(MenuTestRig.NearNorth, 900d, "second");
+        Open();
+
+        view.HostSavedButton.onClick.Invoke();
+        Assert.That(view.IsShown, Is.False);
+        Assert.That(savedGames.IsOpen && savedGames.IsHosting, Is.True);
+        Assert.That(rig.Menus.Top, Is.SameAs(savedGames));
+        Assert.That(rig.Selection.Current, Is.EqualTo(savedView.Card(0).HostButton.gameObject));
+
+        savedGames.HandleBack();
+        Assert.That(view.IsShown, Is.True);
+        Assert.That(rig.Menus.Top, Is.SameAs(controller));
+        Assert.That(rig.Selection.Current, Is.EqualTo(view.HostSavedButton.gameObject));
+
+        view.HostSavedButton.onClick.Invoke();
+        savedView.Card(1).DeleteButton.onClick.Invoke();
+        savedView.ConfirmYesButton.onClick.Invoke();
+        savedGames.HandleBack();
+        Assert.That(view.HostSavedButton.gameObject.activeSelf, Is.False, "Only the latest is left.");
+        Assert.That(rig.Selection.Current, Is.EqualTo(view.HostNewButton.gameObject));
     }
 
     /// <summary>

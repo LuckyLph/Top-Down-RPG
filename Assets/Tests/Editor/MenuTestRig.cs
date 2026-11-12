@@ -9,7 +9,8 @@ using Object = UnityEngine.Object;
 /// What the main menu's tests share (Docs/UiRevamp.md, Phase 9): a listed starting world, Home, with two named entries;
 /// a fake game flow and network connection; a save folder, the session's saved state and where players start; user
 /// settings; the joining line; the <see cref="MenuSessionStarter"/> and <see cref="ContinueLine"/> over them; fake
-/// interfaces, clipboard and wall clock; and a menu stack and selection over an event system of its own.
+/// interfaces, clipboard and wall clock; and a menu stack and selection over an event system of its own. It builds the
+/// Play together and Saved games controllers (Phase 10) over the views a test gives it.
 /// </summary>
 internal sealed class MenuTestRig : IDisposable
 {
@@ -92,13 +93,27 @@ internal sealed class MenuTestRig : IDisposable
 
     /// <summary>
     /// Writes a session's save holding the local player at <paramref name="local"/> in Home, played for
-    /// <paramref name="seconds"/>.
+    /// <paramref name="seconds"/>, under <paramref name="session"/>; returns its file's name.
     /// </summary>
-    public void WriteSave(Vector2 local, double seconds)
+    public string WriteSave(Vector2 local, double seconds, string session = "saved-session")
     {
         GameSaveData data = new(seconds, new[] { new GameSaveData.Player(Connection.LocalPlayerId, Home.WorldId, Home.ToWorld(local)) }, new GameSaveData.World[0]);
-        data.SetSession("saved-session");
+        data.SetSession(session);
         Save.Write(data);
+        return GameSave.FileNameOf(data);
+    }
+
+    /// <summary>
+    /// Writes a joined client's copy of the local player's place at <paramref name="local"/> in Home in the host's
+    /// session <paramref name="hostSession"/>, played for <paramref name="seconds"/>, its host there or gone as
+    /// <paramref name="hostGone"/> says; returns its file's name.
+    /// </summary>
+    public string WriteCopy(Vector2 local, double seconds, string hostSession, bool hostGone)
+    {
+        GameSaveData data = new(seconds, new[] { new GameSaveData.Player(Connection.LocalPlayerId, Home.WorldId, Home.ToWorld(local)) }, new GameSaveData.World[0]);
+        data.SetHost(hostSession, hostGone);
+        Save.Write(data);
+        return GameSave.FileNameOf(data);
     }
 
     /// <summary>
@@ -111,11 +126,22 @@ internal sealed class MenuTestRig : IDisposable
     }
 
     /// <summary>
-    /// A Play together controller over <paramref name="view"/> and the rig's parts, started.
+    /// A Play together controller over <paramref name="view"/> and the rig's parts, started, hosting another saved game
+    /// through <paramref name="savedGames"/> (none for null).
     /// </summary>
-    public PlayTogetherController CreatePlayTogether(PlayTogetherView view)
+    public PlayTogetherController CreatePlayTogether(PlayTogetherView view, SavedGamesController savedGames = null)
     {
-        PlayTogetherController controller = new(view, Starter, Line, new HostAddresses(Interfaces, 7777), Clipboard, WallClock, Hud, Settings, Menus, Selection);
+        PlayTogetherController controller = new(view, Starter, Line, new HostAddresses(Interfaces, 7777), Clipboard, WallClock, Hud, Settings, Menus, Selection, savedGames);
+        controller.Start();
+        return controller;
+    }
+
+    /// <summary>
+    /// A Saved games controller over <paramref name="view"/> and the rig's parts, started.
+    /// </summary>
+    public SavedGamesController CreateSavedGames(SavedGamesView view)
+    {
+        SavedGamesController controller = new(view, Starter, Save, Line, Menus, Selection);
         controller.Start();
         return controller;
     }

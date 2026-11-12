@@ -62,11 +62,11 @@ public class GameMenuPlayModeTests
     }
 
     /// <summary>
-    /// While hosting, the menu blocks gameplay input but does not pause time, and Leave asks for confirmation before
-    /// returning to the main menu and shutting the session down.
+    /// While hosting, the menu blocks gameplay input but does not pause time, and a host alone leaves at once
+    /// (Docs/UiRevamp.md, Phase 6: nobody else loses the game), returning to the main menu and shutting the session down.
     /// </summary>
     [UnityTest]
-    public IEnumerator Hosting_TheMenuPausesNothing_AndLeavingAsksFirstThenEndsTheSession()
+    public IEnumerator Hosting_TheMenuPausesNothing_AndALoneHostLeavesAtOnce_EndingTheSession()
     {
         yield return SceneBootTestHelper.BootIntoMainMenu();
         GameFlow gameFlow = SceneBootTestHelper.ResolveGameFlow();
@@ -85,12 +85,13 @@ public class GameMenuPlayModeTests
         Assert.That(menu.IsPaused, Is.False);
         Assert.That(Time.timeScale, Is.EqualTo(1f), "A host alone is still online; a client may join at any moment.");
         Assert.That(input.GameplayEnabled, Is.False);
+        Assert.That(view.PartyButton.gameObject.activeSelf, Is.True);
+        Assert.That(view.SaveButton.interactable, Is.True, "A session started from the main menu is saved.");
 
         view.LeaveButton.onClick.Invoke();
-        Assert.That(view.IsConfirmShown, Is.True);
-        Assert.That(menu.IsLeaving, Is.False);
+        Assert.That(view.IsConfirmShown, Is.False, "Nobody else loses the game.");
+        Assert.That(menu.IsLeaving, Is.True);
 
-        view.ConfirmYesButton.onClick.Invoke();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the session to shut down in the menu");
 

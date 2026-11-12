@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 using VContainer.Unity;
 
@@ -15,8 +14,9 @@ using VContainer.Unity;
 /// restored;</item>
 /// <item>else its health and up to four of its distinct debuffs, in the order they landed.</item>
 /// </list>
-/// It polls health and statuses, since a client's copies change without events. Every text is built once, so
-/// <see cref="Tick"/> allocates nothing.
+/// The players come from a <see cref="PartyRoster"/>, which the in-game menu's Party page has too. It polls health and
+/// statuses, since a client's copies change without events. Every text is built once, so <see cref="Tick"/> allocates
+/// nothing.
 /// </summary>
 public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
 {
@@ -25,14 +25,13 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
     public const string Joining = "Joining";
     private const int MaxPips = 4;
 
-    private readonly IPlayerRegistry players;
+    private readonly PartyRoster roster;
     private readonly LocalPlayerTracker localPlayer;
     private readonly PlayerWorlds playerWorlds;
     private readonly IClock clock;
     private readonly GameplaySettings settings;
     private readonly PartyFramesView view;
-    private readonly List<Member> members = new(PlayerSlots.Count);
-    private readonly Member[] order = new Member[PlayerSlots.Count];
+    private readonly PartyMember[] order = new PartyMember[PlayerSlots.Count];
     private readonly Color[] pipColours = new Color[MaxPips];
     private readonly StatusEffectDefinition[] pipDefinitions = new StatusEffectDefinition[MaxPips];
     private string[] countdown = new string[0];
@@ -49,7 +48,7 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
         GameplaySettings settings,
         PartyFramesView view)
     {
-        this.players = players;
+        roster = new PartyRoster(players);
         this.localPlayer = localPlayer;
         this.playerWorlds = playerWorlds;
         this.clock = clock;
@@ -74,15 +73,8 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
             countdown[second] = string.Format(RespawningFormat, second);
         }
 
-        players.PlayerAdded += Add;
-        players.PlayerRemoved += Remove;
+        roster.Start();
         started = true;
-        IReadOnlyList<PlayerHandle> party = players.Players;
-        for (int i = 0; i < party.Count; i++)
-        {
-            Add(party[i]);
-        }
-
         Tick();
     }
 
@@ -97,9 +89,7 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
         }
 
         started = false;
-        players.PlayerAdded -= Add;
-        players.PlayerRemoved -= Remove;
-        members.Clear();
+        roster.Dispose();
     }
 
     /// <summary>
@@ -115,26 +105,7 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
         PlayerHandle local = localPlayer.Current?.Handle;
         Transform localTransform = local?.Transform;
         WorldDefinition localWorld = local != null ? playerWorlds.Get(local) : null;
-        int count = 0;
-        for (int i = 0; i < members.Count; i++)
-        {
-            Member member = members[i];
-            member.Track(clock.Time);
-            if ((localTransform != null && member.Handle.Transform == localTransform) || member.Slot == null || !PlayerSlots.IsSlot(member.Slot.Number) || count >= order.Length)
-            {
-                continue;
-            }
-
-            int at = count++;
-            while (at > 0 && order[at - 1].Slot.Number > member.Slot.Number)
-            {
-                order[at] = order[at - 1];
-                at--;
-            }
-
-            order[at] = member;
-        }
-
+        int count = roster.Order(clock.Time, localTransform, order);
         ShownCount = Mathf.Min(count, view.Count);
         for (int i = 0; i < view.Count; i++)
         {
@@ -159,7 +130,7 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
     /// <summary>
     /// Shows <paramref name="member"/> on <paramref name="frame"/>: why it has no bar, or its health and debuffs.
     /// </summary>
-    private void Show(PartyFrameView frame, Member member, WorldDefinition localWorld)
+    private void Show(PartyFrameView frame, PartyMember member, WorldDefinition localWorld)
     {
         frame.ShowSlot(member.Slot.Number);
         WorldDefinition world = playerWorlds.Get(member.Handle);
@@ -178,8 +149,7 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
         }
         else
         {
-            Health health = member.Handle.Health;
-            frame.ShowHealth(health != null && health.MaxHealth > 0 ? (float)health.CurrentHealth / health.MaxHealth : 0f);
+            frame.ShowHealth(member.HealthFraction);
             frame.ShowDebuffs(pipColours, Debuffs(member.Statuses));
         }
     }
@@ -206,78 +176,5 @@ public sealed class PartyFramesPresenter : IStartable, ITickable, IDisposable
 
         Array.Clear(pipDefinitions, 0, pipDefinitions.Length);
         return count;
-    }
-
-    /// <summary>
-    /// Starts following <paramref name="player"/>, its slot and its statuses.
-    /// </summary>
-    private void Add(PlayerHandle player)
-    {
-        if (player == null || player.Transform == null)
-        {
-            return;
-        }
-
-        for (int i = 0; i < members.Count; i++)
-        {
-            if (members[i].Handle == player)
-            {
-                return;
-            }
-        }
-
-        player.Transform.TryGetComponent(out PlayerSlot slot);
-        player.Transform.TryGetComponent(out StatusEffects statuses);
-        members.Add(new Member(player, slot, statuses));
-    }
-
-    /// <summary>
-    /// Stops following <paramref name="player"/>.
-    /// </summary>
-    private void Remove(PlayerHandle player)
-    {
-        for (int i = members.Count - 1; i >= 0; i--)
-        {
-            if (members[i].Handle == player)
-            {
-                members.RemoveAt(i);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Another player this presenter follows: its handle, slot and statuses, and when this machine saw it die.
-    /// </summary>
-    private sealed class Member
-    {
-        /// <summary>
-        /// Follows <paramref name="handle"/> with its <paramref name="slot"/> and <paramref name="statuses"/>.
-        /// </summary>
-        public Member(PlayerHandle handle, PlayerSlot slot, StatusEffects statuses)
-        {
-            Handle = handle;
-            Slot = slot;
-            Statuses = statuses;
-        }
-
-        public PlayerHandle Handle { get; }
-        public PlayerSlot Slot { get; }
-        public StatusEffects Statuses { get; }
-        public bool Dead { get; private set; }
-        public float DiedAt { get; private set; }
-
-        /// <summary>
-        /// Records the time <paramref name="now"/> as it is first seen dead, and forgets it once it lives again.
-        /// </summary>
-        public void Track(float now)
-        {
-            bool dead = Handle.Health != null && Handle.Health.IsDead;
-            if (dead && !Dead)
-            {
-                DiedAt = now;
-            }
-
-            Dead = dead;
-        }
     }
 }

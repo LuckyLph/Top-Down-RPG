@@ -141,6 +141,16 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     }
 
     /// <summary>
+    /// The short label of the input bound to the <c>Player</c> map's action named <paramref name="actionName"/>, or an
+    /// empty string when the asset or the action is missing.
+    /// </summary>
+    public string GetActionKeyLabel(string actionName)
+    {
+        InputAction action = actions != null ? actions.FindAction($"{PlayerInputService.PlayerMapName}/{actionName}", false) : null;
+        return GetShortLabel(action);
+    }
+
+    /// <summary>
     /// A short label for the HUD: the keyboard layout's name for a key, or LMB, RMB, MMB, M4 and M5 for mouse buttons.
     /// </summary>
     public string GetShortLabel(InputAction action)

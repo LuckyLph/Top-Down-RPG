@@ -63,6 +63,8 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Party frames | The HUD's frames for the other players, at the left edge |
 | Chat | The HUD's window of the session's lines, under the party frames until the player moves it: players' messages and the party's comings and goings (Phase 12) |
 | Vitals strip | The session line and the local player's health, shown on a full screen opened in game online |
+| Party page | The in-game menu's page of the players online, and for the host the addresses friends join at (Phase 6) |
+| Controls page | The in-game menu's page of the controls and their keys (Phase 6) |
 | Preview stage | The local character drawn off screen into a render texture, for the Character screen and the title view |
 | Title view | The still picture of the Overworld behind the main menu, rendered by a recipe |
 
@@ -71,7 +73,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 - Everything about the local player sits in one place, the command bar, near the player the camera centres.
 - Every press is answered in words or a visible state on the frame it happens: why a cast failed, what is casting, what is queued, what is blocked.
 - Players see each other: health, debuffs and casts over every player, party frames, and the same player numbers on every machine.
-- The in-game menu says whether the game is paused and saved, keeps a running game in view, and gives the host the addresses friends join with.
+- The in-game menu says whether the game is paused, saves on request, keeps the HUD of a running game in view, and gives the host the addresses friends join with.
 - Character customization has its own screen with a preview, reachable from the main menu and in game. The options screen gets short, described categories.
 - The main menu shows the game, says what each choice will do, puts hosting and joining in one place, and reaches every saved game.
 - Every screen fits 480 x 270 UI px and keeps DesignSystem.md's accessibility baseline.
@@ -81,7 +83,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 - **Player names.** Slots give every player a number, shape and colour. Names need a text field (which a gamepad cannot type into), a filter to the characters the Galmuri subsets hold, and one more field at join (Later).
 - **Kicking a player**, and **pausing online** while every player has the menu open (Later).
 - **A live title scene,** such as a lit campfire with the player beside it (Later). The title view is a still picture.
-- **A tabbed game hub** (inventory, map, quests), until those features exist. The in-game menu's column and cards can become its first tabs then.
+- **A tabbed game hub** (inventory, map, quests), until those features exist. The in-game menu's pages can become its first tabs then.
 - **A minimap, an XP bar, audio and window or resolution settings.** The HUD keeps the top right free for a place name and a minimap. The chat, a non-goal at first, became Phase 12 when Phase 5 sent the party's notices to it.
 - **Icon art** for abilities and statuses, which stays in DesignSystem.md's Later. Slots keep the ability names and statuses keep their abbreviations.
 - **Join codes, a relay or lobbies,** and an on-screen keypad for gamepad players to type addresses. Recent hosts let a gamepad player rejoin with one press.
@@ -91,7 +93,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 
 | Topic | Decision |
 |---|---|
-| Directions | **HUD:** the command bar, plus the world bars of the world-first direction. **In-game menu:** the side column and cards. **Main menu:** the title view and full screens. Each proposal's text fixes ship first, where they stand on their own. |
+| Directions | **HUD:** the command bar, plus the world bars of the world-first direction. **In-game menu:** the side column and cards, which Phase 6's previews turned into one panel at the centre with pages. **Main menu:** the title view and full screens. Each proposal's text fixes ship first, where they stand on their own. |
 | Screen regions | In game, each part of the screen has one owner, so nothing overlaps at 480 x 270:<br>• the bottom centre: the command bar;<br>• the top centre: a 24 UI px notice band;<br>• the left edge: the party frames, and under them the chat's default place, 144 x 96 (Phase 12), which the player may move it from;<br>• the top right: kept free for a place name and a minimap later.<br>Online, menus opened in game stay clear of the command bar and the notice band. |
 | Health | In the command bar: 242 x 13 (12 until Phase 3) over the ability row, reading "72 / 100".<br>• **Ticks:** one every 10 HP, one Weasel hit ([Units.md](Generated/Units.md)), until Phase 3 took them out (`HudSettings.TickHealth` 0 draws none).<br>• **Recent loss:** the part just lost shows pale for 0.4 s.<br>• **Low:** at 30% or less, the frame turns `Danger` and pulses once a second, holding steady with Reduce flashing on.<br>The numbers live in `HudSettings`. |
 | Bar contrast | A bar's fill against its track is measured like a text pair and meets 3:1. `HealthTrack` becomes opaque, which takes today's red to 3.68:1. |
@@ -105,16 +107,16 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Party frames | At the left edge, one 104 x 26 frame per other player. Each shows the badge, "Player 2", and a bar with debuff pips (unticked, as the command bar's since Phase 3), or else "Respawning in 2", "In another world" or "Joining". Playing alone, none show. |
 | Notices | In-game notices queue on the notice line: Waystone discovered, the world entered, and while you are dead "You fell. Respawning in 3". This replaces the Messages pattern's "short notices float over the local player"; popups are left to hits and heals. A player joining, leaving or going down is a line in the chat (Phase 12), not a notice. |
 | Chat | A window at the left edge under the party frames (Phase 12): the session's lines, newest at the bottom.<br>• **Players' lines:** "Player 2: on my way", the name in its slot's colour.<br>• **Party lines,** in `TextMuted`: "Player 2 joined", "Player 2 left" and "Player 2 is down", each machine raising its own from what it already knows.<br>• **Typing:** the Chat key (Enter) opens the window, Enter sends and Escape cancels; gameplay input is off while it is open. A gamepad reads but cannot type (Later's on-screen keypad).<br>• **Fading:** at rest a line shows for 10 s, then fades over 1 s; opening the window shows every line again. Nothing is saved.<br>• **The window:** 144 x 96 UI px by default. While it is open the player moves it by its header and resizes it by its corner grip, from 104 x 52 to 240 x 160; it keeps its place by the nearest screen corner, on this machine, and the options put it back.<br>• **Timestamps:** an option, off by default, puts the time each line arrived, "14:32", before it. |
-| In-game menu | **A column on the left:** titled "Paused" offline and "Menu" online. Under the title, a status line ("Offline · paused", "Hosting · not paused" or "Joined · not paused") and a line saying whether the game waits or keeps running. Then Resume, Character, Options, Leave game and Quit to desktop, looping, and a saved line ("Saved at 14:32").<br>**Cards on the right:** Party (online) and Controls. A card that would reach the command bar or the notice band drops, Controls first.<br>**Party frames** hide while the menu is open, since the Party card shows the same players. |
-| Scrim | Offline, where time stands still, the menu dims the game with the `Scrim`. Online there is none: the column and cards are opaque, and the game stays live between them. Words carry the difference, not the dimming alone. |
-| Saving on open | Opening the in-game menu saves, offline and on the host. A joined client writes its copy. The saved line shows the time just written. |
-| Confirmations | Leaving or quitting asks only when it loses something:<br>• as the host with others connected: "End the game for 2 other players? The game is saved.";<br>• after a failed save: "The game couldn't be saved. Leave anyway?".<br>Offline, alone as the host, or joined, it goes ahead at once. |
+| In-game menu | **One panel at the centre** of the space between the notice band and the command bar (settled in Phase 6; a side column and cards were proposed first): titled "Paused" offline and "Menu" online, then Resume, Character (Phase 7), Party (online), Controls, Options, Save game (offline and hosting), Leave game and Quit to desktop, looping.<br>**Pages in its place:** Party and Controls each open a page where the panel stands, with Back. Nothing shows by default but the buttons.<br>**Party frames and the chat** stay in view beside it. |
+| Scrim | Offline, where time stands still, the menu dims the game with the `Scrim`. Online there is none: the panel is opaque, and the game stays live around it. The title carries the difference too, "Paused" or "Menu". |
+| Saving | **Save game** (settled in Phase 6, in place of saving on open and a saved line) writes the game at once, offline and on the host, and answers on its own button: "Saved" or "Couldn't save" for 1.2 s. A joined client has none: the host saves the game, and the client's copy of its place keeps saving itself. Where nothing is written (an editor boot straight into a world) it cannot be pressed. |
+| Confirmations | Leaving or quitting asks only when it loses something, each sentence on its own line:<br>• as the host with others connected: "End the game for 2 other players?" ("1 other player"), then "The game is saved." or, after a failed save, "The game couldn't be saved.";<br>• otherwise after a failed save: "The game couldn't be saved. Leave anyway?" ("Quit anyway?"), and joined "Your place couldn't be saved.".<br>Offline, alone as the host, or joined, with the last save written, it goes ahead at once. |
 | Full screens in game | Options and the Character screen stay opaque raised panels. Online, they show the vitals strip, and their notice line says "You're taking damage." when the local player is hit. |
 | Options | **Layout:** a rail of categories beside a pane of rows.<br>• **Accessibility:** UI size, Reduce flashing, Reduce motion. It was the Display section; the settings file is unchanged.<br>• **Controls:** the bindings.<br>**Behaviour:**<br>• Moving onto a category shows its rows.<br>• The focused row's one-line description shows at the pane's foot.<br>• Reset shows only on a row that differs from its default.<br>• The footer's reset is the category's ("Reset controls").<br>• Opened in game, the screen returns to the category used last this session. |
 | Character screen | **Layout:** a screen of its own, shared by the main menu and the in-game menu as the options screen is. A preview sits on the left (Turn left, Turn right and Pose), and rows on the right grouped by part, each part's colours under it.<br>**Grouping:** read from the dyes the sheets and parts carry, not from a hand-made list.<br>**Colours:** a colour row opens a swatch picker.<br>The Character section leaves the options screen. This lifts PlayerCharacter.md's non-goal "An in-game character creator". |
 | Main menu | **The panel:** raised, on the left, over the title view. It holds the logo, then:<br>• Continue, with a line saying where, how long played and when saved;<br>• New game, Saved games, Play together, Character, Options and Quit, looping.<br>**Without a save,** Continue and Saved games hide.<br>**The build version** shows at the bottom right. |
 | Play together | One screen with two columns:<br>• **Host:** Host and continue, Host a new game, Host another saved game, then the addresses friends join with, each with Copy, and the port.<br>• **Join:** an address field taking `host` or `host:port`, checked before connecting and remembered; Join; and up to five recent hosts as buttons.<br>**Connecting** shows a modal with a count and Cancel. |
-| Host addresses | Shown openly. They are read from this machine's network interfaces: the home network and a virtual LAN. None is the public internet address behind the router, and none is ever sent anywhere. |
+| Host addresses | Shown openly on the Party page, two at most. They are read from this machine's network interfaces: the home network and a virtual LAN. None is the public internet address behind the router, and none is ever sent anywhere. |
 | Saved games | A screen listing every session and joined copy, newest first. Each card shows the place, the time played and the last save, with Play, Host and Delete. Delete asks first and keeps one `.bak` copy. |
 | Title view | A still picture of the Overworld at dusk, rendered by an editor recipe into a sprite of 768 x 432 art px, which covers every canvas in the Scale table. The local character stands in it, drawn by the preview stage. |
 | First run | On the first launch, a Welcome panel offers UI size, Reduce flashing and Reduce motion before the menu. The first New game goes through the Character screen, whose Back reads "Start". Later New games do not. |
@@ -192,19 +194,20 @@ Settled on Phase 12's previews, where the chat also became a window the player m
 
 ### The in-game menu
 
-- **Placement.**
-  - **Column:** 144 UI px wide, 8 from the left edge, below the notice band.
-  - **Cards:** 144 wide, 8 from the right edge, below the notice band, stacked.
-  - **Fit:** online, both end above the command bar at every display in the Scale table. Offline, under the scrim, they may cover it.
-- **Party card** (online). A row per player:
-  - its badge, "Player N", and "You" or "Host";
-  - a 40 x 6 bar, or "Down" or "In another world".
-  - For the host, an invite block follows: each address with its network's name ("home network", "Tailscale") and a Copy button, then the port.
-- **Controls card.** Move and attack, Attack move and Stop, with their keys, then the six ability keys as key caps. The labels come from `IInputBindingLabels` and follow `BindingsChanged`.
+Settled on Phase 6's previews, where the side column and cards became one panel at the centre, the Controls and Party cards pages behind buttons, and the saved line a Save game button.
+
+- **Placement.** One raised panel, 160 UI px wide, centred across the canvas and down the space between the notice band (32 UI px from the top) and the command bar's region (68 from the bottom), on whole UI px; its pages stand in the same place. Online the game runs on around it, the local player under it, its health in the command bar below.
+- **The panel.** Its title, "Paused" offline and "Menu" online, then its buttons, 144 x 16 UI px and 2 apart: Resume, Character (Phase 7), Party (online), Controls, Options, Save game (offline and hosting), Leave game and Quit to desktop. With Phase 7's button the host's eight fill 169 of the 170 UI px the space has at 480 x 270; a ninth would need Leave game and Quit to desktop to share a row.
+- **Party page** (online). A row per player with a slot, in slot order, the local player's included:
+  - its 5 px badge, "Player N", and "You" for the local player or "Host" for slot 1, the host's own player, on every other machine;
+  - a 40 x 6 bar in `HealthPlayer` on `HealthTrack`, framed in `ControlSecondary` so the empty part shows on the dark panel; or "Down" in `Danger`; or "In another world" or "Joining" in `TextMuted`.
+  - For the host, an invite block follows: "Friends join at" and the port, then up to two addresses, each with its network's name under it ("home network", "Tailscale") and a Copy button that puts "address:port" on the clipboard and reads "Copied" for 1.2 s; "No network found" without any.
+  - Back.
+- **Controls page.** Move / attack, Attack move, Stop, Class abilities and Weapon abilities, and online Chat, each with its keys in key caps framed in `ControlSecondary` with letters in `Accent`, the HUD's key colour. The labels come from `IInputBindingLabels` and follow `BindingsChanged`. Change keys opens the options screen at its first key binding, and Back.
 - **Focus.**
-  - The column loops: Resume, Character, Options, Leave game, Quit to desktop.
-  - Right from the column goes to the first control in the cards (the host's Copy buttons), and Left returns.
-  - Offline and joined, the cards hold no controls.
+  - Opening selects Resume, and the buttons loop, the hidden ones skipped.
+  - A page's controls loop: the Party page's Copy buttons and Back, the Controls page's Change keys and Back. The Party page opens on its first Copy button or Back, the Controls page on Back.
+  - Back on a page returns to the panel with the button that opened it selected; Back on the panel closes the menu; the options screen returns to the button or page it was opened from.
 
 ### The options screen
 
@@ -251,14 +254,14 @@ Settled on Phase 12's previews, where the chat also became a window the player m
 
 ### Core
 
-- **`HostAddresses`** (`Core/Network`): this machine's IPv4 addresses on interfaces that are up, each with a network name, behind an interface so tests can fake the interfaces. Used by the Party card and by Play together.
+- **`HostAddresses`** (`Core/Network`): this machine's IPv4 addresses on interfaces that are up, each with a network name, two at most, read through `INetworkInterfaceSource` so tests can fake the interfaces. Used by the Party page and by Play together.
 - **`JoinAddress`** (`Core/Network`): parses and checks `host` or `host:port`.
 - **`NetworkSession.JoinAsync`** takes a port and ends cleanly when cancelled.
 - **`MenuNotice`:** why the menu was reached (host gone, lost while joining). `NetworkSessionLifecycle` leaves it, and the main menu takes it, replacing `GameSave.TakeHostGoneNotice`'s line.
 - **`GameSave`:**
   - `List()` returns a summary per save: id, `savedAt`, time played, the local player's world and place, and whether it is a joined copy;
   - `Delete(name)` keeps a `.bak` through a new `ISaveFolder.Delete`;
-  - it keeps the time of the last write and whether it failed, for the saved line.
+  - it keeps whether the last write failed, for the in-game menu's confirmations (Phase 6).
 - **`UiCharacters`** (`Core/UI`, Phase 12): the characters the UI's fonts hold, which the font writer puts in the atlases and the chat keeps typed text to.
 - **`UserSettingsData`** gains `recentHosts` and `firstRunDone`. A file from before reads them empty and false, or true when it already holds bindings or picks. The format version stays 1.
 - **`WorldDefinition`** gains a display name for the world and for each entry (content rule 5, checked by `ContentTests`).
@@ -287,9 +290,10 @@ Settled on Phase 12's previews, where the chat also became a window the player m
   - `PlayerChat`, a `NetworkBehaviour` on the player: its owner's line to the host, the host's relay to every machine; `IChatSender` and `LocalChatSender` send through it;
   - the Chat action in the bindings (`RebindableActionList`), read through `IChatInput`;
   - `UserSettings`' chat timestamps and window place (`ChatWindowPlace`).
-- **In-game menu:**
-  - `GameMenuView` and `GameMenuCanvas` rebuilt;
-  - `PartyCardView` and its presenter (`IPlayerRegistry`, `ISessionStatus`), and `ControlsCardView`;
+- **In-game menu (Phase 6):**
+  - `GameMenuView` and `GameMenuCanvas` rebuilt: one centred panel and its pages;
+  - `PartyPageView` and `PartyPagePresenter` (over a `PartyRoster`, which the party frames share), and `ControlsPageView` and `ControlsPagePresenter`;
+  - `IGameSaving` (the save recorder), `IGameExit` and `IClipboard`, the menu's seams;
   - new components: `PartyRow`, `BarSmall` and `KeyCap`.
 - **Options:** `OptionsMenuView` with the rail; new components `RailItem` and `DescriptionLine`; a description per action on `RebindableActionList`.
 - **Character:**
@@ -315,14 +319,14 @@ Settled on Phase 12's previews, where the chat also became a window the player m
   - the chat's messages (Phase 12): a client sends its line to the host (`PlayerChat.SayRpc`), which checks its length and characters, names the sender's slot and relays it to every machine (`LineRpc`); the host's own goes out the same way. Lines are not saved, and a late joiner sees only those sent after it joined.
   Nothing else in this plan adds replicated state or messages. Phase 3 gave three existing host messages one more field: a heal, an immune hit and a blocked status name their source unit, as a hit already did, so a client's popups tell its own apart.
 - **Already replicated, now shown:**
-  - health (`NetworkHealth`) and statuses (`NetworkStatusEffects`) on the party frames, the world bars and the Party card;
+  - health (`NetworkHealth`) and statuses (`NetworkStatusEffects`) on the party frames, the world bars and the Party page;
   - casts (`RemoteCast*`) on the cast bars;
   - each player's world (`PlayerWorldSync`) for "In another world".
 - **Unchanged:** look, colour and part picks stay owner-written network variables on `PlayerNetworkSync`, now edited from the Character screen. The join payload is unchanged.
 - **Local only:**
   - the layout, failure texts, slot states and notices, and the allies' damage numbers preference;
   - the chat's party lines, its window's place and the timestamps option;
-  - the saved line and the invite addresses;
+  - Save game's answer and the invite addresses;
   - the recent hosts, the first-run flag and the title view.
   The host's simulation never reads any of them.
 - **The game never pauses online.** Kick, names and pings for every player are Later.
@@ -336,7 +340,7 @@ Settled on Phase 12's previews, where the chat also became a window the player m
   - **Feedback:** a failure is answered in words too.
   - **Components:** the new components join the table.
   - **Later:** "Co-op identity" and "players' world bars and status icons" are done.
-- **KeyBindings.md:** the Chat key and the options screen's two chat rows (Phase 12); the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (column, cards, confirmations, saving on open) and the main menu (Play together in place of the Host and Join buttons and the join field).
+- **KeyBindings.md:** the Chat key and the options screen's two chat rows (Phase 12); the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (the centred panel, its Party and Controls pages, Save game, confirmations) and the main menu (Play together in place of the Host and Join buttons and the join field).
 - **PlayerCharacter.md:** its non-goal "An in-game character creator" is lifted, and its customization rows move to the Character screen. **AsepriteCharacters.md:** the Look row's home moves the same way.
 - **Multiplayer.md:**
   - "the menu shows no slot list" becomes the Saved games screen;
@@ -636,24 +640,54 @@ Fixes on today's layout, before anything moves.
 
 The Character button arrives with Phase 7.
 
-- [ ] Previews offline, hosting and joined at every display in the Scale table, signed off.
-- [ ] The column:
-  - [ ] titles, status lines and labels;
-  - [ ] looping navigation;
-  - [ ] the saved line.
-- [ ] Saving on open. `GameSave` keeps the last write's time and failure.
-- [ ] Confirmations only when something is lost, and the failed-save confirmation.
-- [ ] The scrim offline only.
-- [ ] `HostAddresses`.
-- [ ] The Party card, with the host's invite block and Copy.
-- [ ] The Controls card and `KeyCap`.
-- [ ] Cards that drop by height, with a test.
-- [ ] The party frames hiding while the menu is open.
-- [ ] PlayMode, with an in-process client:
-  - [ ] the host's dialog names one player;
-  - [ ] a joined client leaves without a dialog;
-  - [ ] both see one roster.
-- [ ] KeyBindings.md's In-game menu.
+- [x] Previews offline, hosting and joined at every display in the Scale table, signed off.
+- [x] The panel:
+  - [x] titles and buttons per session kind;
+  - [x] looping navigation;
+  - [x] Save game, in place of the saved line.
+- [x] `GameSave` keeps whether the last write failed. Saving on open went with the saved line.
+- [x] Confirmations only when something is lost, and the failed-save confirmation.
+- [x] The scrim offline only.
+- [x] `HostAddresses`.
+- [x] The Party page, with the host's invite block and Copy; `PartyRow` and `BarSmall`.
+- [x] The Controls page and `KeyCap`.
+- [x] The panel and its pages kept between the notice band and the command bar, with a test. The cards that dropped by height went with the side layout.
+- [x] The party frames and the chat stay in view beside the centred panel; they hid only behind the side column.
+- [x] PlayMode, with an in-process client:
+  - [x] the host's dialog names one player;
+  - [x] a joined client leaves without a dialog;
+  - [x] both see one roster.
+- [x] KeyBindings.md's In-game menu.
+
+#### Phase 6 notes
+
+- **Settled with the user on 2026-11-12,** in four rounds of previews at 640 x 360 (x3) and 480 x 270 (x4) and sheets of every display in the Scale table at x2:
+  - **Round 1,** the plan's side column and cards: the Party bars framed in `ControlSecondary` (`HealthTrack` alone vanished on `SurfaceRaised`; the plain bar was the alternative) and key caps framed in `ControlSecondary` with `Accent` letters (filled caps were the alternative).
+  - **Round 2,** asked for: a more central layout, and the controls not shown by default but in a menu of their own. One panel at the centre, the Controls card a page behind a button, the Party card docked to the panel's right.
+  - **Round 3,** asked for: the Party card behind a button too, and no status line under the title. The buttons went 2 apart so seven fit 480 x 270 online.
+  - **Round 4,** asked for: no saved line, and a Save game button. Claude's calls, accepted: none for a joined client, the press answered on the button, and no saving on open.
+- **The previews.** A Python script outside the repo, built on Phase 4's, composed them in the gitignored `Recordings/UiRevamp/Phase6` (`central4` holds the final round), over the Clearing with the Phase 3 HUD. Once built, a temporary tool, since removed, rendered the real `GameMenuCanvas` in edit mode, its themed components woken by reflection, onto the same backdrop (`engine` there); it matched them, once the Controls page's footer stretched its buttons to their height.
+- **Layout.** `GameMenu` holds the scrim (`Panel`, its image on offline only), and under it the panel (`Box`, a `PanelRaised`), the `PartyPage` and the `ControlsPage` (each a `PanelRaised` with its view), then the `ConfirmPanel`, so the dialog draws over them.
+  - Each has its title, `Title` size, 4 UI px down, and a `Content` column at (8, 21), 144 wide.
+  - `GameMenuView.Place` lays the shown one's column out, sizes it 160 wide and 21 + its column + 6 tall, and stands it on whole UI px at the centre of the space between 32 UI px from the top and 68 from the bottom. It runs on every page change, on a page's `Resized` (rows or addresses shown, the Chat row) and when the canvas changes size.
+  - Party rows are 12 UI px, an address row 21 with 2 between, the invite's header 15; Controls rows are 14, then a 4 UI px gap and the footer's two 70 UI px buttons.
+- **The panel.** `GameMenuController` sets the title, the scrim, the Party and Save game buttons and their loop (`SetButtons`, explicit navigation wrapping around) as it opens.
+  - **Save game:** goes through `IGameSaving`, which `GameSaveRecorder` implements: `CanSave` (it decides game state, a world session runs and it is no throwaway), `Save()` and `LastWriteFailed` (`GameSave.LastWriteFailed`, set by every write, a joined client's copy included). Its answer shows for `HudSettings.MessageSeconds` of real time (`IWallClock`), since the game is paused offline.
+  - **Leaving:** `Question(hosting, joined, others, saveFailed, quitting)` gives the confirmation's words or none; the others are the registered players but the local one. Leave and Quit go through `IGameExit` (`GameExit`: `GameFlow.ShowMainMenuAsync`, `ApplicationExit.Quit`), so tests leave without ending a session.
+  - **Pages:** Party opens `PartyPagePresenter`, which fills its rows only while open; Controls shows its Chat row online; Change keys opens the options screen at its first key binding row (`OptionsMenuController.Open(closed, atControls)`).
+- **Party page.** `PartyPagePresenter` lists the players from a `PartyRoster` (registry, slots, statuses and death times, in slot order, allocation-free), which `PartyFramesPresenter` now uses too.
+  - **"Host":** slot 1, the host's own player, which takes the first slot as it spawns first (Phase 5).
+  - **Addresses:** `HostAddresses` reads them as the page opens, through `SystemNetworkInterfaces`. A private address needs a default gateway, which leaves out Hyper-V's, WSL's and VirtualBox's virtual switches; Tailscale is known by its range, 100.64.0.0/10, or its interface's name, ZeroTier by its interface's name. Two at most: three made the host's page with four players 179 UI px tall, past the 170 the space has at 480 x 270.
+  - **Copy:** puts "address:port" on the clipboard through `IClipboard` (`SystemClipboard`, `GUIUtility.systemCopyBuffer`).
+- **Controls page.** `ControlsPagePresenter` sets the keys from `IInputBindingLabels`, which gains `GetActionKeyLabel(actionName)` for the `Player` map's other actions. A key cap is as wide as its label plus 3 UI px a side, 12 at least.
+- **Co-op.** Nothing new is sent. The roster comes from each machine's registry and slots, the addresses from the host's own interfaces, and a client's menu asks its own session. `NetworkGameMenuPlayModeTests` builds a copy of the menu over the in-process client.
+- **Found on the way.**
+  - The Controls page's footer kept its buttons at their sprites' height until its layout group stretched them.
+  - Key names follow the keyboard layout: the test machine's Enter key reads "Entrée", so the tests compare with the bindings' own labels.
+- **Tests.**
+  - `GameMenuControllerTests` (19, rebuilt), `PartyPagePresenterTests` (6, new), `HostAddressesTests` (3, new), `GameMenuLayoutTests` (1, new) and `NetworkGameMenuPlayModeTests` (2, new).
+  - `GameMenuPlayModeTests`: a host alone leaves at once.
+  - `UiContentTests`: the new components themed; `UiTheme.md` gains `Danger` on `SurfaceRaised`, 5.44:1, and `Accent` read at `Caption` on it.
 
 ### Phase 7: the Character screen
 
@@ -745,7 +779,7 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
   - **Fading:** a line shows for 10 s, then fades over 1 s. 6 s and 20 s were the alternatives.
   - **The field** is dark: `SurfaceRaised` framed in `Accent`, its text in `Text` and its placeholder in `TextMuted`. The join field's look, an `Accent` face while typing, was the alternative.
   - **At rest** the lines are outlined over the world with no panel; the panel shows only while the window is open.
-  - **On those previews the user asked for more:** a window the player moves and resizes, and an option for timestamps. A second round of previews settled them: a header with a move grip and a corner resize grip shown only while open, sizes from 104 x 52 to 240 x 160, a place kept by the nearest corner, the Chat timestamps and Chat window rows, and the time in `TextMuted` and 24-hour format, as Phase 6's saved line.
+  - **On those previews the user asked for more:** a window the player moves and resizes, and an option for timestamps. A second round of previews settled them: a header with a move grip and a corner resize grip shown only while open, sizes from 104 x 52 to 240 x 160, a place kept by the nearest corner, the Chat timestamps and Chat window rows, and the time in `TextMuted` and 24-hour format, as Phase 6's saved line was planned.
 - **The previews.** The Phase 5 script, outside the repo, extended, composed them in the gitignored `Recordings/UiRevamp/Phase12`, with the text drawn from `Galmuri7.ttf` at 8 px. Once built, a temporary tool, since removed, rendered the real HUD's chat in edit mode, at rest and open, over the same capture (`engine_check.png` there), which matched them.
 - **Layout.** `Chat` on `PlayerHudCanvas` sits after the command bar and before the notice line, so the notice line, the party frames and the tooltip draw over a moved window. It holds:
   - `ChatView` and a `CanvasGroup` that takes the pointer only while the window is open;
@@ -798,7 +832,7 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
 - **Pausing online** while every player has the menu open (Path of Exile 2's rule).
 - **A live title scene,** lit, with the player's character by a campfire.
 - **A tabbed game hub,** once inventory, map and quests exist.
-- **Pings** for every player on the Party card.
+- **Pings** for every player on the Party page.
 - **Gamepad and lobbies:** an on-screen keypad for addresses, join codes once a relay exists, and a lobby on the Character screen before a session starts.
 - **More than one character per install.**
 - **The top right:** a place name and a minimap.
@@ -810,8 +844,8 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
   - **`AbilityBarPresenter`,** with fakes: a text per failure outcome, each slot state, and the disabled slots per control.
   - **`StatusBarPresenter` and `StatusFeedbackTests`:** the two groups, their order and "+n".
   - **The notices:** the queue, the countdown, and a repeated notice restarting.
-  - **`PartyFramesPresenter`, `PartyCardView` and `ControlsCardView`,** with fakes for the registry, the session and the bindings.
-  - **`GameMenuControllerTests`:** titles and lines per session kind, saving on open, and when each confirmation shows.
+  - **`PartyFramesPresenter`, `PartyPagePresenter` and `ControlsPagePresenter`,** with fakes for the registry, the session and the bindings.
+  - **`GameMenuControllerTests`:** titles and buttons per session kind, the pages, Save game, and when each confirmation shows.
   - **`OptionsMenuControllerTests`:** categories, descriptions, Reset shown only when changed, and the last category.
   - **`CharacterScreenControllerTests`:** groups from the dyes, hidden rows, and the picker's navigation and names.
   - **Core:** `HostAddresses` and `JoinAddress`; `GameSave` listing (order, copies, unreadable files) and deleting (a `.bak` kept).
@@ -821,7 +855,7 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
   - **`UiSkinWriterTests`:** the new pieces, the badges discs outlined in black.
   - **The chat (Phase 12):** `ChatLog` and its presenter with fakes, the text filter, the field's input handling, the window's layout and the party lines.
   - **`UiContentTests`:** every new prefab themed, controls at least 12 UI px with navigation on; the title sprites excepted from "the skin or nothing".
-  - **Layout:** the HUD's regions, the in-game menu's cards and every screen fitting 480 x 270 at every display in the Scale table.
+  - **Layout:** the HUD's regions, the in-game menu and its pages, and every screen fitting 480 x 270 at every display in the Scale table.
 - **PlayMode,** with the in-process host and client in Testlands:
   - world bars, pips and cast bars on both machines, and a late joiner's;
   - slots agreeing, and a leaver's slot reused;

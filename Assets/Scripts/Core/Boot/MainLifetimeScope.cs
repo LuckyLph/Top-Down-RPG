@@ -106,6 +106,8 @@ public class MainLifetimeScope : LifetimeScope
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();
+            builder.Register<INetworkInterfaceSource, SystemNetworkInterfaces>(Lifetime.Singleton);
+            builder.Register<HostAddresses>(Lifetime.Singleton).WithParameter(networkSettings.Port);
         }
 
         builder.RegisterEntryPoint<BootFlow>();

@@ -71,7 +71,8 @@ Each pair of text role and background role a themed text uses, at the smallest s
 | Placeholder | Accent (selected) | Heading | 5.12:1 | 4.50:1 |
 | Accent | Surface | Body | 7.44:1 | 4.50:1 |
 | Accent | SurfaceEmpty | Caption | 5.24:1 | 4.50:1 |
-| Accent | SurfaceRaised | Body | 13.11:1 | 4.50:1 |
+| Accent | SurfaceRaised | Caption | 13.11:1 | 4.50:1 |
+| Danger | SurfaceRaised | Body | 5.44:1 | 4.50:1 |
 
 ## Fills on tracks
 

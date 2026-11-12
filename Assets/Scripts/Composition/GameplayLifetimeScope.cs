@@ -143,6 +143,12 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<OptionsMenuView>();
         builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
         builder.RegisterComponentInHierarchy<GameMenuView>();
+        builder.RegisterComponentInHierarchy<PartyPageView>();
+        builder.RegisterComponentInHierarchy<ControlsPageView>();
+        builder.Register<SystemClipboard>(Lifetime.Singleton).As<IClipboard>();
+        builder.Register<GameExit>(Lifetime.Singleton).As<IGameExit>();
+        builder.RegisterEntryPoint<PartyPagePresenter>().AsSelf();
+        builder.RegisterEntryPoint<ControlsPagePresenter>().AsSelf();
         builder.RegisterEntryPoint<GameMenuController>().AsSelf();
 
         if (pointerFeedbackLayer == null)
@@ -169,7 +175,7 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
-        builder.RegisterEntryPoint<GameSaveRecorder>().AsSelf();
+        builder.RegisterEntryPoint<GameSaveRecorder>().As<IGameSaving>().AsSelf();
         builder.RegisterEntryPoint<HostSessionSync>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
         builder.Register<SharedTerrainArrays>(Lifetime.Singleton);

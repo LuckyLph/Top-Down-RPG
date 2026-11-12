@@ -40,7 +40,7 @@ Every rule in [Multiplayer.md](Multiplayer.md#rules-for-new-code-starting-now) a
 | When changes apply | At once, and saved at once. There is no Apply or Cancel step. |
 | Reset | Per action (back to the asset's default) and "Reset all" behind a confirmation. |
 | Saving | A separate `settings.json` next to the save files (`save.json` then, the `Saves` folder since KnownGaps.md's Phase 5), written on every machine. Starting a new game or deleting the save never touches it. |
-| In-game menu | Escape opens it: Resume, Options, Leave game, Quit. In single player (no network session) it pauses the game. In an online session, hosting alone included, it pauses nothing: no new orders are made and the current order runs on, the same rule as during transitions. |
+| In-game menu | Escape opens it: Resume, Options, Leave game, Quit (since UiRevamp.md's Phase 6: Resume, Party online, Controls, Options, Save game offline and hosting, Leave game, Quit to desktop). In single player (no network session) it pauses the game. In an online session, hosting alone included, it pauses nothing: no new orders are made and the current order runs on, the same rule as during transitions. |
 | Pausing | Game time stops (`Time.timeScale` 0) through the same mechanism as the transition freeze, so the clock, cooldowns, statuses, physics, mob AI and animations all stop together. Menus and the fader run on unscaled time. |
 | Unused template actions | Removed from the `Player` map now, so the conflict rules only ever deal with real controls. |
 
@@ -82,11 +82,12 @@ Short labels for the ability bar: the layout's key name for keys ("Q", "Space", 
 ### In-game menu
 
 - Escape (or gamepad Start) in game opens it; Escape, gamepad East or Resume closes it. Options opens the options screen on top, and Back returns to the in-game menu.
+- Since UiRevamp.md's Phase 6 it is one panel at the centre, titled "Paused" offline and "Menu" online, its buttons looping: Resume, Party (online), Controls, Options, Save game (offline and hosting), Leave game and Quit to desktop. Party and Controls open a page in its place; Escape, gamepad East or the page's Back return to the buttons, and a second Escape closes the menu. The Controls page lists every control's keys, following rebinds, and its Change keys opens the options screen at the first key binding. Save game writes the game at once and says "Saved" or "Couldn't save" on its button. Offline the scrim dims the game behind it; online nothing does.
 - Opening it blocks gameplay input through `GameplayInputGate`, so the `Player` map is disabled for as long as it is open, which also lets rebinding run (the Input System only rebinds disabled actions). Pointer feedback (hover ring, attack cursor) goes away because gameplay input reads as neutral.
 - In single player (`NetworkSession.IsActive` false) it pauses the game while it is open, the options screen included, and resumes when it closes, whichever way it closes. Opening it from a host session that has no clients yet does not pause, because a client may join at any moment.
 - Online it pauses nothing. The local player can be hit, die and respawn behind it.
-- Leave game returns to the main menu through `GameFlow.ShowMainMenuAsync()`; `NetworkSessionLifecycle` already shuts the session down when a transition ends in the menu. For the host, a confirmation first says that leaving ends the game for everyone; clients then go back to their menu through the existing lost-connection path. A client leaving affects only itself.
-- Quit closes the application (same as the main menu's Quit), with the same confirmation for the host.
+- Leave game returns to the main menu through `GameFlow.ShowMainMenuAsync()`; `NetworkSessionLifecycle` already shuts the session down when a transition ends in the menu. For the host, a confirmation first says that leaving ends the game for everyone; clients then go back to their menu through the existing lost-connection path. A client leaving affects only itself. Since UiRevamp.md's Phase 6 the host is asked only with others connected ("End the game for 2 other players?" and whether the game is saved), and anyone is asked after a failed save ("The game couldn't be saved. Leave anyway?"); otherwise it goes ahead at once.
+- Quit closes the application (same as the main menu's Quit), with the same confirmations.
 - It stays open across area changes (the fader draws over it) and closes with the Gameplay scene when a session ends or restarts. It does not open during a transition.
 
 ### Saving
@@ -100,6 +101,7 @@ Short labels for the ability bar: the layout's key name for keys ("Q", "Space", 
 ### Labels
 
 - The ability bar shows each slot's current short label and updates when a binding changes or the keyboard layout changes.
+- The in-game menu's Controls page (UiRevamp.md's Phase 6) shows the same short labels for every control, Move / attack, Attack move, Stop, the six ability slots and Chat, and follows the same changes; `IInputBindingLabels.GetActionKeyLabel(actionName)` gives the `Player` map's other actions theirs.
 - Editor gizmos label abilities by slot number (1–6) instead of a key, so `AbilitySlots.KeyName` goes away.
 
 ## Architecture
@@ -117,7 +119,7 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
 - `RuntimeInputActions`: Main-scope singleton holding this session's copy of the project input asset (`Instantiate` keeps action ids). `PlayerInputService`, `InputBindings` and the `EventSystem`'s UI module all use the copy, so overrides never touch the project asset (CLAUDE.md treats ScriptableObject assets as immutable at runtime), and `InputActionReference`s in assets resolve to the copy by id.
 - `InputBindings`: Main-scope singleton and entry point over the session's copy.
   - On initialize: loads the overrides from `UserSettings`, applies them, and resolves duplicates.
-  - `IsRebindable(action)`, `GetShortLabel(action)`, `GetLabel(action)` (for the options screen: the layout's full key name).
+  - `IsRebindable(action)`, `GetShortLabel(action)`, `GetActionKeyLabel(actionName)` (the short label of a `Player` map action by name, for the in-game menu's Controls page, UiRevamp.md's Phase 6), `GetLabel(action)` (for the options screen: the layout's full key name).
   - `TryAssign(action, controlPath, out InputAction swappedWith)`: the rule in one place. Refuses non-rebindable actions and disallowed paths, swaps on conflict, applies the override (or removes it when the path is the default), saves and raises `BindingsChanged`.
   - `StartRebind(action)`: wraps `PerformInteractiveRebinding` with the allowed paths (`WithControlsHavingToMatchPath` for `<Keyboard>` and the mouse buttons), Escape as the cancel control, the `Keyboard&Mouse` binding group, and an `OnApplyBinding` that routes the result through `TryAssign`. Returns a handle that reports completion or cancellation and disposes the operation. Logs an error and does nothing if the action is enabled.
   - `Reset(action, out swappedWith)` assigns the default through `TryAssign`, so a default another action took is swapped back; `ResetAll()` removes every override. Both save and raise `BindingsChanged`.
@@ -136,7 +138,7 @@ Binding logic is input plumbing, so it lives in Core next to `PlayerInputService
 | `OptionsMenuView` | Passive view on the `OptionsMenu` prefab: rows container, footer buttons, listening panel, notice line, reset confirmation. |
 | `KeyBindingRowView` | One row: label, binding button, reset button, and a swatch chip on a colour row. Instantiated from a row prefab (`Row`, or `RowSwatch` for a colour row; [DesignSystem.md](DesignSystem.md)'s components) when the screen is built (once, not per open). |
 | `OptionsMenuController` | Plain entry point next to the view. Builds rows from `InputBindings`, starts and cancels rebinds through it, refreshes rows on `BindingsChanged`, shows swap notices, handles Back and Reset all. `Open(onClosed)`, `Close()`. |
-| `GameMenuController` | In-game menu on a `GameMenu` prefab under the Gameplay HUD: opens on `MenuPressedThisFrame`, closes on Back; holds a `GameplayInputGate` block while open, and a `TimeFreeze` hold too when no network session is active; releases both when it closes or is destroyed; Resume, Options, Leave game, Quit with the host confirmation. Ignores input during transitions and while the options screen is listening. |
+| `GameMenuController` | In-game menu on a `GameMenu` prefab under the Gameplay HUD: opens on `MenuPressedThisFrame`, closes on Back; holds a `GameplayInputGate` block while open, and a `TimeFreeze` hold too when no network session is active; releases both when it closes or is destroyed; Resume, Options, Leave game, Quit with the host confirmation. Ignores input during transitions and while the options screen is listening. Since UiRevamp.md's Phase 6 also Party and Controls (pages in its place, `PartyPagePresenter` and `ControlsPagePresenter`, the latter labelling every control from `IInputBindingLabels` and following `BindingsChanged`), Save game, and the confirmations only when something is lost. |
 | `MainMenuController` | Gains the Options button handler. |
 | `AbilityBarPresenter` | Sets slot labels from `IInputBindingLabels` (implemented by `InputBindings`) at start and on `BindingsChanged`, instead of `AbilitySlots.KeyName`. |
 

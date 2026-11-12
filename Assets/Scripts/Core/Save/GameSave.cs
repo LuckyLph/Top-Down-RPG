@@ -41,6 +41,12 @@ public sealed class GameSave
     public bool HasSave => TryLoadLatest(out _);
 
     /// <summary>
+    /// Whether the last <see cref="Write"/> failed, so the in-game menu asks before leaving a game it could not save
+    /// (Docs/UiRevamp.md, Phase 6). False before any write.
+    /// </summary>
+    public bool LastWriteFailed { get; private set; }
+
+    /// <summary>
     /// The name of the file <paramref name="data"/> is written to: its host's copy for a joined client's copy, else its
     /// session's.
     /// </summary>
@@ -102,9 +108,19 @@ public sealed class GameSave
     /// it names no session or host, or the store fails. Before the first write over a stored file this build cannot
     /// read, a copy of it is kept (<see cref="ISaveStore.KeepCopy"/>), with a warning naming it; when the copy cannot be
     /// made, nothing is written. Writing a copy whose host is gone leaves a notice for the menu
-    /// (<see cref="TakeHostGoneNotice"/>).
+    /// (<see cref="TakeHostGoneNotice"/>). Each write records whether it failed (<see cref="LastWriteFailed"/>).
     /// </summary>
     public bool Write(GameSaveData data)
+    {
+        bool written = WriteFile(data);
+        LastWriteFailed = !written;
+        return written;
+    }
+
+    /// <summary>
+    /// Writes <paramref name="data"/> as <see cref="Write"/> describes; false when nothing was written.
+    /// </summary>
+    private bool WriteFile(GameSaveData data)
     {
         ImportLegacyOnce();
         if (data == null || (data.IsCopy ? string.IsNullOrEmpty(data.Host) : string.IsNullOrEmpty(data.Id)))

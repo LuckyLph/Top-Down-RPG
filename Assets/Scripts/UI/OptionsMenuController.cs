@@ -226,9 +226,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Shows the screen with its first row selected. <paramref name="closed"/> runs once it closes.
+    /// Shows the screen with its first row selected, or, <paramref name="atControls"/>, its first key binding row (the
+    /// in-game menu's Change keys, Docs/UiRevamp.md, Phase 6). <paramref name="closed"/> runs once it closes.
     /// </summary>
-    public void Open(Action closed)
+    public void Open(Action closed, bool atControls = false)
     {
         onClosed = closed;
         pendingRebind = -1;
@@ -238,7 +239,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         RefreshRows();
         view.SetShown(true);
         menus.Push(this);
-        KeyBindingRowView first = FirstRow();
+        KeyBindingRowView first = atControls && rows.Count > 0 ? rows[0] : FirstRow();
         selection.Select(first != null ? first.BindingButton : view.BackButton);
     }
 

@@ -23,9 +23,9 @@ using VContainer.Unity;
 /// the last to Reset all; Right from Turn right returns to the first row.</item>
 /// </list>
 /// While open it is a layer on the <see cref="MenuStack"/>: Back closes the picker, else the confirmation, else the
-/// screen.
+/// screen. Online in game it is a full screen with the vitals strip (<see cref="IVitalsScreen"/>).
 /// </summary>
-public sealed class CharacterScreenController : IStartable, ITickable, IDisposable, IMenuLayer
+public sealed class CharacterScreenController : IStartable, ITickable, IDisposable, IMenuLayer, IVitalsScreen
 {
     public const string TurnLeftName = "Turn left";
     public const string TurnRightName = "Turn right";
@@ -67,6 +67,7 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
 
     public bool IsOpen { get; private set; }
     public bool IsPickerOpen => pickerChoice >= 0;
+    public VitalsStripView Vitals => view.Vitals;
     internal int RowCount => rows.Count;
     internal CharacterGroup GetGroup(int index) => groups[index];
     internal RowChipsView GetRow(int index) => rows[index];
@@ -197,6 +198,14 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
         Action closed = onClosed;
         onClosed = null;
         closed?.Invoke();
+    }
+
+    /// <summary>
+    /// Shows <paramref name="text"/> as the foot line's warning over the focused control's name, or clears it for null.
+    /// </summary>
+    public void SetWarning(string text)
+    {
+        view.SetWarning(text);
     }
 
     /// <summary>

@@ -399,6 +399,82 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// Puts the accessibility options back on their defaults (the options screen's Reset accessibility,
+    /// Docs/UiRevamp.md, Phase 8): the UI size at Normal, flashing and motion not reduced, in one write; raises
+    /// <see cref="UiSizeStepChanged"/>, <see cref="ReduceFlashingChanged"/> and <see cref="ReduceMotionChanged"/> for those
+    /// that changed. Returns whether it was written.
+    /// </summary>
+    public bool ResetAccessibility()
+    {
+        bool size = uiSizeStep != 0;
+        bool flashing = reduceFlashing;
+        bool motion = reduceMotion;
+        if (!size && !flashing && !motion)
+        {
+            return false;
+        }
+
+        uiSizeStep = 0;
+        reduceFlashing = false;
+        reduceMotion = false;
+        bool written = Write();
+        if (size)
+        {
+            UiSizeStepChanged?.Invoke();
+        }
+
+        if (flashing)
+        {
+            ReduceFlashingChanged?.Invoke();
+        }
+
+        if (motion)
+        {
+            ReduceMotionChanged?.Invoke();
+        }
+
+        return written;
+    }
+
+    /// <summary>
+    /// Puts the interface options back on their defaults (the options screen's Reset interface, Docs/UiRevamp.md,
+    /// Phase 8): allies' popups shown, no chat timestamps, the chat window in its place, in one write; raises
+    /// <see cref="AllyPopupsChanged"/>, <see cref="ChatTimestampsChanged"/> and <see cref="ChatWindowChanged"/> for those
+    /// that changed. Returns whether it was written.
+    /// </summary>
+    public bool ResetInterface()
+    {
+        bool popups = allyPopups != AllyPopups.Shown;
+        bool stamps = chatTimestamps;
+        bool window = chatWindow.IsMoved;
+        if (!popups && !stamps && !window)
+        {
+            return false;
+        }
+
+        allyPopups = AllyPopups.Shown;
+        chatTimestamps = false;
+        chatWindow = default;
+        bool written = Write();
+        if (popups)
+        {
+            AllyPopupsChanged?.Invoke();
+        }
+
+        if (stamps)
+        {
+            ChatTimestampsChanged?.Invoke();
+        }
+
+        if (window)
+        {
+            ChatWindowChanged?.Invoke();
+        }
+
+        return written;
+    }
+
+    /// <summary>
     /// Writes every setting to the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     private bool Write()

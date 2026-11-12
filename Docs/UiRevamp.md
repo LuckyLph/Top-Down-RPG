@@ -112,7 +112,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Saving | **Save game** (settled in Phase 6, in place of saving on open and a saved line) writes the game at once, offline and on the host, and answers on its own button: "Saved" or "Couldn't save" for 1.2 s. A joined client has none: the host saves the game, and the client's copy of its place keeps saving itself. Where nothing is written (an editor boot straight into a world) it cannot be pressed. |
 | Confirmations | Leaving or quitting asks only when it loses something, each sentence on its own line:<br>• as the host with others connected: "End the game for 2 other players?" ("1 other player"), then "The game is saved." or, after a failed save, "The game couldn't be saved.";<br>• otherwise after a failed save: "The game couldn't be saved. Leave anyway?" ("Quit anyway?"), and joined "Your place couldn't be saved.".<br>Offline, alone as the host, or joined, with the last save written, it goes ahead at once. |
 | Full screens in game | Options and the Character screen stay opaque raised panels. Online, they show the vitals strip, and their notice line says "You're taking damage." when the local player is hit. |
-| Options | **Layout:** a rail of categories beside a pane of rows.<br>• **Accessibility:** UI size, Reduce flashing, Reduce motion. It was the Display section; the settings file is unchanged.<br>• **Controls:** the bindings.<br>**Behaviour:**<br>• Moving onto a category shows its rows.<br>• The focused row's one-line description shows at the pane's foot.<br>• Reset shows only on a row that differs from its default.<br>• The footer's reset is the category's ("Reset controls").<br>• Opened in game, the screen returns to the category used last this session. |
+| Options | **Layout:** a rail of categories beside a pane of rows (settled on Phase 8's previews).<br>• **Accessibility:** UI size, Reduce flashing, Reduce motion. It was the Display section; the settings file is unchanged.<br>• **Interface:** Allies' damage numbers, Chat timestamps and Chat window, the Display section's later rows (chosen in Phase 8 over Accessibility holding all six, or the chat's rows joining Controls).<br>• **Controls:** the bindings.<br>**Behaviour:**<br>• Moving onto a category shows its rows.<br>• The focused row's description, up to two lines, shows at the pane's foot, and a category's while its item is focused.<br>• Reset shows only on a row that differs from its default.<br>• The footer's reset is the category's ("Reset controls"), shown only while something in the category differs.<br>• Opened in game, the screen returns to the category used last this session. |
 | Character screen | **Layout** (settled on Phase 7's previews, where the plan's colour rows became chips): a full screen of its own, shared by the main menu and the in-game menu as the options screen is. The preview on the left, in a box of 80 x 80 art px at x3 on 640 x 360 and x2 on 480 x 270, with Turn left and Turn right, two arrow icons, either side of the pose's button; on the right **one row per part**, the option worn on its button, its colours as chips, and Reset.<br>**Grouping:** read from the dyes, not from a hand-made list: a colour goes on the one part's row whose options carry it, else on Body.<br>**Colours:** a chip opens a swatch picker, which shows the focused swatch on the preview before it is picked.<br>**Foot line:** names the focused chip or turn button.<br>The Character section leaves the options screen. This lifts PlayerCharacter.md's non-goal "An in-game character creator". |
 | Main menu | **The panel:** raised, on the left, over the title view. It holds the logo, then:<br>• Continue, with a line saying where, how long played and when saved;<br>• New game, Saved games, Play together, Character, Options and Quit, looping.<br>**Without a save,** Continue and Saved games hide.<br>**The build version** shows at the bottom right. |
 | Play together | One screen with two columns:<br>• **Host:** Host and continue, Host a new game, Host another saved game, then the addresses friends join with, each with Copy, and the port.<br>• **Join:** an address field taking `host` or `host:port`, checked before connecting and remembered; Join; and up to five recent hosts as buttons.<br>**Connecting** shows a modal with a count and Cancel. |
@@ -211,13 +211,24 @@ Settled on Phase 6's previews, where the side column and cards became one panel 
 
 ### The options screen
 
-- **Layout.** A 472 UI px block centred on the canvas: a 104-wide rail and a 360-wide pane holding today's rows and scrollbar, so it fits 480 x 270.
-- **The rail.** The current category is a raised button with a pip, and the others are flat, so shape and the pip mark it, not colour alone. Right or Submit enters the first row, and Left from any row returns to the rail.
-- **Descriptions.** The two lines at the pane's foot describe the focused row:
-  - a binding's description comes from `RebindableActionList`;
-  - the preferences' come from the controller;
-  - the UI size row says "Larger sizes need a larger window." where none fits.
-- **Opening.** From the main menu the screen opens on its first category, and in game on the category used last this session (Controls the first time). Escape closes it from anywhere, as today.
+Settled on Phase 8's previews, where the Display section's later rows became a third category, Interface.
+
+- **Layout.** A full raised panel titled "Options", its title centred, holding a 472 UI px block centred on the canvas on whole UI px, so it fits 480 x 270:
+  - **the rail,** 104 wide, its items 16 tall and 2 apart, from 28 UI px below the top;
+  - **the pane,** 8 to its right and 360 wide: the rows, which fill it but for 6 UI px kept for the scrollbar, shown only while they overflow, and under them **the description,** two lines;
+  - **the notice line** under the block, and **the footer,** the category's reset and Back, centred at the bottom as on the Character screen; the reset hides, keeping its place, so Back never moves;
+  - online, **the vitals strip** at the top right, its right edge on the pane's.
+  The Controls' four headers and ten rows fit without scrolling at 640 x 360, 683 x 384, 512 x 384 and 560 x 350, and scroll at the smaller sizes.
+- **The rail.** Accessibility, Interface and Controls. The current category is a raised button with a pip, and the others are flat, so shape and the pip mark it, not colour alone. Moving onto an item shows its category; Up and Down loop through the rail; Right or Submit enters the first row, and Left from any row returns to the rail.
+- **Rows.** Reset shows only on a row that differs from its default, keeping its column, and is out of navigation while hidden; pressing it hides it and selects its row's button. Up and Down move to the same kind of control in the row above or below, and Down from the last row reaches the footer.
+- **Descriptions.** The two lines at the pane's foot, in `TextMuted`, describe the focus:
+  - a category's item its category ("How large the UI is drawn, and less flashing and motion.");
+  - a binding's row the line from `RebindableActionList` ("Walk to the pointer and attack the first enemy on the way.");
+  - a preference's row the controller's line; the UI size row adds "Larger sizes need a larger window." on the second line where none fits;
+  - the footer nothing.
+- **The category's reset.** "Reset accessibility", "Reset interface" or "Reset controls", shown while any of the category's rows differs from its default. It asks first ("Reset all controls to their defaults?"), puts back only its own category in one write, says so on the notice line ("All controls are back to their defaults.") and selects Back.
+- **Opening.** From the main menu the screen opens on its first category, and in game on the category used last this session (Controls the first time), each with its item selected. The in-game menu's Change keys opens it on Controls with the first binding selected. Escape closes it from anywhere, as today.
+- **Online.** The vitals strip shows, and a hit on the local player puts "You're taking damage." in `Accent` over the notice line for 3 s.
 
 ### The Character screen
 
@@ -305,11 +316,11 @@ Settled on Phase 7's previews, where the colour rows became chips on each part's
   - `PartyPageView` and `PartyPagePresenter` (over a `PartyRoster`, which the party frames share), and `ControlsPageView` and `ControlsPagePresenter`;
   - `IGameSaving` (the save recorder), `IGameExit` and `IClipboard`, the menu's seams;
   - new components: `PartyRow`, `BarSmall` and `KeyCap`.
-- **Options:** `OptionsMenuView` with the rail; new components `RailItem` and `DescriptionLine`; a description per action on `RebindableActionList`.
+- **Options (Phase 8):** `OptionsMenuView` with the rail; new components `RailItem` (`RailItemView`) and `DescriptionLine`; a description per action on `RebindableActionList` (`InputBindings.GetDescription`), and `InputBindings.IsDefault` for the rows' Reset; `UserSettings.ResetAccessibility` and `ResetInterface`, each in one write; `IVitalsScreen`, which the options and Character screens' controllers implement, so one `VitalsStripPresenter` serves both.
 - **Character (Phase 7):**
   - `CharacterScreenController` and `CharacterScreenView`, taking the Character section's rows from `OptionsMenuController`; `CharacterGroups` reads the rows from the dyes;
   - `CharacterPreviewStage` (`ICharacterPreview`), drawing the character into the texture the screen's box shows;
-  - `VitalsStripPresenter` (Gameplay scope) and the `VitalsStrip` component;
+  - `VitalsStripPresenter` (Gameplay scope; serving the options screen too since Phase 8) and the `VitalsStrip` component;
   - new components: `RowChips`, `SwatchChip`, `SwatchPicker` and `ButtonIcon`.
 - **Main menu:**
   - `MainMenuController` keeps `ContinueGame`, `StartNewGame`, `HostGame` and `JoinGame` as entry points, since the PlayMode tests drive them. Their logic moves into a plain `MenuSessionStarter` that the new screens share.
@@ -351,7 +362,7 @@ Settled on Phase 7's previews, where the colour rows became chips on each part's
   - **Feedback:** a failure is answered in words too.
   - **Components:** the new components join the table.
   - **Later:** "Co-op identity" and "players' world bars and status icons" are done.
-- **KeyBindings.md:** the Chat key and the options screen's two chat rows (Phase 12); the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (the centred panel, its Party and Controls pages, Save game, confirmations) and the main menu (Play together in place of the Host and Join buttons and the join field).
+- **KeyBindings.md:** the Chat key and the options screen's two chat rows (Phase 12); the options screen (rail, categories, the Character section gone, Display split into Accessibility and Interface), the in-game menu (the centred panel, its Party and Controls pages, Save game, confirmations) and the main menu (Play together in place of the Host and Join buttons and the join field).
 - **PlayerCharacter.md:** its non-goal "An in-game character creator" is lifted, and its customization rows move to the Character screen. **AsepriteCharacters.md:** the Look row's home moves the same way.
 - **Multiplayer.md:**
   - "the menu shows no slot list" becomes the Saved games screen;
@@ -764,14 +775,38 @@ The Character button arrived with Phase 7.
 
 ### Phase 8: the options screen
 
-- [ ] Previews of the rail and the description line, signed off.
-- [ ] The rail (Accessibility, Controls), `RailItem` and its navigation.
-- [ ] Descriptions for every row, from `RebindableActionList` and the controller, and the UI size explanation.
-- [ ] Reset shown only on changed rows, and out of navigation while hidden.
-- [ ] The category's reset in the footer.
-- [ ] Reopening on the last category in game.
-- [ ] The vitals strip and the "You're taking damage." notice online.
-- [ ] KeyBindings.md's options screen.
+- [x] Previews of the rail and the description line, signed off.
+- [x] The rail (Accessibility, Interface, Controls), `RailItem` and its navigation.
+- [x] Descriptions for every row, from `RebindableActionList` and the controller, and the UI size explanation.
+- [x] Reset shown only on changed rows, and out of navigation while hidden.
+- [x] The category's reset in the footer.
+- [x] Reopening on the last category in game.
+- [x] The vitals strip and the "You're taking damage." notice online.
+- [x] KeyBindings.md's options screen.
+
+#### Phase 8 notes
+
+- **Settled with the user on 2026-11-12,** in one round of previews at 640 x 360 (x3) and 480 x 270 (x4), with sheets of every display in the Scale table at x2, composed in the gitignored `Recordings/UiRevamp/Phase8` by a script built on Phase 6's and Phase 7's:
+  - **Where the Display section's later rows go** (Allies' damage numbers, Chat timestamps, Chat window), which the plan's two categories predated: `A`, a third category, Interface; `B`, Accessibility holding all six; `C`, Allies' damage numbers in Accessibility and the chat's rows as a Chat section of Controls, which would have made the Controls scroll at 640 x 360 and "Reset controls" put the chat window back. The user chose `A`.
+  - **Claude's calls, accepted:** the footer's reset hides while nothing in its category differs, keeping its place, so Back never moves; a category's item describes its category on the description line; the questions follow the old wording ("Reset all controls to their defaults?"); the descriptions' wording; the pane without a frame, the rows filling it.
+  - **Once built,** a temporary tool, since removed, rendered the real prefab in edit mode, its themed components woken by reflection, in every previewed state (`Phase8/engine`, each beside its preview in `compare_*`). It matched them. Only the scrollbar differed, and only in edit mode, where a `ScrollRect` counts scrolling as needed whatever its rows, so the tool hid it where the rows fit.
+- **Layout.** `OptionsMenu.prefab`'s `Panel` holds the title, the `VitalsStrip` (hidden), the `Rail` (a vertical layout, 2 apart, its items never stretched), the `List` (the `ScrollList`, its scrollbar shown only while the rows overflow, its viewport leaving it 6 UI px so the rows keep their width either way), the `Description` (a `DescriptionLine`), the `Notice` and the `Warning` over it (two `NoticeLine`s), the `Footer` (no layout group: the category's `ResetButton` anchored at its left and Back at its right), the listening panel and the `Dialog`.
+  - `OptionsMenuView.Place` runs as the screen shows and when the canvas changes size: the block from `floor((width - 472) / 2)`, the rail 104 wide from 28 UI px below the top, the list 8 to its right, 360 wide, down to 6 above the description, the description 354 x 22 with its foot 44 above the bottom, the notice line and the warning centred 28 up, the footer centred 8 up, and the vitals strip's right edge on the pane's, 6 down, all on whole UI px.
+  - The rows are 354 wide; the label's column takes the 14 UI px more than the old 340.
+- **Rows.** `Row.prefab`'s Reset now stands in a `ResetSlot` (a `LayoutElement` 44 wide) that keeps the column while `KeyBindingRowView.SetResetShown` hides the button, as `RowChips` keeps its value's column; `RowToggle` inherits it.
+- **The controller.** `OptionsMenuController` keeps a row per option with its category, and the action it binds or its preference's line and default test:
+  - `ShowCategory` raises the category's rail item (`RailItemView.SetCurrent`: the raised panel, `ControlNormal` and the pip, the label kept on the face) and shows its rows and headers only;
+  - every change (the bindings, the six preferences, the UI sizes that fit) refreshes the values, each row's Reset (a binding through `InputBindings.IsDefault`), the footer's reset and the explicit navigation, and moves the selection off a Reset that hid;
+  - each tick, when the selection moves, an item it lands on shows its category, and the description follows. A change describes the selection again but never switches the category.
+  - The category's reset calls `UserSettings.ResetAccessibility`, `ResetInterface` (one write each, raising each change once) or `InputBindings.ResetAll`.
+  - `Open(closed, opening)`: `First` (the main menu), `Last` (the in-game Options: the category the screen had when it last closed, Controls the first time, kept for the Gameplay scope's life), `Controls` (Change keys, the first binding selected).
+- **The vitals strip.** `IVitalsScreen` (`IsOpen`, `Vitals`, `SetWarning`) is implemented by both screens' controllers, and `VitalsStripPresenter` takes them as a list (each entry point is registered as its interfaces), with a strip and a warning per screen. On the options screen the warning stands over the notice line, which hides while it shows.
+- **Found on the way.** A refresh first re-ran the focus logic on the last selection seen, so a change in the frame a rail item was pressed flipped the category back; `OptionsMenuControllerTests` caught it, and describing the selection is now apart from switching on it.
+- **Co-op.** Nothing new is sent: the preferences and bindings stay on this machine, and each machine's strip shows its own player.
+- **Tests.**
+  - `OptionsMenuControllerTests` (rebuilt: the rail and its navigation, the descriptions, Reset only on changed rows and out of navigation while hidden, each category's reset putting back only its own, reopening on the last category in game, Change keys landing on Controls, the warning over the notice) and `OptionsMenuLayoutTests` (1, new: every category at every display size).
+  - `OptionsMenuPlayModeTests`: the main menu opens on Accessibility with its item selected and moving onto Controls shows it; online, the strip and "You're taking damage." on the options screen, then on the Character screen.
+  - `UiContentTests`: `RailItem` and `DescriptionLine`. `InputBindingsTests`: every action's description and `IsDefault`. `UserSettingsTests`: the two category resets in one write each. `GameMenuControllerTests`: Options opening on Controls the first time, and Change keys on Controls.
 
 ### Phase 9: the main menu and Play together
 

@@ -16,30 +16,40 @@ MonoBehaviour:
   - action: {fileID: 2775607151954716846, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Move / attack
     section: Movement
+    description: Walk to the pointer, or attack the enemy under it.
   - action: {fileID: 7872609846883157701, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Attack move
     section: Movement
+    description: Walk to the pointer and attack the first enemy on the way.
   - action: {fileID: 380077077918752802, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Stop
     section: Movement
+    description: Cancel your order and any cast waiting to start.
   - action: {fileID: -7147937859873032432, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Class ability 1
     section: Class abilities
+    description: Use your class's first ability.
   - action: {fileID: -5506120038718382649, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Class ability 2
     section: Class abilities
+    description: Use your class's second ability.
   - action: {fileID: -7753353285363710004, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Class ability 3
     section: Class abilities
+    description: Use your class's third ability.
   - action: {fileID: 5308568178682399807, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Class ability 4
     section: Class abilities
+    description: Use your class's fourth ability.
   - action: {fileID: 4124645297494837991, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Weapon ability 1
     section: Weapon abilities
+    description: Use your weapon's first ability.
   - action: {fileID: -7678081435606228788, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Weapon ability 2
     section: Weapon abilities
+    description: Use your weapon's second ability.
   - action: {fileID: 4909433640705008777, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
     label: Chat
     section: Other
+    description: Open the chat to write to the other players. Online only.

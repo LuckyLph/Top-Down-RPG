@@ -317,8 +317,9 @@ public class GameMenuControllerTests
     }
 
     /// <summary>
-    /// Options, and the Controls page's Change keys, open the options screen in the menu's place while staying paused;
-    /// Back from the options returns to where they were opened from without closing the menu.
+    /// Options, and the Controls page's Change keys, open the options screen in the menu's place while staying paused,
+    /// Options on the category used last (Controls the first time) and Change keys on the Controls (Docs/UiRevamp.md,
+    /// Phase 8); Back from the options returns to where they were opened from without closing the menu.
     /// </summary>
     [Test]
     public void OptionsAndChangeKeys_OpenTheOptions_AndBackFromThemReturnsWhereTheyWereOpened()
@@ -331,6 +332,7 @@ public class GameMenuControllerTests
         Assert.That(options.IsOpen, Is.True);
         Assert.That(menus.Top, Is.SameAs(options));
         Assert.That(Time.timeScale, Is.Zero, "Still paused while in the options.");
+        Assert.That(options.CurrentCategory, Is.EqualTo(OptionsMenuController.Category.Controls), "In game the options open on the category used last, Controls the first time.");
 
         TickWith(back: true);
         Assert.That(options.IsOpen, Is.False);
@@ -341,6 +343,7 @@ public class GameMenuControllerTests
         menuView.ControlsButton.onClick.Invoke();
         menuView.ControlsPage.ChangeKeysButton.onClick.Invoke();
         Assert.That(options.IsOpen, Is.True);
+        Assert.That(options.CurrentCategory, Is.EqualTo(OptionsMenuController.Category.Controls), "Change keys lands on the Controls.");
         TickWith(back: true);
         Assert.That(menuView.IsShown, Is.True);
         Assert.That(menuView.ShownPage, Is.EqualTo(GameMenuView.Page.Controls), "Back from the options returns to the Controls page.");

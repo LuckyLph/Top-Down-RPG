@@ -251,8 +251,8 @@ public class MainMenuController : MonoBehaviour
     }
 
     /// <summary>
-    /// Swaps the menu buttons for the options screen, unless a transition runs; they come back, with Options
-    /// selected, when it closes.
+    /// Swaps the menu buttons for the options screen, on its first category (Docs/UiRevamp.md, Phase 8), unless a
+    /// transition runs; they come back, with Options selected, when it closes.
     /// </summary>
     public void OpenOptions()
     {
@@ -262,7 +262,7 @@ public class MainMenuController : MonoBehaviour
         }
 
         SetButtonsShown(false);
-        options.Open(HandleOptionsClosed);
+        options.Open(HandleOptionsClosed, OptionsMenuController.Opening.First);
     }
 
     /// <summary>

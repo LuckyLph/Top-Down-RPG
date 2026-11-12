@@ -12,8 +12,9 @@ using UnityEngine.UI;
 /// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
 /// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
-/// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), and the command
-/// bar is built from its components (Phase 2).
+/// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), the command
+/// bar is built from its components (Phase 2), and the options screen's rail item and description line are built from
+/// the skin and the notice line (Phase 8).
 /// </summary>
 public class UiContentTests
 {
@@ -505,6 +506,59 @@ public class UiContentTests
     }
 
     /// <summary>
+    /// The options screen's rail item (Docs/UiRevamp.md, Phase 8) is a variant of the secondary button, 104 x 16 UI px
+    /// and never stretched by its column: its label left-aligned after the slot of the skin's pip, which shows in
+    /// TextOnControl on the current category's item only and never takes the pointer, its faces the skin's flat panel and
+    /// raised panel. The description line is a variant of the notice line in TextMuted, two wrapping lines of 22 UI px
+    /// at the top left, ending in an ellipsis past them. Every options screen builds its rail from the one and shows its
+    /// description on the other.
+    /// </summary>
+    [Test]
+    public void TheRailItemAndTheDescriptionLine_AreBuiltFromTheSkinAndTheNoticeLine()
+    {
+        GameObject item = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}RailItem.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(item)), Is.EqualTo($"{Components}ButtonSecondary.prefab"), "A variant of the secondary button.");
+        Assert.That(((RectTransform)item.transform).sizeDelta, Is.EqualTo(new Vector2(104f, 16f)));
+        LayoutElement layout = item.GetComponent<LayoutElement>();
+        Assert.That(layout.preferredHeight, Is.EqualTo(16f));
+        Assert.That(layout.flexibleHeight, Is.Zero, "The rail's column never stretches it.");
+        RailItemView view = item.GetComponent<RailItemView>();
+        Assert.That(view.Button, Is.SameAs(item.GetComponent<Button>()));
+        Assert.That(view.Label.horizontalAlignment, Is.EqualTo(HorizontalAlignmentOptions.Left));
+        Image pip = view.Pip;
+        Assert.That(pip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Pip))));
+        Assert.That(pip.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.TextOnControl));
+        Assert.That(pip.enabled, Is.False, "Shown on the current category's item only.");
+        Assert.That(pip.raycastTarget, Is.False);
+        Assert.That(view.Label.margin.x, Is.GreaterThanOrEqualTo(pip.rectTransform.anchoredPosition.x + pip.rectTransform.sizeDelta.x), "The label starts after the pip's slot.");
+        SerializedObject faces = new(view);
+        Assert.That(faces.FindProperty("flat").objectReferenceValue, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Panel))));
+        Assert.That(faces.FindProperty("raised").objectReferenceValue, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.PanelRaised))));
+        Assert.That(faces.FindProperty("themed").objectReferenceValue, Is.SameAs(item.GetComponent<ThemedSelectable>()));
+
+        GameObject line = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}DescriptionLine.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(line)), Is.EqualTo($"{Components}NoticeLine.prefab"), "A variant of the notice line.");
+        TMP_Text text = line.GetComponent<TMP_Text>();
+        Assert.That(line.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(text.alignment, Is.EqualTo(TextAlignmentOptions.TopLeft));
+        Assert.That(text.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal));
+        Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis));
+        Assert.That(text.raycastTarget, Is.False);
+        Assert.That(((RectTransform)line.transform).sizeDelta.y, Is.EqualTo(22f), "Two 11 UI px lines.");
+
+        int screens = 0;
+        foreach ((string where, OptionsMenuView options) in All<OptionsMenuView>())
+        {
+            screens++;
+            SerializedObject serialized = new(options);
+            Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("railItemPrefab").objectReferenceValue), Is.EqualTo($"{Components}RailItem.prefab"), $"{where}'s rail.");
+            Assert.That(ComesFrom(serialized.FindProperty("description").objectReferenceValue, $"{Components}DescriptionLine.prefab"), Is.True, $"{where}'s description is a description line.");
+        }
+
+        Assert.That(screens, Is.GreaterThanOrEqualTo(2), "The options prefab and the main menu's screen.");
+    }
+
+    /// <summary>
     /// The ability slot's states (Docs/UiRevamp.md, Phase 1) are skin pieces in their roles, hidden until shown and
     /// never taking the pointer: its frame (Border, Accent while casting), the corner brackets 1 UI px outside it in
     /// Accent, and the hatch, tiled in ControlDisabled inside the frame and under the name, so the name stays readable;
@@ -729,6 +783,25 @@ public class UiContentTests
                 yield return (where, component);
             }
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="target"/> is, or is an instance of, a part of the prefab at <paramref name="path"/>,
+    /// through any nesting.
+    /// </summary>
+    private static bool ComesFrom(Object target, string path)
+    {
+        while (target != null)
+        {
+            if (AssetDatabase.GetAssetPath(target) == path)
+            {
+                return true;
+            }
+
+            target = PrefabUtility.GetCorrespondingObjectFromSource(target);
+        }
+
+        return false;
     }
 
     /// <summary>

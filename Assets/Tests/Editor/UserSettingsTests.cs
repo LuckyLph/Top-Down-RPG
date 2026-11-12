@@ -324,6 +324,54 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The options screen's Reset accessibility and Reset interface (Docs/UiRevamp.md, Phase 8) each put their own
+    /// options back in one write, raising each change once and leaving the other category's alone; with nothing to put
+    /// back they write nothing.
+    /// </summary>
+    [Test]
+    public void ResetAccessibilityAndInterface_PutBackTheirOwnOptionsInOneWrite()
+    {
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        Assert.That(settings.ResetAccessibility(), Is.False);
+        Assert.That(settings.ResetInterface(), Is.False);
+        Assert.That(store.WriteCount, Is.Zero);
+        settings.SetUiSizeStep(2);
+        settings.SetReduceFlashing(true);
+        settings.SetReduceMotion(true);
+        settings.SetAllyPopups(AllyPopups.Hidden);
+        settings.SetChatTimestamps(true);
+        settings.SetChatWindow(new ChatWindowPlace(ScreenCorner.TopRight, new Vector2Int(8, 8), new Vector2Int(160, 100)));
+        int changes = 0;
+        settings.UiSizeStepChanged += () => changes++;
+        settings.ReduceFlashingChanged += () => changes++;
+        settings.ReduceMotionChanged += () => changes++;
+        settings.AllyPopupsChanged += () => changes += 10;
+        settings.ChatTimestampsChanged += () => changes += 10;
+        settings.ChatWindowChanged += () => changes += 10;
+
+        int writes = store.WriteCount;
+        Assert.That(settings.ResetAccessibility(), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(writes + 1));
+        Assert.That(changes, Is.EqualTo(3), "Each accessibility option changed once, no interface option.");
+        UserSettings reread = new(store);
+        Assert.That(reread.UiSizeStep, Is.Zero);
+        Assert.That(reread.ReduceFlashing, Is.False);
+        Assert.That(reread.ReduceMotion, Is.False);
+        Assert.That(reread.AllyPopups, Is.EqualTo(AllyPopups.Hidden));
+        Assert.That(reread.ChatTimestamps, Is.True);
+        Assert.That(reread.ChatWindow.IsMoved, Is.True);
+
+        Assert.That(settings.ResetInterface(), Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(writes + 2));
+        Assert.That(changes, Is.EqualTo(33));
+        reread = new UserSettings(store);
+        Assert.That(reread.AllyPopups, Is.EqualTo(AllyPopups.Shown));
+        Assert.That(reread.ChatTimestamps, Is.False);
+        Assert.That(reread.ChatWindow.IsMoved, Is.False);
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

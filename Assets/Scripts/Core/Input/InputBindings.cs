@@ -38,6 +38,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     private readonly List<int> bindingIndices = new();
     private readonly List<string> displayNames = new();
     private readonly List<string> sections = new();
+    private readonly List<string> descriptions = new();
     private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
     private InputActionRebindingExtensions.RebindingOperation rebinding;
     private Action<RebindOutcome, InputAction> rebindFinished;
@@ -78,6 +79,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
             bindingIndices.Add(bindingIndex);
             displayNames.Add(rebindableActions[i].Label);
             sections.Add(rebindableActions[i].Section);
+            descriptions.Add(rebindableActions[i].Description ?? string.Empty);
         }
     }
 
@@ -120,6 +122,26 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     {
         int index = IndexOf(action);
         return index >= 0 ? sections[index] : string.Empty;
+    }
+
+    /// <summary>
+    /// What <paramref name="action"/> does, as the options screen describes it while its row is focused
+    /// (Docs/UiRevamp.md, Phase 8), or an empty string when it is not rebindable.
+    /// </summary>
+    public string GetDescription(InputAction action)
+    {
+        int index = IndexOf(action);
+        return index >= 0 ? descriptions[index] : string.Empty;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="action"/> is bound to its default input, the one the asset gives it; true for an action
+    /// that is not rebindable.
+    /// </summary>
+    public bool IsDefault(InputAction action)
+    {
+        int index = IndexOf(action);
+        return index < 0 || SamePath(EffectivePath(index), DefaultPath(index));
     }
 
     /// <summary>

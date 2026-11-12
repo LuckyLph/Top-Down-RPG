@@ -11,8 +11,9 @@ using VContainer.Unity;
 /// lets go of both when it closes or is disposed with the Gameplay scope.</item>
 /// <item><b>Buttons,</b> looping: Resume, Character, Party (online), Controls, Options, Save game (offline and hosting),
 /// Leave game and Quit to desktop. Party and Controls show their pages in the menu's place, and Back returns from them;
-/// Character opens the Character screen in its place (Docs/UiRevamp.md, Phase 7), with the local player's weapon; Options,
-/// and the Controls page's Change keys, open the options screen in its place.</item>
+/// Character opens the Character screen in its place (Docs/UiRevamp.md, Phase 7), with the local player's weapon; Options
+/// opens the options screen in its place on the category used last this session, and the Controls page's Change keys on
+/// its Controls (Phase 8).</item>
 /// <item><b>Save game</b> writes the game through <see cref="IGameSaving"/>, its label reading "Saved" or
 /// "Couldn't save" for <see cref="HudSettings.MessageSeconds"/> of real time; it cannot be pressed where this machine
 /// does not write the game (a throwaway session).</item>
@@ -346,7 +347,8 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
     }
 
     /// <summary>
-    /// Hides the menu and opens the options screen in its place.
+    /// Hides the menu and opens the options screen in its place, on the category used last this session
+    /// (Docs/UiRevamp.md, Phase 8).
     /// </summary>
     private void OpenOptions()
     {
@@ -356,7 +358,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
         }
 
         view.SetShown(false);
-        options.Open(HandleOptionsClosed);
+        options.Open(HandleOptionsClosed, OptionsMenuController.Opening.Last);
     }
 
     /// <summary>
@@ -388,7 +390,8 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
     }
 
     /// <summary>
-    /// The Controls page's Change keys: hides the menu and opens the options screen at its key bindings.
+    /// The Controls page's Change keys: hides the menu and opens the options screen on its Controls, the first key
+    /// binding selected.
     /// </summary>
     private void ChangeKeys()
     {
@@ -398,7 +401,7 @@ public sealed class GameMenuController : IStartable, ITickable, IDisposable, IMe
         }
 
         view.SetShown(false);
-        options.Open(HandleOptionsClosed, true);
+        options.Open(HandleOptionsClosed, OptionsMenuController.Opening.Controls);
     }
 
     /// <summary>

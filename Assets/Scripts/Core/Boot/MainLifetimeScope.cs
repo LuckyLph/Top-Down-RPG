@@ -57,6 +57,7 @@ public class MainLifetimeScope : LifetimeScope
             .WithParameter(eventSystem)
             .As<IPlayerInput>()
             .As<IMenuInput>()
+            .As<IChatInput>()
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>().AsSelf();
         builder.Register<TimeFreeze>(Lifetime.Singleton);

@@ -18,7 +18,8 @@ using VContainer.Unity;
 /// its reset going back to Normal, the Reduce flashing and Reduce motion toggle rows (Phase 6), each button reading
 /// On or Off and turning it the other way, each reset turning it off, and the allies' damage numbers row
 /// (Docs/UiRevamp.md, Phase 3), its button showing Shown, Smaller or Hidden and moving to the next, its reset going back
-/// to Shown; then a row per rebindable action of
+/// to Shown, the Chat timestamps toggle row (Phase 12), and the Chat window row, its button reading Default or Moved
+/// and, like its reset, putting a moved chat window back in its place; then a row per rebindable action of
 /// <see cref="InputBindings"/> under its section, rebinding a row when its binding is selected (listening starts on the
 /// next tick, so the click itself is never captured), naming the action that moved on a swap, resetting one row or all
 /// of them after a confirmation; and it closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back
@@ -41,6 +42,10 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     public const string OffName = "Off";
     public const string AllyPopupsLabel = "Allies' damage numbers";
     public static readonly string[] AllyPopupsNames = { "Shown", "Smaller", "Hidden" };
+    public const string ChatTimestampsLabel = "Chat timestamps";
+    public const string ChatWindowLabel = "Chat window";
+    public const string ChatWindowDefault = "Default";
+    public const string ChatWindowMoved = "Moved";
 
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
@@ -59,6 +64,8 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private KeyBindingRowView reduceFlashingRow;
     private KeyBindingRowView reduceMotionRow;
     private KeyBindingRowView allyPopupsRow;
+    private KeyBindingRowView chatTimestampsRow;
+    private KeyBindingRowView chatWindowRow;
     private Action onClosed;
     private int pendingRebind = -1;
     private int listeningRow = -1;
@@ -86,6 +93,8 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     internal KeyBindingRowView ReduceFlashingRow => reduceFlashingRow;
     internal KeyBindingRowView ReduceMotionRow => reduceMotionRow;
     internal KeyBindingRowView AllyPopupsRow => allyPopupsRow;
+    internal KeyBindingRowView ChatTimestampsRow => chatTimestampsRow;
+    internal KeyBindingRowView ChatWindowRow => chatWindowRow;
     internal int ColourRowCount => colourRows.Count;
     internal int PartRowCount => partRows.Count;
 
@@ -118,8 +127,9 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     /// section and a labelled row per rebindable action, wires the buttons, and keeps the rows' labels in sync with
     /// <see cref="InputBindings.BindingsChanged"/>, <see cref="UserSettings.CharacterLookChanged"/>,
     /// <see cref="UserSettings.CharacterColoursChanged"/>, <see cref="UserSettings.UiSizeStepChanged"/>,
-    /// <see cref="UiScale.Changed"/>, <see cref="UserSettings.ReduceFlashingChanged"/> and
-    /// <see cref="UserSettings.ReduceMotionChanged"/>.
+    /// <see cref="UiScale.Changed"/>, <see cref="UserSettings.ReduceFlashingChanged"/>,
+    /// <see cref="UserSettings.ReduceMotionChanged"/>, <see cref="UserSettings.AllyPopupsChanged"/>,
+    /// <see cref="UserSettings.ChatTimestampsChanged"/> and <see cref="UserSettings.ChatWindowChanged"/>.
     /// </summary>
     public void Start()
     {
@@ -196,6 +206,16 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         if (allyPopupsRow != null)
         {
             settings.AllyPopupsChanged -= RefreshAllyPopups;
+        }
+
+        if (chatTimestampsRow != null)
+        {
+            settings.ChatTimestampsChanged -= RefreshChatTimestamps;
+        }
+
+        if (chatWindowRow != null)
+        {
+            settings.ChatWindowChanged -= RefreshChatWindow;
         }
 
         menus.Remove(this);
@@ -514,7 +534,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
 
     /// <summary>
     /// Builds the Display section: its UI size row, when there is a UI zoom to follow, then the Reduce flashing and
-    /// Reduce motion toggle rows and the allies' damage numbers row.
+    /// Reduce motion toggle rows, the allies' damage numbers row, the Chat timestamps toggle row and the Chat window row.
     /// </summary>
     private void BuildDisplaySection()
     {
@@ -547,6 +567,43 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
         allyPopupsRow.ResetButton.onClick.AddListener(ResetAllyPopups);
         settings.AllyPopupsChanged += RefreshAllyPopups;
         RefreshAllyPopups();
+        chatTimestampsRow = AddToggleRow(ChatTimestampsLabel, () => SetToggle(settings.SetChatTimestamps, !settings.ChatTimestamps), () => SetToggle(settings.SetChatTimestamps, false));
+        settings.ChatTimestampsChanged += RefreshChatTimestamps;
+        RefreshChatTimestamps();
+        chatWindowRow = view.AddRow();
+        chatWindowRow.SetLabel(ChatWindowLabel);
+        chatWindowRow.BindingButton.onClick.AddListener(ResetChatWindow);
+        chatWindowRow.ResetButton.onClick.AddListener(ResetChatWindow);
+        settings.ChatWindowChanged += RefreshChatWindow;
+        RefreshChatWindow();
+    }
+
+    /// <summary>
+    /// Shows whether the chat shows timestamps on the Chat timestamps row.
+    /// </summary>
+    private void RefreshChatTimestamps()
+    {
+        ShowToggle(chatTimestampsRow, settings.ChatTimestamps);
+    }
+
+    /// <summary>
+    /// Chat window button and reset button: puts a moved chat window back in its place. Ignored while listening or
+    /// confirming.
+    /// </summary>
+    private void ResetChatWindow()
+    {
+        if (!IsListening && !view.IsConfirmShown)
+        {
+            settings.SetChatWindow(default);
+        }
+    }
+
+    /// <summary>
+    /// Shows whether the chat window was moved on its row's button.
+    /// </summary>
+    private void RefreshChatWindow()
+    {
+        chatWindowRow.SetBinding(settings.ChatWindow.IsMoved ? ChatWindowMoved : ChatWindowDefault);
     }
 
     /// <summary>

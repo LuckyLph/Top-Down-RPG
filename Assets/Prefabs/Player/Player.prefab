@@ -239,6 +239,7 @@ GameObject:
   - component: {fileID: 8349417306256648232}
   - component: {fileID: 3466547070987228911}
   - component: {fileID: 7356804438280954112}
+  - component: {fileID: 7179136020270278027}
   m_Layer: 9
   m_Name: Player
   m_TagString: Player
@@ -663,6 +664,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dc433357b56209546aaad48bff725dd6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerSlot
+  ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &7179136020270278027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7676685028584557553}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cc050d8a5cf95940927c059eab61313, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TopDownRPG.Gameplay::PlayerChat
   ShowTopMostFoldoutHeaderGroup: 1
 --- !u!1001 &2754807479323402932
 PrefabInstance:

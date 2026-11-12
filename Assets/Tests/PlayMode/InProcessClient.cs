@@ -122,7 +122,8 @@ public sealed class InProcessClient : IDisposable
     /// here, with
     /// <paramref name="sessionStatus"/> saying which side of the session it is), an always-ready readiness, an empty
     /// world navigation, so its players walk in straight lines, pooled effects, in-memory local settings (whose look its
-    /// own player follows), what its own player discovered with the waystones' markers'
+    /// own player follows), the chat's log (Docs/UiRevamp.md, Phase 12), what its own player discovered with the
+    /// waystones' markers'
     /// presenter (not started: the client loads no chunk of its own) and, given <paramref name="hitFeedbackSettings"/>,
     /// the hit feedback presenter (not started) kicking <paramref name="cameraKick"/>.
     /// </summary>
@@ -188,6 +189,8 @@ public sealed class InProcessClient : IDisposable
         builder.RegisterInstance<IRandom>(new SystemRandom(1));
         builder.RegisterInstance<INavigation2D>(new WorldNavigation(new NavigationPagePool()));
         builder.RegisterInstance(new UserSettings(new MemorySaveStore()));
+        builder.RegisterInstance<IWallClock>(new SystemWallClock());
+        builder.Register<ChatLog>(Lifetime.Singleton);
         builder.Register<CharacterOutfits>(Lifetime.Singleton)
             .WithParameter("spareOutfits", 2)
             .WithParameter("spritesPerFrame", 500);

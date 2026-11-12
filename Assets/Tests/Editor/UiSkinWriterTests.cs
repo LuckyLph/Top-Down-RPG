@@ -215,6 +215,18 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
+    /// A window's grips (Docs/UiRevamp.md, Phase 12): the move grip six 2 px dots, three across and two down, 1 px
+    /// apart; the resize grip three diagonal strokes in the bottom right half of a 7 px square, 3 px apart along its
+    /// edges, the first the corner pixel.
+    /// </summary>
+    [Test]
+    public void TheGrips_AreDotsAndDiagonalStrokes()
+    {
+        AssertRows(recipe.Generate(UiSkinPiece.GripMove), "##.##.##", "##.##.##", "........", "##.##.##", "##.##.##");
+        AssertRows(recipe.Generate(UiSkinPiece.GripResize), "......#", ".....#.", "....#..", "...#..#", "..#..#.", ".#..#..", "#..#..#");
+    }
+
+    /// <summary>
     /// A player slot's badges (Docs/UiRevamp.md, Phase 5) are discs outlined in opaque black: the small one 5 px across
     /// in a 7 px sprite, its corners cut, and the large one 16 px across in an 18 px sprite, round and symmetric, white
     /// inside, black around and clear beyond.
@@ -307,7 +319,25 @@ public class UiSkinWriterTests
     {
         return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip
             || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch || piece == UiSkinPiece.BarTick || piece == UiSkinPiece.Notch
-            || piece == UiSkinPiece.Badge || piece == UiSkinPiece.BadgeLarge;
+            || piece == UiSkinPiece.Badge || piece == UiSkinPiece.BadgeLarge || piece == UiSkinPiece.GripMove || piece == UiSkinPiece.GripResize;
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="sprite"/> is <paramref name="rows"/>, from the top, '#' opaque white and '.' clear.
+    /// </summary>
+    private static void AssertRows(SkinSprite sprite, params string[] rows)
+    {
+        Assert.That(sprite.Width, Is.EqualTo(rows[0].Length));
+        Assert.That(sprite.Height, Is.EqualTo(rows.Length));
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < sprite.Width; x++)
+            {
+                Color32 pixel = At(sprite, x, sprite.Height - 1 - row);
+                Assert.That(pixel.a, Is.EqualTo(rows[row][x] == '#' ? 255 : 0), $"{sprite.Piece} pixel ({x}, {row}) from the top left.");
+                Assert.That(pixel.r, Is.EqualTo(rows[row][x] == '#' ? 255 : pixel.r));
+            }
+        }
     }
 
     /// <summary>

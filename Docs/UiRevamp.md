@@ -61,7 +61,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Notice line | The line at the top centre where in-game notices queue |
 | Player slot | A number from 1 to 4 that the host gives each player as they join, with a colour. Every machine agrees on it |
 | Party frames | The HUD's frames for the other players, at the left edge |
-| Chat | The HUD's box of the session's lines, under the party frames: players' messages and the party's comings and goings (Phase 12) |
+| Chat | The HUD's window of the session's lines, under the party frames until the player moves it: players' messages and the party's comings and goings (Phase 12) |
 | Vitals strip | The session line and the local player's health, shown on a full screen opened in game online |
 | Preview stage | The local character drawn off screen into a render texture, for the Character screen and the title view |
 | Title view | The still picture of the Overworld behind the main menu, rendered by a recipe |
@@ -92,7 +92,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Topic | Decision |
 |---|---|
 | Directions | **HUD:** the command bar, plus the world bars of the world-first direction. **In-game menu:** the side column and cards. **Main menu:** the title view and full screens. Each proposal's text fixes ship first, where they stand on their own. |
-| Screen regions | In game, each part of the screen has one owner, so nothing overlaps at 480 x 270:<br>• the bottom centre: the command bar;<br>• the top centre: a 24 UI px notice band;<br>• the left edge: the party frames, and under them the chat (Phase 12, its size settled on its previews);<br>• the top right: kept free for a place name and a minimap later.<br>Online, menus opened in game stay clear of the command bar and the notice band. |
+| Screen regions | In game, each part of the screen has one owner, so nothing overlaps at 480 x 270:<br>• the bottom centre: the command bar;<br>• the top centre: a 24 UI px notice band;<br>• the left edge: the party frames, and under them the chat's default place, 144 x 96 (Phase 12), which the player may move it from;<br>• the top right: kept free for a place name and a minimap later.<br>Online, menus opened in game stay clear of the command bar and the notice band. |
 | Health | In the command bar: 242 x 13 (12 until Phase 3) over the ability row, reading "72 / 100".<br>• **Ticks:** one every 10 HP, one Weasel hit ([Units.md](Generated/Units.md)), until Phase 3 took them out (`HudSettings.TickHealth` 0 draws none).<br>• **Recent loss:** the part just lost shows pale for 0.4 s.<br>• **Low:** at 30% or less, the frame turns `Danger` and pulses once a second, holding steady with Reduce flashing on.<br>The numbers live in `HudSettings`. |
 | Bar contrast | A bar's fill against its track is measured like a text pair and meets 3:1. `HealthTrack` becomes opaque, which takes today's red to 3.68:1. |
 | Players' health colour | Players' bars fill in a new `HealthPlayer` role, green, on the HUD and in the world. Mobs keep `Health`, red. The slot badge and the bar's shape still tell them apart, so colour is never alone. The exact green is settled on Phase 2's previews. |
@@ -104,7 +104,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Player slots | The host gives itself slot 1 and each joining player the lowest free one, and a player who leaves frees theirs. A slot has:<br>• a number;<br>• a colour role (`Player1` to `Player4`): blue, violet, teal and orange;<br>• a badge, a disc in that colour outlined in black, 5 px beside the world bar and 16 px with the number on it in a party frame. Every badge is a disc (settled in Phase 5, where shapes per slot were proposed), so in the world only its colour tells slots apart.<br>It is a server-written network variable on the player, read by late joiners, which also says whether the player is still joining. Offline there is no slot and no badge. |
 | Party frames | At the left edge, one 104 x 26 frame per other player. Each shows the badge, "Player 2", and a bar with debuff pips (unticked, as the command bar's since Phase 3), or else "Respawning in 2", "In another world" or "Joining". Playing alone, none show. |
 | Notices | In-game notices queue on the notice line: Waystone discovered, the world entered, and while you are dead "You fell. Respawning in 3". This replaces the Messages pattern's "short notices float over the local player"; popups are left to hits and heals. A player joining, leaving or going down is a line in the chat (Phase 12), not a notice. |
-| Chat | At the left edge under the party frames (Phase 12): the session's lines, newest at the bottom.<br>• **Players' lines:** "Player 2: on my way", the name in its slot's colour.<br>• **Party lines,** in `TextMuted`: "Player 2 joined", "Player 2 left" and "Player 2 is down", each machine raising its own from what it already knows.<br>• **Typing:** the Chat key (Enter) opens a field, Enter sends and Escape cancels; gameplay input is off while it is open. A gamepad reads but cannot type (Later's on-screen keypad).<br>• Lines fade after a while unless the field is open. Nothing is saved. |
+| Chat | A window at the left edge under the party frames (Phase 12): the session's lines, newest at the bottom.<br>• **Players' lines:** "Player 2: on my way", the name in its slot's colour.<br>• **Party lines,** in `TextMuted`: "Player 2 joined", "Player 2 left" and "Player 2 is down", each machine raising its own from what it already knows.<br>• **Typing:** the Chat key (Enter) opens the window, Enter sends and Escape cancels; gameplay input is off while it is open. A gamepad reads but cannot type (Later's on-screen keypad).<br>• **Fading:** at rest a line shows for 10 s, then fades over 1 s; opening the window shows every line again. Nothing is saved.<br>• **The window:** 144 x 96 UI px by default. While it is open the player moves it by its header and resizes it by its corner grip, from 104 x 52 to 240 x 160; it keeps its place by the nearest screen corner, on this machine, and the options put it back.<br>• **Timestamps:** an option, off by default, puts the time each line arrived, "14:32", before it. |
 | In-game menu | **A column on the left:** titled "Paused" offline and "Menu" online. Under the title, a status line ("Offline · paused", "Hosting · not paused" or "Joined · not paused") and a line saying whether the game waits or keeps running. Then Resume, Character, Options, Leave game and Quit to desktop, looping, and a saved line ("Saved at 14:32").<br>**Cards on the right:** Party (online) and Controls. A card that would reach the command bar or the notice band drops, Controls first.<br>**Party frames** hide while the menu is open, since the Party card shows the same players. |
 | Scrim | Offline, where time stands still, the menu dims the game with the `Scrim`. Online there is none: the column and cards are opaque, and the game stays live between them. Words carry the difference, not the dimming alone. |
 | Saving on open | Opening the in-game menu saves, offline and on the host. A joined client writes its copy. The saved line shows the time just written. |
@@ -119,7 +119,7 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Title view | A still picture of the Overworld at dusk, rendered by an editor recipe into a sprite of 768 x 432 art px, which covers every canvas in the Scale table. The local character stands in it, drawn by the preview stage. |
 | First run | On the first launch, a Welcome panel offers UI size, Reduce flashing and Reduce motion before the menu. The first New game goes through the Character screen, whose Back reads "Start". Later New games do not. |
 | Online pause | Kept as it is: the game never pauses online. |
-| New art | All from recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, and the slot badge, a disc at 5 and 16 px;<br>• **a new title view recipe.**<br>No Aseprite work is needed. |
+| New art | All from recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, the slot badge, a disc at 5 and 16 px, and a window's move and resize grips (Phase 12);<br>• **a new title view recipe.**<br>No Aseprite work is needed. |
 | New theme roles | `HealthPlayer`, `HealthLost`, and `Player1` to `Player4`. Each is measured in `UiTheme.md` like every other role. |
 
 ## Behaviour
@@ -172,12 +172,22 @@ The cluster is 378 x 54 with statuses showing: 15% of the height at 640 x 360 an
 
 ### The chat
 
-Settled at the start of Phase 12; this is the plan it starts from.
+Settled on Phase 12's previews, where the chat also became a window the player moves and resizes, with timestamps as an option.
 
-- **Place.** At the left edge under the party frames, above the command bar's region, as wide as the frames or a little wider, sized on Phase 12's previews to fit 480 x 270.
-- **Lines.** Newest at the bottom, wrapping, the oldest scrolling off: players' messages with the sender's "Player 2" in its slot's colour, and the party's lines in `TextMuted`. A line fades after a while; opening the field shows them all again.
-- **Typing.** The Chat key opens a `Field` at the box's foot. Enter sends and closes it, Escape closes it, and either way gameplay input comes back. Text is kept to the characters the UI's Galmuri atlases hold (`UiFonts.Characters`) and to 80 of them.
-- **Party lines.** "Player 2 joined" once its joining ends, "Player 2 left" when its player despawns, and "Player 2 is down" when it dies, raised on each machine from what it already knows.
+- **Place.** By default at the left edge under the party frames: 144 x 96 UI px, 8 from the left edge and 98 from the top, so 8 under the party frames' region and, at 480 x 270, 8 above the command bar's. It is as wide as the in-game menu's column.
+- **At rest.** Only the lines show, outlined in `Outline` over the world, and nothing of the chat takes the pointer. A line shows for 10 s of game time, then fades over 1 s.
+- **Lines.** Newest at the bottom, wrapping, as many whole ones as the window holds: six one-line ones in the default window, eleven in the largest.
+  - A player's line reads "Player 2: on my way", the name in its slot's colour.
+  - The party's lines are in `TextMuted`.
+  - With the Chat timestamps option on, each line starts with the time it arrived on this machine, "14:32", in `TextMuted`.
+- **Typing.** The Chat key (Enter, rebindable) opens the window:
+  - a `Window` behind the lines, its header titled "Chat" with a move grip, and a resize grip in its bottom right corner;
+  - every line at full again;
+  - a dark `Field` at its foot, "Enter to send, Esc to cancel" while empty.
+  Enter sends the line and closes the window, and on an empty line just closes it; Escape closes it. Gameplay input is off while it is open, and the chat is a layer on the menu stack, so Escape never opens the in-game menu then.
+- **Text** is kept to the characters the UI's Galmuri atlases hold (`UiCharacters`) but the zero-width space, and to 80 of them. A typed tag shows as typed.
+- **The window.** While it is open, its header moves it and its grip resizes it, from 104 x 52 (two lines) to 240 x 160, always wholly on the screen. Let go, it keeps its distance from the screen corner nearest it, so it holds its place at every UI size, saved on this machine in `settings.json`. A window dragged back to its default place counts as never moved. The options' Chat window row reads Default or Moved and puts it back.
+- **Party lines.** "Player 2 joined" once its joining ends, "Player 2 left" when its player despawns, and "Player 2 is down" when it dies, raised on each machine from what it already knows. The local player's own and a player without a slot raise none.
 - **Offline,** with nobody to talk to, the chat does not show.
 
 ### The in-game menu
@@ -249,6 +259,7 @@ Settled at the start of Phase 12; this is the plan it starts from.
   - `List()` returns a summary per save: id, `savedAt`, time played, the local player's world and place, and whether it is a joined copy;
   - `Delete(name)` keeps a `.bak` through a new `ISaveFolder.Delete`;
   - it keeps the time of the last write and whether it failed, for the saved line.
+- **`UiCharacters`** (`Core/UI`, Phase 12): the characters the UI's fonts hold, which the font writer puts in the atlases and the chat keeps typed text to.
 - **`UserSettingsData`** gains `recentHosts` and `firstRunDone`. A file from before reads them empty and false, or true when it already holds bindings or picks. The format version stays 1.
 - **`WorldDefinition`** gains a display name for the world and for each entry (content rule 5, checked by `ContentTests`).
 - **An unscaled `IClock`** for the preview stage.
@@ -269,10 +280,13 @@ Settled at the start of Phase 12; this is the plan it starts from.
   - `PlayerSlotBadge` on the `WorldBarPlayer` component;
   - `PartyFramesPresenter`, `PartyFramesView` and the `PartyFrame` component (`PartyFrameView`).
 - **Chat (Phase 12):**
-  - `ChatLog`, the session's lines on this machine;
-  - `ChatPresenter` and the HUD's `ChatView`, with a `Field` for typing;
-  - `PlayerChatSync` (or the session's named messages): a client's line to the host, the host's relay to every machine;
-  - the Chat action in the bindings (`RebindableActionList`).
+  - `ChatLog` and `ChatLine`: the session's lines on this machine;
+  - `ChatText`: what a line may hold, cleaned and escaped;
+  - `ChatPresenter`, the HUD's `ChatView` and `ChatWindowLayout`; the new `Window`, `ChatLine` and `Field` components, and `WindowDragHandle`;
+  - `ChatPartyLines`: the party's lines on each machine;
+  - `PlayerChat`, a `NetworkBehaviour` on the player: its owner's line to the host, the host's relay to every machine; `IChatSender` and `LocalChatSender` send through it;
+  - the Chat action in the bindings (`RebindableActionList`), read through `IChatInput`;
+  - `UserSettings`' chat timestamps and window place (`ChatWindowPlace`).
 - **In-game menu:**
   - `GameMenuView` and `GameMenuCanvas` rebuilt;
   - `PartyCardView` and its presenter (`IPlayerRegistry`, `ISessionStatus`), and `ControlsCardView`;
@@ -298,7 +312,7 @@ Settled at the start of Phase 12; this is the plan it starts from.
 
 - **New:**
   - the player slot, a server-written network variable on the player, read by late joiners at spawn, which since Phase 5 also says whether the player is still joining;
-  - the chat's messages (Phase 12): a client sends its line to the host, which checks its length and characters, names the sender's slot and relays it to every machine; the host's own goes out the same way. Lines are not saved, and a late joiner sees only those sent after it joined.
+  - the chat's messages (Phase 12): a client sends its line to the host (`PlayerChat.SayRpc`), which checks its length and characters, names the sender's slot and relays it to every machine (`LineRpc`); the host's own goes out the same way. Lines are not saved, and a late joiner sees only those sent after it joined.
   Nothing else in this plan adds replicated state or messages. Phase 3 gave three existing host messages one more field: a heal, an immune hit and a blocked status name their source unit, as a hit already did, so a client's popups tell its own apart.
 - **Already replicated, now shown:**
   - health (`NetworkHealth`) and statuses (`NetworkStatusEffects`) on the party frames, the world bars and the Party card;
@@ -307,6 +321,7 @@ Settled at the start of Phase 12; this is the plan it starts from.
 - **Unchanged:** look, colour and part picks stay owner-written network variables on `PlayerNetworkSync`, now edited from the Character screen. The join payload is unchanged.
 - **Local only:**
   - the layout, failure texts, slot states and notices, and the allies' damage numbers preference;
+  - the chat's party lines, its window's place and the timestamps option;
   - the saved line and the invite addresses;
   - the recent hosts, the first-run flag and the title view.
   The host's simulation never reads any of them.
@@ -321,7 +336,7 @@ Settled at the start of Phase 12; this is the plan it starts from.
   - **Feedback:** a failure is answered in words too.
   - **Components:** the new components join the table.
   - **Later:** "Co-op identity" and "players' world bars and status icons" are done.
-- **KeyBindings.md:** the Chat key (Phase 12); the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (column, cards, confirmations, saving on open) and the main menu (Play together in place of the Host and Join buttons and the join field).
+- **KeyBindings.md:** the Chat key and the options screen's two chat rows (Phase 12); the options screen (rail, categories, the Character section gone, Display renamed Accessibility), the in-game menu (column, cards, confirmations, saving on open) and the main menu (Play together in place of the Host and Join buttons and the join field).
 - **PlayerCharacter.md:** its non-goal "An in-game character creator" is lifted, and its customization rows move to the Character screen. **AsepriteCharacters.md:** the Look row's home moves the same way.
 - **Multiplayer.md:**
   - "the menu shows no slot list" becomes the Saved games screen;
@@ -711,16 +726,70 @@ The Character button arrives with Phase 7.
 
 Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. It needs Phase 5's slots.
 
-- [ ] Open question settled: the chat's place and size, and how long its lines stay.
-- [ ] Previews of the chat at rest, open for typing, and with players' and party lines, at every display in the Scale table, signed off.
-- [ ] `ChatLog` and the HUD's chat (`ChatPresenter`, `ChatView`): lines in their sender's colour, the party's in `TextMuted`, fading, and the screen region in DesignSystem.md's Foundations with `HudLayoutTests`.
-- [ ] The Chat key in the bindings, the `Field` for typing, gameplay input off while it is open, and the text kept to the font's characters and 80 of them.
-- [ ] The messages: a client's line to the host, checked and relayed to every machine with the sender's slot.
-- [ ] The party lines: joined, left and down, on each machine.
-- [ ] PlayMode, with the in-process host and client:
-  - [ ] a client's line reaches the host, and the host's the client, each with its slot;
-  - [ ] the party lines show on each machine.
-- [ ] DesignSystem.md's Messages pattern and screen regions; KeyBindings.md's Chat key; Multiplayer.md's authority table.
+- [x] Open question settled: the chat's place and size, and how long its lines stay.
+- [x] Previews of the chat at rest, open for typing, and with players' and party lines, at every display in the Scale table, signed off.
+- [x] `ChatLog` and the HUD's chat (`ChatPresenter`, `ChatView`): lines in their sender's colour, the party's in `TextMuted`, fading, and the screen region in DesignSystem.md's Foundations with `HudLayoutTests`.
+- [x] The Chat key in the bindings, the `Field` for typing, gameplay input off while it is open, and the text kept to the font's characters and 80 of them.
+- [x] The window, moved and resized while it is open, and the Chat timestamps option (asked for on the previews).
+- [x] The messages: a client's line to the host, checked and relayed to every machine with the sender's slot.
+- [x] The party lines: joined, left and down, on each machine.
+- [x] PlayMode, with the in-process host and client:
+  - [x] a client's line reaches the host, and the host's the client, each with its slot;
+  - [x] the party lines show on each machine.
+- [x] DesignSystem.md's Messages pattern and screen regions; KeyBindings.md's Chat key; Multiplayer.md's authority table.
+
+#### Phase 12 notes
+
+- **Settled with the user on 2026-11-11,** on previews at 640 x 360 (x3) and 480 x 270 (x4) and close-ups at x6:
+  - **Open question 3:** the window is 144 x 96 UI px, as wide as the in-game menu's column. The alternatives were 104 x 96 (the party frames' width, where most lines wrapped), 176 x 96 and 144 x 64 (four lines).
+  - **Fading:** a line shows for 10 s, then fades over 1 s. 6 s and 20 s were the alternatives.
+  - **The field** is dark: `SurfaceRaised` framed in `Accent`, its text in `Text` and its placeholder in `TextMuted`. The join field's look, an `Accent` face while typing, was the alternative.
+  - **At rest** the lines are outlined over the world with no panel; the panel shows only while the window is open.
+  - **On those previews the user asked for more:** a window the player moves and resizes, and an option for timestamps. A second round of previews settled them: a header with a move grip and a corner resize grip shown only while open, sizes from 104 x 52 to 240 x 160, a place kept by the nearest corner, the Chat timestamps and Chat window rows, and the time in `TextMuted` and 24-hour format, as Phase 6's saved line.
+- **The previews.** The Phase 5 script, outside the repo, extended, composed them in the gitignored `Recordings/UiRevamp/Phase12`, with the text drawn from `Galmuri7.ttf` at 8 px. Once built, a temporary tool, since removed, rendered the real HUD's chat in edit mode, at rest and open, over the same capture (`engine_check.png` there), which matched them.
+- **Layout.** `Chat` on `PlayerHudCanvas` sits after the command bar and before the notice line, so the notice line, the party frames and the tooltip draw over a moved window. It holds:
+  - `ChatView` and a `CanvasGroup` that takes the pointer only while the window is open;
+  - a `Window` stretched over it, hidden at rest;
+  - `Lines`, 4 UI px in from the sides, 13 under the top (the header) and 17 over the bottom (the field), holding eleven `ChatLine`s, enough for the largest window;
+  - a `Field`, 13 tall, 2 in from the bottom and the left and 10 from the right, which leaves the resize grip its corner.
+  A line is 11 UI px, Galmuri7's line height. `ShowLines` lays the newest out from the bottom, each wrapped to its width and as tall as its lines, and stops at the first that does not fit whole. A line fades through its `CanvasRenderer`'s alpha, so its mesh is not built again.
+- **Components.**
+  - **`Window`,** a variant of `Panel`. Its `Header` is 13 px: `SurfaceRaised`, framed in `Border` over the panel's own frame, so its bottom edge is the line under it. It holds the title in `Accent` and the skin's new `GripMove` (8 x 5, six 2 px dots) in `ControlSecondary`, 3 px from the right. `ResizeGrip` is the skin's new `GripResize` (7 px, three diagonal strokes 3 apart) in `ControlSecondary`, 1 px inside the bottom right corner. Both handles are `WindowDragHandle`s.
+  - **`ChatLine`,** a variant of `MessageLine`: left-aligned, with a 1 px top margin so a line's glyphs sit in the middle of its 11 px.
+  - **`Field`:** a `TMP_InputField` on a `SurfaceRaised` face framed in `Accent`, its text and placeholder inside a `Text Area` (a `RectMask2D`) 3 px in from the sides and 1 from the top and bottom. One line, no rich text, and no transition, so its face stays dark while typing and its frame marks it; it does not select all its text when it takes the typing back. Phase 9's join field can be a variant in the control look.
+- **The presenter.** `ChatPresenter` shows the chat only while `ISessionStatus.IsActive`.
+  - **Opening.** The Chat key opens the window: a `GameplayInputGate` block, a layer on the `MenuStack`, the field selected through `UISelection`. `TMP_InputField` takes the typing only from its next update, so the key's own press is never typed.
+  - **Enter.** The UI map's Submit can reach the field in the very frame the key opened it, so a submit in the tick the window opened is ignored; the key cannot open the window again in the tick after it closed.
+  - **Focus.** While open, the field takes the typing back whenever it lost it, as a click on the window's header does.
+  - **Lines.** They are formatted (`Format`: the name's colour as rich text, the message escaped) only when the log, the window's size or the timestamps change, and their opacity (`AlphaAt`) is set each tick, which allocates nothing.
+- **The window.** `ChatWindowLayout`, from `HudSettings`, works in whole UI px from the canvas's top left corner, y going down.
+  - **Dragging.** A `WindowDragHandle` reports how far the pointer has gone since it was pressed, so the window follows the drag from where it stood without drifting. Moving keeps the whole window on the canvas; resizing moves the bottom right corner, the size kept between the smallest and largest and the corner on the canvas.
+  - **Keeping it.** When the drag ends the place is written to `settings.json` once (`UserSettings.SetChatWindow`): the corner nearest the window's centre, its distance from that corner's two edges, and its size. It is resolved again whenever the canvas changes size (a UI size step, the game's window) and kept on the canvas.
+- **Text.** `UiCharacters` (Core) holds the atlases' 200 characters, which `UiFonts.Characters` now reads, so the font writer and the filter cannot drift apart.
+  - `ChatText.Validate` is the field's `onValidateInput`, so a character the fonts lack is never typed, pasted text included.
+  - `Clean` drops such characters, trims the ends and cuts to 80. The sender and the host both clean.
+  - `Escape` puts a zero-width space after each '<' when a line is shown as rich text, so no TMP tag starts there. The space cannot be typed, so it cannot be used to undo the escape.
+- **The Chat key** is the tenth rebindable action: `Chat` in the `Player` map, `<Keyboard>/enter` in the `Keyboard&Mouse` group, under a new "Other" section of the options. It is read through `IChatInput` (`PlayerInputService`). The `Player` map is off while the window is open, while the in-game menu is open and during transitions, so the key opens nothing then.
+- **Options.** The Chat timestamps toggle row and the Chat window row follow the allies' damage numbers in the Display section. The Chat window row reads Default or Moved, and its button, like its reset, puts the window back. `settings.json` gains `chatTimestamps` and `chatWindow` (its corner, offset and size), and its format version stays 1. Phase 8 puts both rows in its categories.
+- **Co-op.** `PlayerChat` on the player prefab sends a line as a string.
+  - **`SayRpc`** (to the server, invoked by the owner): the host cleans the line again and reads the sender's slot from its own `PlayerSlot`, so a client can name neither.
+  - **`LineRpc`** (to every machine, invoked by the server): each machine adds the line to its `ChatLog`, which keeps the newest 32.
+  - **Party lines.** `ChatPartyLines` raises them on each machine from its registry, the slots and deaths it already knows. It keeps each player's last slot, since a despawning slot reads none. On a client, the host's leaving says "Player 1 left" as the session ends.
+  - **Tests.** The in-process client's container registers a `ChatLog`, which the players' copies take. `NetworkChatPlayModeTests` checks both machines.
+- **Found on the way.** A prefab built outside a canvas sizes `Image.SetNativeSize` at 100 pixels per unit, not the UI's 32, so the grips were first 25 px wide; `HudLayoutTests` caught them leaving the chat's region.
+- **Left as they are.**
+  - **The grips are not measured,** like the hatch: they mark where to drag, beside the header itself.
+  - **The resize grip is 7 px,** under the 12 UI px a control needs. It is not a control: no keyboard or gamepad reaches it, and the options' Chat window row puts the window back from either.
+  - **Lines sent before a player joined are not shown to it,** and none are kept past the session.
+- **Tests.**
+  - `ChatTextTests` (5, new), `ChatLogTests` (3, new), `ChatWindowLayoutTests` (3, new), `ChatPartyLinesTests` (3, new), `ChatPresenterTests` (10, new) and `NetworkChatPlayModeTests` (2, new).
+  - `HudLayoutTests`: the open chat with every line in its region, and the regions apart, at every size.
+  - `UiContentTests`: the chat and its `Window`, `ChatLine` and `Field` components.
+  - `UiSkinWriterTests`: the grips pixel by pixel.
+  - `UiThemeTests`: the slots' colours and `TextMuted` on `Outline`, which the lines show in rich text, at 4.5:1 or more.
+  - `UserSettingsTests`: the chat's preferences, and their defaults from an older file.
+  - `OptionsMenuControllerTests`: the two rows, and 46 rows on the screen, as `OptionsMenuPlayModeTests` counts.
+  - `PlayerInputServiceTests` and `InputBindingsTests`: the Chat key.
 
 ### Later
 
@@ -750,7 +819,7 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
   - **`ContentTests`:** display names for worlds and entries.
   - **`UiThemeTests`:** the new roles, and the fill-on-track pairs at 3:1.
   - **`UiSkinWriterTests`:** the new pieces, the badges discs outlined in black.
-  - **The chat (Phase 12):** `ChatLog` and its presenter with fakes, the text filter, and the field's input handling.
+  - **The chat (Phase 12):** `ChatLog` and its presenter with fakes, the text filter, the field's input handling, the window's layout and the party lines.
   - **`UiContentTests`:** every new prefab themed, controls at least 12 UI px with navigation on; the title sprites excepted from "the skin or nothing".
   - **Layout:** the HUD's regions, the in-game menu's cards and every screen fitting 480 x 270 at every display in the Scale table.
 - **PlayMode,** with the in-process host and client in Testlands:
@@ -768,4 +837,4 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
 
 1. **Phase 3, other players' damage popups.** Settled on 2026-11-10: all three, as the player's choice. The "Allies' damage numbers" preference reads Shown (the default), Smaller (at `Caption`, the ticks' size: Galmuri has nothing smaller, so there is no third size) or Hidden (Phase 3 notes).
 2. **Phase 11, the game's name and logo.** A placeholder made by a recipe from the name in Galmuri, doubled and outlined, or a logo drawn in Aseprite once the game is named?
-3. **Phase 12, the chat's place, size and fading.** How wide and tall is the box under the party frames at 480 x 270, and how long does a line stay before it fades?
+3. **Phase 12, the chat's place, size and fading.** Settled on 2026-11-11: 144 x 96 UI px under the party frames by default, and a line stays 10 s, then fades over 1 s. The user also asked for a window to move and resize, and for timestamps as an option (Phase 12 notes).

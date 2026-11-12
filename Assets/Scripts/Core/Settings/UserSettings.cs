@@ -8,7 +8,8 @@ using VContainer;
 /// name of the look the local player is drawn with (Docs/AsepriteCharacters.md, Phase 2), the swatch picked for each of
 /// its colour choices (Docs/PlayerCharacter.md, Phase 5), the option picked for each of its part slots (Phase 6), the
 /// UI size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), how
-/// allies' popups show (Docs/UiRevamp.md, Phase 3), and this install's player id
+/// allies' popups show (Docs/UiRevamp.md, Phase 3), whether the chat shows timestamps and where its window was moved
+/// (Phase 12), and this install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -28,6 +29,8 @@ public sealed class UserSettings
     private bool reduceFlashing;
     private bool reduceMotion;
     private AllyPopups allyPopups;
+    private bool chatTimestamps;
+    private ChatWindowPlace chatWindow;
     private bool isReadOnly;
 
     /// <summary>
@@ -73,6 +76,16 @@ public sealed class UserSettings
     /// Raised when <see cref="SetAllyPopups"/> changes how allies' popups show.
     /// </summary>
     public event Action AllyPopupsChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetChatTimestamps"/> changes whether the chat shows timestamps.
+    /// </summary>
+    public event Action ChatTimestampsChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetChatWindow"/> moves or resizes the chat window, or puts it back.
+    /// </summary>
+    public event Action ChatWindowChanged;
 
     /// <summary>The key binding overrides as written by the Input System, or an empty string for the defaults.</summary>
     public string InputBindingOverrides => inputBindingOverrides;
@@ -209,6 +222,53 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// Whether the chat shows the time each line arrived on this machine (Docs/UiRevamp.md, Phase 12). Off by default.
+    /// </summary>
+    public bool ChatTimestamps => chatTimestamps;
+
+    /// <summary>
+    /// Keeps whether the chat shows timestamps, writes the file unless it came from a newer build, and raises
+    /// <see cref="ChatTimestampsChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetChatTimestamps(bool shown)
+    {
+        if (shown == chatTimestamps)
+        {
+            return false;
+        }
+
+        chatTimestamps = shown;
+        bool written = Write();
+        ChatTimestampsChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Where the player moved the chat window and how large they made it (Docs/UiRevamp.md, Phase 12); the default
+    /// value while it stands in its default place.
+    /// </summary>
+    public ChatWindowPlace ChatWindow => chatWindow;
+
+    /// <summary>
+    /// Keeps <paramref name="place"/> as the chat window's place (one not moved puts it back in its default place),
+    /// writes the file unless it came from a newer build, and raises <see cref="ChatWindowChanged"/> when it changed.
+    /// Returns whether it was written.
+    /// </summary>
+    public bool SetChatWindow(ChatWindowPlace place)
+    {
+        ChatWindowPlace kept = place.IsMoved ? place : default;
+        if (kept.Equals(chatWindow))
+        {
+            return false;
+        }
+
+        chatWindow = kept;
+        bool written = Write();
+        ChatWindowChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
     /// Keeps <paramref name="overrides"/> and writes the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     public bool SetInputBindingOverrides(string overrides)
@@ -305,7 +365,7 @@ public sealed class UserSettings
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups, chatTimestamps, chatWindow).ToJson());
     }
 
     /// <summary>
@@ -345,6 +405,8 @@ public sealed class UserSettings
         reduceFlashing = data.ReduceFlashing;
         reduceMotion = data.ReduceMotion;
         allyPopups = data.AllyPopups;
+        chatTimestamps = data.ChatTimestamps;
+        chatWindow = data.ChatWindow;
         foreach (UserColourPick pick in data.CharacterColours)
         {
             if (pick.Choice.Length > 0 && pick.Swatch.Length > 0 && CharacterColour(pick.Choice).Length == 0)

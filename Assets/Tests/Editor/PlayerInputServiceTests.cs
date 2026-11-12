@@ -17,8 +17,8 @@ public class PlayerInputServiceTests
     private InputActionAsset actions;
 
     /// <summary>
-    /// Builds an action asset with the player map (move click, attack move, point, stop and one action per ability
-    /// slot), a UI map with submit and cancel, and a menus map with the menu key.
+    /// Builds an action asset with the player map (move click, attack move, point, stop, one action per ability slot and
+    /// the chat key), a UI map with submit and cancel, and a menus map with the menu key.
     /// </summary>
     [SetUp]
     public void SetUp()
@@ -34,6 +34,7 @@ public class PlayerInputServiceTests
             playerMap.AddAction(PlayerInputService.AbilityActionName(slot), InputActionType.Button, $"<Keyboard>/{AbilityKeys[slot]}");
         }
 
+        playerMap.AddAction(PlayerInputService.ChatActionName, InputActionType.Button, "<Keyboard>/enter");
         InputActionMap uiMap = actions.AddActionMap(PlayerInputService.UIMapName);
         uiMap.AddAction("Submit", InputActionType.Button, "<Keyboard>/enter");
         uiMap.AddAction(PlayerInputService.CancelActionName, InputActionType.Button, "<Keyboard>/escape");
@@ -70,7 +71,7 @@ public class PlayerInputServiceTests
     }
 
     /// <summary>
-    /// With gameplay disabled, the pointer reads zero and no move, attack move, stop or ability press is reported.
+    /// With gameplay disabled, the pointer reads zero and no move, attack move, stop, ability or chat press is reported.
     /// </summary>
     [Test]
     public void DisabledGameplay_ReadsNeutralInput()
@@ -87,6 +88,8 @@ public class PlayerInputServiceTests
         {
             Assert.That(service.WasAbilityPressedThisFrame(slot), Is.False);
         }
+
+        Assert.That(service.ChatPressedThisFrame, Is.False);
     }
 
     /// <summary>
@@ -179,8 +182,8 @@ public class PlayerInputServiceTests
 
     /// <summary>
     /// The project input asset binds move to the right mouse button, attack move to A, point to the pointer position,
-    /// stop to S and the ability slots to Q, W, E, R, 1 and 2, and the service accepts it without
-    /// logging an error.
+    /// stop to S, the ability slots to Q, W, E, R, 1 and 2 and the chat to Enter (Docs/UiRevamp.md, Phase 12), and the
+    /// service accepts it without logging an error.
     /// </summary>
     [Test]
     public void ProjectAsset_BindsMouseMoveStopAndAbilityKeys()
@@ -198,6 +201,7 @@ public class PlayerInputServiceTests
             AssertBoundTo(playerMap, PlayerInputService.AbilityActionName(slot), $"<Keyboard>/{AbilityKeys[slot]}");
         }
 
+        AssertBoundTo(playerMap, PlayerInputService.ChatActionName, "<Keyboard>/enter");
         new PlayerInputService(projectActions, null);
     }
 
@@ -212,6 +216,7 @@ public class PlayerInputServiceTests
         InputActionMap playerMap = projectActions.FindActionMap(PlayerInputService.PlayerMapName, true);
         string[] expected = new[] { PlayerInputService.MoveClickActionName, PlayerInputService.AttackMoveActionName, PlayerInputService.PointActionName, PlayerInputService.StopActionName }
             .Concat(Enumerable.Range(0, AbilitySlots.Count).Select(PlayerInputService.AbilityActionName))
+            .Append(PlayerInputService.ChatActionName)
             .ToArray();
 
         Assert.That(playerMap.actions.Select(action => action.name), Is.EquivalentTo(expected));

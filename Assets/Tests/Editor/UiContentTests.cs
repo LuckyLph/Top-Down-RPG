@@ -295,6 +295,90 @@ public class UiContentTests
     }
 
     /// <summary>
+    /// The chat (Docs/UiRevamp.md, Phase 12): the HUD holds a <c>ChatView</c> anchored at the top left, 144 x 96 UI px,
+    /// 8 from the left edge and 98 from the top, drawn after the command bar and before the notice line, the party
+    /// frames and the tooltip, taking no pointer at rest. Its window is a hidden <c>Window</c> titled "Chat", the
+    /// component a variant of the panel whose header (SurfaceRaised, framed in Border, its title in Accent and its move
+    /// grip in ControlSecondary) moves it and whose resize grip in its bottom right corner resizes it; its eleven lines
+    /// are hidden <c>ChatLine</c>s, a variant of the message line, left-aligned Text on Outline taking no pointer; and its
+    /// field a hidden <c>Field</c>, 13 UI px tall: SurfaceRaised framed in Accent, Text, its placeholder in TextMuted,
+    /// one line without rich text.
+    /// </summary>
+    [Test]
+    public void TheHudsChat_IsAWindowOfLinesAndAField()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        ChatView chat = hud.GetComponentInChildren<ChatView>(true);
+        Assert.That(chat, Is.Not.Null);
+        RectTransform rect = (RectTransform)chat.transform;
+        Assert.That(rect.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(rect.anchorMax, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(rect.pivot, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(rect.anchoredPosition, Is.EqualTo(new Vector2(8f, -98f)));
+        Assert.That(rect.sizeDelta, Is.EqualTo(new Vector2(144f, 96f)));
+        int index = chat.transform.GetSiblingIndex();
+        Assert.That(index, Is.GreaterThan(hud.transform.Find("CommandBar").GetSiblingIndex()));
+        Assert.That(index, Is.LessThan(hud.GetComponentInChildren<NoticeView>(true).transform.GetSiblingIndex()), "Drawn under the notice line.");
+        Assert.That(index, Is.LessThan(hud.GetComponentInChildren<PartyFramesView>(true).transform.GetSiblingIndex()));
+        Assert.That(chat.GetComponent<CanvasGroup>().blocksRaycasts, Is.False, "At rest it takes no pointer.");
+
+        SerializedObject serialized = new(chat);
+        GameObject window = (GameObject)serialized.FindProperty("window").objectReferenceValue;
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(window), Is.EqualTo($"{Components}Window.prefab"));
+        Assert.That(window.activeSelf, Is.False);
+        Assert.That(window.transform.Find("Header/Title").GetComponent<TMP_Text>().text, Is.EqualTo("Chat"));
+        Assert.That(chat.MoveHandle.Kind, Is.EqualTo(WindowDrag.Move));
+        Assert.That(chat.MoveHandle.transform.IsChildOf(window.transform), Is.True);
+        Assert.That(chat.ResizeHandle.Kind, Is.EqualTo(WindowDrag.Resize));
+        Assert.That(chat.LineCapacity, Is.EqualTo(11), "Enough for the largest window.");
+        SerializedProperty lines = serialized.FindProperty("lines");
+        for (int i = 0; i < lines.arraySize; i++)
+        {
+            TMP_Text line = (TMP_Text)lines.GetArrayElementAtIndex(i).objectReferenceValue;
+            Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(line.gameObject), Is.EqualTo($"{Components}ChatLine.prefab"));
+            Assert.That(line.gameObject.activeSelf, Is.False);
+        }
+
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(chat.Field.gameObject), Is.EqualTo($"{Components}Field.prefab"));
+        Assert.That(chat.Field.gameObject.activeSelf, Is.False);
+        Assert.That(((RectTransform)chat.Field.transform).rect.height, Is.EqualTo(13f));
+
+        GameObject windowComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}Window.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(windowComponent)), Is.EqualTo($"{Components}Panel.prefab"), "A variant of the panel.");
+        Transform header = windowComponent.transform.Find("Header");
+        Assert.That(header.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.SurfaceRaised));
+        Assert.That(header.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(header.Find("Title").GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Accent));
+        Assert.That(header.Find("Title").GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.SurfaceRaised));
+        Image moveGrip = header.Find("MoveGrip").GetComponent<Image>();
+        Assert.That(moveGrip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.GripMove))));
+        Assert.That(moveGrip.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.ControlSecondary));
+        Image resizeGrip = windowComponent.transform.Find("ResizeGrip").GetComponent<Image>();
+        Assert.That(resizeGrip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.GripResize))));
+        Assert.That(resizeGrip.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.ControlSecondary));
+        Assert.That(resizeGrip.GetComponent<WindowDragHandle>().Kind, Is.EqualTo(WindowDrag.Resize));
+
+        GameObject lineComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}ChatLine.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(lineComponent)), Is.EqualTo($"{Components}MessageLine.prefab"), "A variant of the message line.");
+        TMP_Text lineText = lineComponent.GetComponent<TMP_Text>();
+        Assert.That(lineText.alignment, Is.EqualTo(TextAlignmentOptions.TopLeft));
+        Assert.That(lineText.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal));
+        Assert.That(lineText.raycastTarget, Is.False);
+        Assert.That(lineComponent.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(lineComponent.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
+
+        GameObject fieldComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}Field.prefab");
+        TMP_InputField field = fieldComponent.GetComponent<TMP_InputField>();
+        Assert.That(fieldComponent.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.SurfaceRaised));
+        Assert.That(fieldComponent.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(field.textComponent.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(field.placeholder.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(field.lineType, Is.EqualTo(TMP_InputField.LineType.SingleLine));
+        Assert.That(field.richText, Is.False);
+        Assert.That(field.transition, Is.EqualTo(Selectable.Transition.None), "Its face stays dark while typing; its frame marks it.");
+    }
+
+    /// <summary>
     /// The party frames (Docs/UiRevamp.md, Phase 5): the HUD holds three <c>PartyFrame</c>s at the left edge, 104 x 82 UI
     /// px 8 from the left and top edges, 28 apart and hidden, before the tooltip. The component is a variant of the panel,
     /// 104 x 26: the skin's large badge with its number in TextOnControl, the name in Text and the state line in

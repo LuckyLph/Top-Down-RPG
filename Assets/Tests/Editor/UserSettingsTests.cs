@@ -248,6 +248,49 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The chat (Docs/UiRevamp.md, Phase 12) shows no timestamps and its window stands in its place by default, in a
+    /// file from before them and for a corner this build does not know; turning timestamps on and moving the window
+    /// write the file at once, raise their change once per change, and read back; a place never moved puts the window
+    /// back.
+    /// </summary>
+    [Test]
+    public void TheChatsPreferences_AreOffAndInPlaceByDefault_AndChangingThemWritesTheFile()
+    {
+        UserSettings old = new(new MemorySaveStore { Contents = "{\"version\":1,\"reduceMotion\":true}" });
+        Assert.That(old.ChatTimestamps, Is.False);
+        Assert.That(old.ChatWindow.IsMoved, Is.False);
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = "{\"version\":1,\"chatWindow\":{\"corner\":9,\"x\":1,\"y\":1,\"width\":100,\"height\":60}}" }).ChatWindow.IsMoved, Is.False);
+
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        int stampChanges = 0;
+        int windowChanges = 0;
+        settings.ChatTimestampsChanged += () => stampChanges++;
+        settings.ChatWindowChanged += () => windowChanges++;
+
+        Assert.That(settings.SetChatTimestamps(true), Is.True);
+        Assert.That(settings.SetChatTimestamps(true), Is.False);
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+        Assert.That(stampChanges, Is.EqualTo(1));
+
+        ChatWindowPlace moved = new(ScreenCorner.BottomRight, new UnityEngine.Vector2Int(8, 80), new UnityEngine.Vector2Int(200, 100));
+        Assert.That(settings.SetChatWindow(moved), Is.True);
+        Assert.That(settings.SetChatWindow(moved), Is.False, "An unchanged place writes nothing.");
+        Assert.That(store.WriteCount, Is.EqualTo(2));
+        Assert.That(windowChanges, Is.EqualTo(1));
+
+        UserSettings read = new(store);
+        Assert.That(read.ChatTimestamps, Is.True);
+        Assert.That(read.ChatWindow, Is.EqualTo(moved));
+        Assert.That(read.AllyPopups, Is.EqualTo(AllyPopups.Shown), "The other preferences are left alone.");
+
+        Assert.That(settings.SetChatWindow(new ChatWindowPlace(ScreenCorner.None, new UnityEngine.Vector2Int(3, 3), new UnityEngine.Vector2Int(100, 60))), Is.True);
+        Assert.That(settings.ChatWindow.IsMoved, Is.False, "A place never moved puts the window back.");
+        Assert.That(new UserSettings(store).ChatWindow.IsMoved, Is.False);
+        Assert.That(windowChanges, Is.EqualTo(2));
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

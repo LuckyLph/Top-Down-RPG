@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Text;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -29,10 +28,11 @@ public static class UiFonts
     };
 
     /// <summary>
-    /// Every character the static atlases hold: printable ASCII, Latin-1 (key names on other keyboard layouts), dashes,
-    /// curly quotes, the bullet, the ellipsis and the zero-width space TMP's input field shows when empty.
+    /// Every character the static atlases hold, <see cref="UiCharacters.All"/>: printable ASCII, Latin-1 (key names on
+    /// other keyboard layouts), dashes, curly quotes, the bullet, the ellipsis and the zero-width space TMP's input field
+    /// shows when empty.
     /// </summary>
-    public static readonly string Characters = BuildCharacters();
+    public static readonly string Characters = UiCharacters.All;
 
     /// <summary>The path of the font asset written for <paramref name="name"/>.</summary>
     public static string FontAssetPath(string name) => $"{Folder}/{name} SDF.asset";
@@ -159,25 +159,5 @@ public static class UiFonts
         outline.SetColor(ShaderUtilities.ID_OutlineColor, Color.black);
         ShaderUtilities.UpdateShaderRatios(outline);
         EditorUtility.SetDirty(outline);
-    }
-
-    /// <summary>
-    /// Builds <see cref="Characters"/>.
-    /// </summary>
-    private static string BuildCharacters()
-    {
-        StringBuilder characters = new();
-        for (char c = ' '; c <= '~'; c++)
-        {
-            characters.Append(c);
-        }
-
-        for (char c = ' '; c <= 'ÿ'; c++)
-        {
-            characters.Append(c);
-        }
-
-        characters.Append("–—‘’“”•…​");
-        return characters.ToString();
     }
 }

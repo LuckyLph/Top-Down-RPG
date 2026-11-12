@@ -94,6 +94,9 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponentInHierarchy<StatusBarView>();
         builder.RegisterComponentInHierarchy<NoticeView>();
         builder.RegisterComponentInHierarchy<PartyFramesView>();
+        builder.RegisterComponentInHierarchy<ChatView>();
+        builder.Register<ChatLog>(Lifetime.Singleton);
+        builder.Register<LocalChatSender>(Lifetime.Singleton).As<IChatSender>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
@@ -135,6 +138,8 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<StatusBarPresenter>();
         builder.RegisterEntryPoint<NoticePresenter>().AsSelf();
         builder.RegisterEntryPoint<PartyFramesPresenter>().AsSelf();
+        builder.RegisterEntryPoint<ChatPresenter>().AsSelf();
+        builder.RegisterEntryPoint<ChatPartyLines>().AsSelf();
         builder.RegisterComponentInHierarchy<OptionsMenuView>();
         builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
         builder.RegisterComponentInHierarchy<GameMenuView>();

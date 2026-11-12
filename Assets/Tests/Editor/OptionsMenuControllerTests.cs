@@ -71,18 +71,19 @@ public class OptionsMenuControllerTests : InputTestFixture
     /// Starting builds the Character section's Look row, a part row for each of the adventurer's eight part slots its
     /// player picks (not the weapon's, which shows the equipped weapon's gear) and a colour row for each of the fifteen
     /// colour choices its sheets or parts carry, then the Display section's UI size row (Docs/DesignSystem.md, Phase 3)
-    /// and its Reduce flashing and Reduce motion toggle rows (Phase 6) and the allies' damage numbers row
-    /// (Docs/UiRevamp.md, Phase 3), then nine binding rows under three section headers, labelled with each action and
-    /// its current binding, and leaves the screen hidden.
+    /// and its Reduce flashing and Reduce motion toggle rows (Phase 6), the allies' damage numbers row
+    /// (Docs/UiRevamp.md, Phase 3) and the Chat timestamps and Chat window rows (Phase 12), then ten binding rows under
+    /// four section headers, labelled with each action and its current binding, the chat key last, and leaves the
+    /// screen hidden.
     /// </summary>
     [Test]
     public void Start_BuildsARowPerActionUnderItsSection_AndStaysHidden()
     {
         Assert.That(view.IsShown, Is.False);
-        Assert.That(controller.RowCount, Is.EqualTo(9));
+        Assert.That(controller.RowCount, Is.EqualTo(10));
         Assert.That(controller.PartRowCount, Is.EqualTo(8));
         Assert.That(controller.ColourRowCount, Is.EqualTo(15));
-        Assert.That(view.RowsContainer.childCount, Is.EqualTo(42), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row, two toggle rows and the allies' damage numbers row, three section headers and nine rows.");
+        Assert.That(view.RowsContainer.childCount, Is.EqualTo(46), "The Character header, its Look row, eight part rows and fifteen colour rows, the Display header, its UI size row, two toggle rows, the allies' damage numbers row and the two chat rows, four section headers and ten rows.");
         Assert.That(view.RowsContainer.GetChild(0).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo(OptionsMenuController.CharacterSection));
         Assert.That(view.RowsContainer.GetChild(1).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.LookRow));
         Assert.That(view.RowsContainer.GetChild(2).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.GetPartRow(0)));
@@ -92,7 +93,12 @@ public class OptionsMenuControllerTests : InputTestFixture
         Assert.That(view.RowsContainer.GetChild(27).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceFlashingRow));
         Assert.That(view.RowsContainer.GetChild(28).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ReduceMotionRow));
         Assert.That(view.RowsContainer.GetChild(29).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.AllyPopupsRow));
-        Assert.That(view.RowsContainer.GetChild(30).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.GetChild(30).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ChatTimestampsRow));
+        Assert.That(view.RowsContainer.GetChild(31).GetComponent<KeyBindingRowView>(), Is.SameAs(controller.ChatWindowRow));
+        Assert.That(view.RowsContainer.GetChild(32).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Movement"));
+        Assert.That(view.RowsContainer.GetChild(44).GetComponent<TMPro.TMP_Text>().text, Is.EqualTo("Other"));
+        Assert.That(controller.GetRow(9).Label.text, Is.EqualTo("Chat"));
+        Assert.That(controller.GetRow(9).BindingText.text, Is.EqualTo("Enter"));
         Assert.That(controller.GetRow(0).Label.text, Is.EqualTo("Move / attack"));
         Assert.That(controller.GetRow(0).BindingText.text, Is.EqualTo("Right mouse button"));
         Assert.That(controller.GetRow(AttackMoveRow).Label.text, Is.EqualTo("Attack move"));
@@ -185,6 +191,46 @@ public class OptionsMenuControllerTests : InputTestFixture
         motion.ResetButton.onClick.Invoke();
         Assert.That(settings.ReduceFlashing, Is.True, "Nothing changes while a confirmation shows.");
         Assert.That(settings.ReduceMotion, Is.True);
+    }
+
+    /// <summary>
+    /// The Chat timestamps row (Docs/UiRevamp.md, Phase 12) reads Off and turns them on and off, its reset off; the Chat
+    /// window row reads Default, Moved once the window was moved, and its button, like its reset, puts the window back;
+    /// both follow changes made elsewhere, and nothing changes while a confirmation shows.
+    /// </summary>
+    [Test]
+    public void TheChatRows_TurnTimestamps_AndPutTheWindowBack()
+    {
+        KeyBindingRowView stamps = controller.ChatTimestampsRow;
+        KeyBindingRowView window = controller.ChatWindowRow;
+        Assert.That(stamps.Label.text, Is.EqualTo(OptionsMenuController.ChatTimestampsLabel));
+        Assert.That(stamps.BindingText.text, Is.EqualTo(OptionsMenuController.OffName));
+        Assert.That(window.Label.text, Is.EqualTo(OptionsMenuController.ChatWindowLabel));
+        Assert.That(window.BindingText.text, Is.EqualTo(OptionsMenuController.ChatWindowDefault));
+
+        controller.Open(null);
+        stamps.BindingButton.onClick.Invoke();
+        Assert.That(settings.ChatTimestamps, Is.True);
+        Assert.That(stamps.BindingText.text, Is.EqualTo(OptionsMenuController.OnName));
+        stamps.ResetButton.onClick.Invoke();
+        Assert.That(settings.ChatTimestamps, Is.False);
+
+        ChatWindowPlace moved = new(ScreenCorner.BottomLeft, new Vector2Int(8, 80), new Vector2Int(200, 100));
+        settings.SetChatWindow(moved);
+        Assert.That(window.BindingText.text, Is.EqualTo(OptionsMenuController.ChatWindowMoved), "The row follows a change made elsewhere.");
+        window.BindingButton.onClick.Invoke();
+        Assert.That(settings.ChatWindow.IsMoved, Is.False);
+        Assert.That(window.BindingText.text, Is.EqualTo(OptionsMenuController.ChatWindowDefault));
+        settings.SetChatWindow(moved);
+        window.ResetButton.onClick.Invoke();
+        Assert.That(settings.ChatWindow.IsMoved, Is.False);
+
+        settings.SetChatWindow(moved);
+        view.ResetAllButton.onClick.Invoke();
+        window.BindingButton.onClick.Invoke();
+        stamps.BindingButton.onClick.Invoke();
+        Assert.That(settings.ChatWindow.IsMoved, Is.True, "Nothing changes while a confirmation shows.");
+        Assert.That(settings.ChatTimestamps, Is.False);
     }
 
     /// <summary>

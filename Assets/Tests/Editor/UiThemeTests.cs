@@ -493,6 +493,24 @@ public class UiThemeTests
     }
 
     /// <summary>
+    /// The colours the chat's lines take in rich text (Docs/UiRevamp.md, Phase 12), which no themed text names: each
+    /// player slot's, for a sender's name, and TextMuted, for the party's lines and timestamps, read at 4.5:1 or more
+    /// against the Outline the lines are drawn with over the world.
+    /// </summary>
+    [Test]
+    public void TheChatsColours_ReadOnTheirOutline()
+    {
+        UiTheme theme = ProjectTheme();
+        Color outline = theme.Colour(UiColour.Outline);
+        for (int slot = 1; slot <= PlayerSlots.Count; slot++)
+        {
+            Assert.That(UiThemeUsage.Ratio(theme.Colour(PlayerSlots.Role(slot)), outline), Is.GreaterThanOrEqualTo(UiThemeUsage.NormalTextContrast), $"Player {slot}'s name.");
+        }
+
+        Assert.That(UiThemeUsage.Ratio(theme.Colour(UiColour.TextMuted), outline), Is.GreaterThanOrEqualTo(UiThemeUsage.NormalTextContrast), "A party line.");
+    }
+
+    /// <summary>
     /// Every bar fill of the project meets 3:1 on its track in the project's theme (the pairs UiTheme.md lists): the
     /// world bar's Health on an opaque HealthTrack (Docs/UiRevamp.md, Phase 1), the command bar's HealthPlayer and
     /// its part just lost in HealthLost (Phase 2), and the players' cast bars in Accent (Phase 4).

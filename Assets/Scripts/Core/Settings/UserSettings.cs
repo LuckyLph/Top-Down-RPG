@@ -9,7 +9,7 @@ using VContainer;
 /// its colour choices (Docs/PlayerCharacter.md, Phase 5), the option picked for each of its part slots (Phase 6), the
 /// UI size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), how
 /// allies' popups show (Docs/UiRevamp.md, Phase 3), whether the chat shows timestamps and where its window was moved
-/// (Phase 12), the hosts joined last (Phase 9), and this install's player id
+/// (Phase 12), the hosts joined last (Phase 9), whether the first run is over (Phase 11), and this install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -33,6 +33,7 @@ public sealed class UserSettings
     private bool chatTimestamps;
     private ChatWindowPlace chatWindow;
     private readonly List<string> recentHosts = new();
+    private bool firstRunDone;
     private bool isReadOnly;
 
     /// <summary>
@@ -268,6 +269,27 @@ public sealed class UserSettings
         bool written = Write();
         ChatWindowChanged?.Invoke();
         return written;
+    }
+
+    /// <summary>
+    /// Whether the first run is over (Docs/UiRevamp.md, Phase 11): the Welcome was answered, or the file came from a
+    /// build before the flag and already held a choice the player made.
+    /// </summary>
+    public bool FirstRunDone => firstRunDone;
+
+    /// <summary>
+    /// Marks the first run over and writes the file, unless it already was or the file came from a newer build. Returns
+    /// whether it was written.
+    /// </summary>
+    public bool SetFirstRunDone()
+    {
+        if (firstRunDone)
+        {
+            return false;
+        }
+
+        firstRunDone = true;
+        return Write();
     }
 
     /// <summary>
@@ -510,7 +532,7 @@ public sealed class UserSettings
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups, chatTimestamps, chatWindow, recentHosts).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups, chatTimestamps, chatWindow, recentHosts, firstRunDone).ToJson());
     }
 
     /// <summary>
@@ -552,6 +574,7 @@ public sealed class UserSettings
         allyPopups = data.AllyPopups;
         chatTimestamps = data.ChatTimestamps;
         chatWindow = data.ChatWindow;
+        firstRunDone = data.FirstRunDone || data.HoldsChoices;
         foreach (UserColourPick pick in data.CharacterColours)
         {
             if (pick.Choice.Length > 0 && pick.Swatch.Length > 0 && CharacterColour(pick.Choice).Length == 0)

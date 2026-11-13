@@ -9,8 +9,9 @@ using Object = UnityEngine.Object;
 /// What the main menu's tests share (Docs/UiRevamp.md, Phase 9): a listed starting world, Home, with two named entries;
 /// a fake game flow and network connection; a save folder, the session's saved state and where players start; user
 /// settings; the joining line; the <see cref="MenuSessionStarter"/> and <see cref="ContinueLine"/> over them; fake
-/// interfaces, clipboard and wall clock; and a menu stack and selection over an event system of its own. It builds the
-/// Play together and Saved games controllers (Phase 10) over the views a test gives it.
+/// interfaces, clipboard and wall clock; the UI scale on a 1920 x 1080 display; and a menu stack and selection over an
+/// event system of its own. It builds the Play together, Saved games (Phase 10) and Welcome (Phase 11) controllers over
+/// the views a test gives it. The first run is over unless a test asks for it.
 /// </summary>
 internal sealed class MenuTestRig : IDisposable
 {
@@ -19,9 +20,9 @@ internal sealed class MenuTestRig : IDisposable
     private readonly List<Object> created = new();
 
     /// <summary>
-    /// Builds every part, the joining line started.
+    /// Builds every part, the joining line started, the first run over unless <paramref name="firstRunDone"/> is false.
     /// </summary>
-    public MenuTestRig()
+    public MenuTestRig(bool firstRunDone = true)
     {
         Home = Track(WorldDefinition.Create(
             "Home",
@@ -41,6 +42,13 @@ internal sealed class MenuTestRig : IDisposable
         Network = Track(ScriptableObject.CreateInstance<NetworkSettings>());
         Flow = new FakeGameFlow { Scenes = Scenes };
         Settings = new UserSettings(new MemorySaveStore());
+        if (firstRunDone)
+        {
+            Settings.SetFirstRunDone();
+        }
+
+        Scale = new UiScale(AssetDatabase.LoadAssetAtPath<UiScaleSettings>("Assets/Data/UI/UiScale.asset"), Settings);
+        Scale.Apply(1920, 1080, Settings.UiSizeStep);
         Connection = new FakeSessionConnection(Network) { LocalPlayerId = Settings.PlayerId };
         Folder = new MemorySaveFolder();
         WallClock = new ManualWallClock();
@@ -71,6 +79,7 @@ internal sealed class MenuTestRig : IDisposable
     public SessionSave SessionSave { get; }
     public PlayerStarts Starts { get; }
     public UserSettings Settings { get; }
+    public UiScale Scale { get; }
     public LoadingMessage Loading { get; }
     public MenuSessionStarter Starter { get; }
     public ContinueLine Line { get; }
@@ -132,6 +141,16 @@ internal sealed class MenuTestRig : IDisposable
     public PlayTogetherController CreatePlayTogether(PlayTogetherView view, SavedGamesController savedGames = null)
     {
         PlayTogetherController controller = new(view, Starter, Line, new HostAddresses(Interfaces, 7777), Clipboard, WallClock, Hud, Settings, Menus, Selection, savedGames);
+        controller.Start();
+        return controller;
+    }
+
+    /// <summary>
+    /// A Welcome controller over <paramref name="view"/> and the rig's parts, started.
+    /// </summary>
+    public WelcomeController CreateWelcome(WelcomeView view)
+    {
+        WelcomeController controller = new(view, Settings, Scale, Menus, Selection);
         controller.Start();
         return controller;
     }

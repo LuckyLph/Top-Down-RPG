@@ -10,8 +10,9 @@ using Object = UnityEngine.Object;
 /// <summary>
 /// A copy of the main menu scene's canvas for the main menu's EditMode tests (Docs/UiRevamp.md, Phase 9): cloned from
 /// <c>MainMenu.unity</c> into a plain parent of a chosen size in UI px (its canvas components stripped, so the parent
-/// sizes it), with its <see cref="MainMenuController"/>, a <see cref="PlayTogetherController"/> and a
-/// <see cref="SavedGamesController"/> (Phase 10) built over a <see cref="MenuTestRig"/>. <see cref="Start"/> runs the controller's Awake and Start, which edit mode skips.
+/// sizes it), with its <see cref="MainMenuController"/>, a <see cref="PlayTogetherController"/>, a
+/// <see cref="SavedGamesController"/> (Phase 10) and a <see cref="WelcomeController"/> (Phase 11) built over a
+/// <see cref="MenuTestRig"/>, and when asked the Character screen's controller over a fake preview. <see cref="Start"/> runs the controller's Awake and Start, which edit mode skips.
 /// </summary>
 internal sealed class MainMenuTestScreen : IDisposable
 {
@@ -21,7 +22,7 @@ internal sealed class MainMenuTestScreen : IDisposable
     /// Clones the scene's canvas into a <paramref name="width"/> x <paramref name="height"/> UI px parent and builds the
     /// controllers over <paramref name="rig"/>, leaving <paramref name="notice"/> for the menu.
     /// </summary>
-    public MainMenuTestScreen(MenuTestRig rig, int width, int height, MenuNotice notice = null)
+    public MainMenuTestScreen(MenuTestRig rig, int width, int height, MenuNotice notice = null, bool withCharacter = false)
     {
         Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
         GameObject source = null;
@@ -53,7 +54,16 @@ internal sealed class MainMenuTestScreen : IDisposable
         Saved = Root.GetComponentInChildren<SavedGamesView>(true);
         SavedGames = rig.CreateSavedGames(Saved);
         PlayTogether = rig.CreatePlayTogether(Together, SavedGames);
-        Menu.Construct(rig.Starter, PlayTogether, SavedGames, rig.Line, Notice, null, null, rig.Selection, rig.Menus);
+        WelcomePanel = Root.GetComponentInChildren<WelcomeView>(true);
+        Welcome = rig.CreateWelcome(WelcomePanel);
+        TitleView = Root.GetComponentInChildren<TitleView>(true);
+        if (withCharacter)
+        {
+            Character = new CharacterScreenController(Root.GetComponentInChildren<CharacterScreenView>(true), new FakeCharacterPreview(), rig.Menus, rig.Selection, rig.Settings);
+            Character.Start();
+        }
+
+        Menu.Construct(rig.Starter, PlayTogether, SavedGames, Welcome, rig.Line, Notice, null, Character, rig.Selection, rig.Menus);
     }
 
     public GameObject Parent { get; }
@@ -63,6 +73,10 @@ internal sealed class MainMenuTestScreen : IDisposable
     public PlayTogetherController PlayTogether { get; }
     public SavedGamesView Saved { get; }
     public SavedGamesController SavedGames { get; }
+    public WelcomeView WelcomePanel { get; }
+    public WelcomeController Welcome { get; }
+    public TitleView TitleView { get; }
+    public CharacterScreenController Character { get; }
     public MenuNotice Notice { get; }
     public RectTransform Area => (RectTransform)Root.transform;
 
@@ -82,6 +96,8 @@ internal sealed class MainMenuTestScreen : IDisposable
     {
         PlayTogether.Dispose();
         SavedGames.Dispose();
+        Welcome.Dispose();
+        Character?.Dispose();
     }
 
     /// <summary>

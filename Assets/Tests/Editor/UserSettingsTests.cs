@@ -405,6 +405,53 @@ public class UserSettingsTests
     }
 
     /// <summary>
+    /// The first run is not over in a new file; marking it over writes the file once and reads back, and marking it again
+    /// writes nothing (Docs/UiRevamp.md, Phase 11).
+    /// </summary>
+    [Test]
+    public void TheFirstRun_IsNotOverInANewFile_AndMarkingItOverWritesOnce()
+    {
+        MemorySaveStore store = new();
+        UserSettings settings = new(store);
+        Assert.That(settings.FirstRunDone, Is.False);
+
+        Assert.That(settings.SetFirstRunDone(), Is.True);
+        Assert.That(settings.FirstRunDone, Is.True);
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+        Assert.That(settings.SetFirstRunDone(), Is.False);
+        Assert.That(store.WriteCount, Is.EqualTo(1));
+        Assert.That(new UserSettings(store).FirstRunDone, Is.True);
+    }
+
+    /// <summary>
+    /// A file from before the flag counts as past the first run when it holds a choice the player made (key bindings, a
+    /// look, a colour or part pick, a display or interface preference), and not when it holds only the player id or
+    /// recent hosts.
+    /// </summary>
+    [Test]
+    public void AnOlderFile_IsPastTheFirstRun_WhenItHoldsAChoice()
+    {
+        string[] withChoices =
+        {
+            new UserSettingsData("{\"bindings\":[]}", "id", null).ToJson(),
+            new UserSettingsData(null, "id", "Bandit").ToJson(),
+            new UserSettingsData(null, "id", null, new[] { new UserColourPick("Tunic", "Red") }).ToJson(),
+            new UserSettingsData(null, "id", null, null, new[] { new UserPartPick("Cape", "Long") }).ToJson(),
+            new UserSettingsData(null, "id", null, sizeStep: 1).ToJson(),
+            new UserSettingsData(null, "id", null, lessFlashing: true).ToJson(),
+            new UserSettingsData(null, "id", null, allies: AllyPopups.Hidden).ToJson(),
+            new UserSettingsData(null, "id", null, timestamps: true).ToJson(),
+        };
+        foreach (string json in withChoices)
+        {
+            Assert.That(new UserSettings(new MemorySaveStore { Contents = json }).FirstRunDone, Is.True, json);
+        }
+
+        string plain = new UserSettingsData(null, "id", null, hosts: new[] { "192.168.1.20" }).ToJson();
+        Assert.That(new UserSettings(new MemorySaveStore { Contents = plain }).FirstRunDone, Is.False);
+    }
+
+    /// <summary>
     /// The settings file name differs from the game save's default file name.
     /// </summary>
     [Test]

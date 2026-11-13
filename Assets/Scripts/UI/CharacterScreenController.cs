@@ -23,13 +23,17 @@ using VContainer.Unity;
 /// the last to Reset all; Right from Turn right returns to the first row.</item>
 /// </list>
 /// While open it is a layer on the <see cref="MenuStack"/>: Back closes the picker, else the confirmation, else the
-/// screen. Online in game it is a full screen with the vitals strip (<see cref="IVitalsScreen"/>).
+/// screen. Online in game it is a full screen with the vitals strip (<see cref="IVitalsScreen"/>). On the first New game
+/// (<see cref="OpenToStart"/>, Docs/UiRevamp.md, Phase 11) its Back button reads "Start" and starts the game as it
+/// closes, while Escape closes it without starting.
 /// </summary>
 public sealed class CharacterScreenController : IStartable, ITickable, IDisposable, IMenuLayer, IVitalsScreen
 {
     public const string TurnLeftName = "Turn left";
     public const string TurnRightName = "Turn right";
     public const string ChipFormat = "{0}: {1}";
+    public const string BackLabel = "Back";
+    public const string StartLabel = "Start";
     public static readonly string[] PoseNames = { "Standing", "Running", "Attacking" };
 
     private readonly CharacterScreenView view;
@@ -46,6 +50,7 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
     private CharacterColours colours;
     private CharacterParts parts;
     private Action onClosed;
+    private Action onStart;
     private GameObject focused;
     private int pickerRow = -1;
     private int pickerChip = -1;
@@ -113,7 +118,7 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
         view.TurnRightButton.onClick.AddListener(() => Turn(1));
         view.PoseButton.onClick.AddListener(NextPose);
         view.ResetAllButton.onClick.AddListener(AskResetAll);
-        view.BackButton.onClick.AddListener(Close);
+        view.BackButton.onClick.AddListener(PressBack);
         view.ConfirmYesButton.onClick.AddListener(ConfirmResetAll);
         view.ConfirmNoButton.onClick.AddListener(CancelResetAll);
         view.Picker.Focused += PreviewSwatch;
@@ -160,6 +165,8 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
 
         IsOpen = true;
         onClosed = closed;
+        onStart = null;
+        view.SetBackLabel(BackLabel);
         preview.Show(weapon);
         view.SetPreview(preview.Texture);
         view.SetPose(PoseNames[(int)preview.Pose]);
@@ -175,8 +182,25 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
     }
 
     /// <summary>
+    /// Shows the screen for the first New game (Docs/UiRevamp.md, Phase 11), as <see cref="Open"/> does from the main
+    /// menu, its Back button reading "Start": pressing it closes the screen, then runs <paramref name="start"/>; Escape
+    /// closes it without. <paramref name="closed"/> runs once it closes, either way.
+    /// </summary>
+    public void OpenToStart(Action start, Action closed)
+    {
+        if (IsOpen)
+        {
+            return;
+        }
+
+        Open(closed);
+        onStart = start;
+        view.SetBackLabel(StartLabel);
+    }
+
+    /// <summary>
     /// Hides the screen, its picker and its confirmation, stops the preview and runs the callback given to
-    /// <see cref="Open"/>.
+    /// <see cref="Open"/>, starting nothing.
     /// </summary>
     public void Close()
     {
@@ -186,6 +210,7 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
         }
 
         IsOpen = false;
+        onStart = null;
         if (IsPickerOpen)
         {
             ClosePicker(false);
@@ -206,6 +231,16 @@ public sealed class CharacterScreenController : IStartable, ITickable, IDisposab
     public void SetWarning(string text)
     {
         view.SetWarning(text);
+    }
+
+    /// <summary>
+    /// The Back button: closes the screen, then starts the game when it was opened to start one.
+    /// </summary>
+    private void PressBack()
+    {
+        Action start = onStart;
+        Close();
+        start?.Invoke();
     }
 
     /// <summary>

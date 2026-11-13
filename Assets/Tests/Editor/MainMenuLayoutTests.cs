@@ -6,8 +6,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Tests for the main menu's, Play together's and Saved games' layout (Docs/UiRevamp.md, Phases 9 and 10) at the UI size
-/// of every display in the Scale table, every size step included: the menu's panel on the left with every button inside
-/// it, Saved games included, and the version clear of it; Play together's two columns centred, full (a save's line, Host
+/// of every display in the Scale table, every size step included: the title view covering the canvas (Phase 11); the
+/// menu's panel on the left with the logo and every button inside it, Saved games included, and the version clear of it;
+/// the first run's Welcome panel; Play together's two columns centred, full (a save's line, Host
 /// another saved game, two addresses, five recent hosts) and clear of a two-line notice over Back; the host-gone
 /// dialog's box; and Saved games' list of eight cards centred above a two-line notice and Back, with its Delete
 /// confirmation's box; all inside the screen and on whole UI px.
@@ -98,6 +99,31 @@ public class MainMenuLayoutTests
 
         Rect version = screen.RectOf(screen.Menu.VersionText.rectTransform);
         CheckInside(where, "the version", version, panel.xMax, 0f, area.width, area.height, problems);
+        Rect logo = screen.RectOf((RectTransform)screen.Menu.Panel.Find("Logo"));
+        CheckInside(where, "the logo", logo, panel.xMin, panel.yMin, panel.xMax, panel.yMax, problems);
+        screen.TitleView.Place();
+        Rect view = screen.RectOf(screen.TitleView.Picture.rectTransform);
+        if (view.xMin > 0.01f || view.yMin > 0.01f || view.xMax < area.width - 0.01f || view.yMax < area.height - 0.01f)
+        {
+            problems.Add($"{where}: the title view spans {view}, short of the canvas.");
+        }
+
+        if (Mathf.Abs(view.xMin - Mathf.Round(view.xMin)) > 0.01f || Mathf.Abs(view.yMin - Mathf.Round(view.yMin)) > 0.01f)
+        {
+            problems.Add($"{where}: the title view is not on whole UI px at {view.position}.");
+        }
+
+        screen.Welcome.Open(null);
+        Rect welcome = screen.RectOf(screen.WelcomePanel.Panel);
+        CheckInside(where, "the Welcome panel", welcome, 0f, 0f, area.width, area.height, problems);
+        foreach (KeyBindingRowView row in new[] { screen.WelcomePanel.UiSizeRow, screen.WelcomePanel.ReduceFlashingRow, screen.WelcomePanel.ReduceMotionRow })
+        {
+            CheckInside(where, $"the Welcome's {row.name}", screen.RectOf((RectTransform)row.transform), welcome.xMin, welcome.yMin, welcome.xMax, welcome.yMax, problems);
+        }
+
+        CheckInside(where, "the Welcome's description", screen.RectOf(screen.WelcomePanel.Description.rectTransform), welcome.xMin, welcome.yMin, welcome.xMax, welcome.yMax, problems);
+        CheckInside(where, "the Welcome's Continue", screen.RectOf((RectTransform)screen.WelcomePanel.ContinueButton.transform), welcome.xMin, welcome.yMin, welcome.xMax, welcome.yMax, problems);
+        screen.Welcome.HandleBack();
 
         screen.Menu.OpenPlayTogether();
         screen.Together.SetNotice(string.Format(MenuSessionStarter.UnreachableFormat, "100.101.102.103:7777", 10));

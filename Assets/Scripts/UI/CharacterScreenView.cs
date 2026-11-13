@@ -166,6 +166,19 @@ public sealed class CharacterScreenView : MonoBehaviour
     }
 
     /// <summary>
+    /// Shows <paramref name="text"/> on the Back button: "Back", or "Start" on the first New game (Docs/UiRevamp.md,
+    /// Phase 11).
+    /// </summary>
+    public void SetBackLabel(string text)
+    {
+        TMP_Text label = backButton.GetComponentInChildren<TMP_Text>(true);
+        if (label != null)
+        {
+            label.text = text;
+        }
+    }
+
+    /// <summary>
     /// Shows <paramref name="text"/> as the foot line's warning over the focused control's name, or clears it for null.
     /// </summary>
     public void SetWarning(string text)

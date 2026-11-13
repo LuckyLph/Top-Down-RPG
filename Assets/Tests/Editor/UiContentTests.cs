@@ -15,7 +15,8 @@ using UnityEngine.UI;
 /// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), the command
 /// bar is built from its components (Phase 2), the options screen's rail item and description line are built from
 /// the skin and the notice line (Phase 8), the main menu's dialog, join field and invite block from theirs (Phase 9), and
-/// the session card and the Saved games screen from theirs (Phase 10).
+/// the session card and the Saved games screen from theirs (Phase 10), and the title view, the logo and the Welcome
+/// panel from theirs (Phase 11).
 /// </summary>
 public class UiContentTests
 {
@@ -227,8 +228,9 @@ public class UiContentTests
 
     /// <summary>
     /// Every UI image draws a sprite of the skin (Assets/Sprites/UI/Skin), one of the licensed icons
-    /// (Assets/Sprites/UI/Icons, the Character screen's turn arrows, Docs/UiRevamp.md, Phase 7) or none: the views give
-    /// the other icons at runtime.
+    /// (Assets/Sprites/UI/Icons, the Character screen's turn arrows, Docs/UiRevamp.md, Phase 7), one of the title
+    /// sprites the title view recipe writes (Assets/Sprites/UI/Title, the title view and the logo, Phase 11) or none: the
+    /// views give the other icons at runtime.
     /// </summary>
     [Test]
     public void EveryImage_DrawsTheSkinOrNothing()
@@ -237,7 +239,7 @@ public class UiContentTests
         foreach ((string where, Image image) in All<Image>())
         {
             string sprite = image.sprite != null ? AssetDatabase.GetAssetPath(image.sprite) : null;
-            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/") && !sprite.StartsWith(IconsFolder + "/"))
+            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/") && !sprite.StartsWith(IconsFolder + "/") && !sprite.StartsWith(TitleViewRecipe.Folder + "/"))
             {
                 problems.Add($"{where}: {Path(image.transform)} draws {sprite}.");
             }
@@ -721,6 +723,58 @@ public class UiContentTests
         {
             Assert.That(ComesFrom(together.HostSavedButton.gameObject, $"{Components}Button.prefab"), Is.True, $"{where}'s Host another saved game.");
         }
+    }
+
+    /// <summary>
+    /// The main menu's first run and title (Docs/UiRevamp.md, Phase 11): the title view, under the panel and above the
+    /// background, draws the title sprite in its own colours (Icon) and takes no pointer; the panel is a raised panel
+    /// whose logo draws the logo sprite in Accent, taking no pointer, where the name was; the version is outlined over the
+    /// view; and the Welcome panel, in its prefab and in the main menu, is a raised panel holding a row and two toggle
+    /// rows, their Reset columns gone, a description line and a primary Continue.
+    /// </summary>
+    [Test]
+    public void TheTitleViewTheLogoAndWelcome_AreBuiltFromTheirBases()
+    {
+        int menus = 0;
+        foreach ((string where, MainMenuController menu) in All<MainMenuController>())
+        {
+            menus++;
+            Transform canvas = menu.transform;
+            TitleView view = canvas.GetComponentInChildren<TitleView>(true);
+            Assert.That(view, Is.Not.Null, $"{where} has a title view.");
+            Assert.That(AssetDatabase.GetAssetPath(view.Picture.sprite), Is.EqualTo(TitleViewRecipe.ViewPath));
+            Assert.That(view.Picture.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Icon));
+            Assert.That(view.Picture.raycastTarget, Is.False);
+            Assert.That(view.transform.GetSiblingIndex(), Is.EqualTo(canvas.Find("Background").GetSiblingIndex() + 1), "Over the background, under the panel.");
+            Transform panel = canvas.Find("Menu");
+            Assert.That(ComesFrom(panel.gameObject, $"{Components}PanelRaised.prefab"), Is.True, $"{where}'s panel is raised.");
+            Image logo = panel.Find("Logo").GetComponent<Image>();
+            Assert.That(AssetDatabase.GetAssetPath(logo.sprite), Is.EqualTo(TitleViewRecipe.LogoPath));
+            Assert.That(logo.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+            Assert.That(logo.raycastTarget, Is.False);
+            Assert.That(panel.Find("Name"), Is.Null, "The logo replaced the name.");
+            Assert.That(canvas.Find("Version").GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
+        }
+
+        Assert.That(menus, Is.EqualTo(1));
+        int panels = 0;
+        foreach ((string where, WelcomeView welcome) in All<WelcomeView>())
+        {
+            panels++;
+            Assert.That(ComesFrom(welcome.Panel.gameObject, $"{Components}PanelRaised.prefab"), Is.True, $"{where}'s panel.");
+            Assert.That(ComesFrom(welcome.UiSizeRow.gameObject, $"{Components}Row.prefab"), Is.True);
+            Assert.That(ComesFrom(welcome.ReduceFlashingRow.gameObject, $"{Components}RowToggle.prefab"), Is.True);
+            Assert.That(ComesFrom(welcome.ReduceMotionRow.gameObject, $"{Components}RowToggle.prefab"), Is.True);
+            foreach (KeyBindingRowView row in new[] { welcome.UiSizeRow, welcome.ReduceFlashingRow, welcome.ReduceMotionRow })
+            {
+                Assert.That(row.transform.Find("ResetSlot").gameObject.activeSelf, Is.False, $"{where}'s {row.name} has no Reset column.");
+            }
+
+            Assert.That(ComesFrom(welcome.Description.gameObject, $"{Components}DescriptionLine.prefab"), Is.True);
+            Assert.That(welcome.ContinueButton.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlNormal));
+        }
+
+        Assert.That(panels, Is.EqualTo(2), "The prefab and the main menu's.");
     }
 
     /// <summary>

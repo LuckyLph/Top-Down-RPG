@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -245,6 +246,89 @@ public class MainMenuControllerTests
         Assert.That(rig.Connection.JoinHost, Is.EqualTo("127.0.0.1"));
         Assert.That(rig.Connection.JoinPort, Is.EqualTo(7777));
         Assert.That(screen.PlayTogether.IsConnecting, Is.True);
+    }
+
+    /// <summary>
+    /// On the first run the Welcome panel shows in the panel's place with the UI size selected; Continue brings the
+    /// panel back with New game selected and marks the first run over, and the host-gone notice left meanwhile shows
+    /// then (Docs/UiRevamp.md, Phase 11).
+    /// </summary>
+    [Test]
+    public void TheFirstRun_ShowsWelcomeFirst_ThenThePanel()
+    {
+        rig.Dispose();
+        rig = new MenuTestRig(false);
+        MenuNotice notice = new();
+        notice.Leave(MenuNoticeKind.HostGone, "100.101.102.103:7777");
+        Open(notice);
+        MainMenuController menu = screen.Menu;
+
+        Assert.That(screen.WelcomePanel.IsShown, Is.True);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.False);
+        Assert.That(menu.Dialog.IsShown, Is.False, "The notice waits for the Welcome.");
+        Assert.That(rig.Selection.Current, Is.EqualTo(screen.WelcomePanel.UiSizeRow.BindingButton.gameObject));
+
+        screen.WelcomePanel.ContinueButton.onClick.Invoke();
+        Assert.That(rig.Settings.FirstRunDone, Is.True);
+        Assert.That(screen.WelcomePanel.IsShown, Is.False);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.True);
+        Assert.That(menu.Dialog.IsShown, Is.True, "Then the notice shows.");
+        menu.HandleBack();
+        Assert.That(rig.Selection.Current, Is.EqualTo(menu.NewGameButton.gameObject));
+    }
+
+    /// <summary>
+    /// Past the first run the panel shows at once, raised over the title view, the logo above Continue.
+    /// </summary>
+    [Test]
+    public void PastTheFirstRun_ThePanelShowsAtOnce_OverTheTitleView()
+    {
+        Open();
+
+        Assert.That(screen.WelcomePanel.IsShown, Is.False);
+        Assert.That(screen.Menu.Panel.gameObject.activeSelf, Is.True);
+        Assert.That(screen.TitleView.Picture.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(TitleViewRecipe.ViewPath)));
+        Image logo = screen.Menu.Panel.Find("Logo").GetComponent<Image>();
+        Assert.That(logo.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(TitleViewRecipe.LogoPath)));
+        Assert.That(logo.transform.GetSiblingIndex(), Is.LessThan(screen.Menu.ContinueButton.transform.GetSiblingIndex()));
+    }
+
+    /// <summary>
+    /// New game without a save opens the Character screen in the panel's place, its Back reading "Start": Escape brings
+    /// the panel back with New game selected and starts nothing; Start starts the new game. With a save, New game
+    /// starts at once.
+    /// </summary>
+    [Test]
+    public void TheFirstNewGame_GoesThroughTheCharacterScreen()
+    {
+        screen = new MainMenuTestScreen(rig, 640, 360, null, true);
+        screen.Start();
+        MainMenuController menu = screen.Menu;
+        TMPro.TMP_Text back = screen.Root.GetComponentInChildren<CharacterScreenView>(true).BackButton.GetComponentInChildren<TMPro.TMP_Text>(true);
+
+        menu.NewGameButton.onClick.Invoke();
+        Assert.That(screen.Character.IsOpen, Is.True);
+        Assert.That(menu.Panel.gameObject.activeSelf, Is.False);
+        Assert.That(back.text, Is.EqualTo(CharacterScreenController.StartLabel));
+        rig.MenuInput.BackPressedThisFrame = true;
+        rig.Menus.Tick();
+        Assert.That(screen.Character.IsOpen, Is.False);
+        Assert.That(rig.Flow.WorldStarts, Is.Zero, "Escape starts nothing.");
+        Assert.That(rig.Selection.Current, Is.EqualTo(menu.NewGameButton.gameObject));
+
+        menu.NewGameButton.onClick.Invoke();
+        screen.Root.GetComponentInChildren<CharacterScreenView>(true).BackButton.onClick.Invoke();
+        Assert.That(screen.Character.IsOpen, Is.False);
+        Assert.That(rig.Flow.WorldStarts, Is.EqualTo(1), "Start starts the new game.");
+        Assert.That(rig.Flow.StartedPosition, Is.EqualTo(rig.Home.EntryPosition("start")));
+
+        screen.Character.Open(null);
+        Assert.That(back.text, Is.EqualTo(CharacterScreenController.BackLabel), "Opened from the Character button, Back reads Back.");
+        screen.Character.Close();
+        rig.WriteSave(MenuTestRig.NearNorth, 600d);
+        menu.NewGameButton.onClick.Invoke();
+        Assert.That(screen.Character.IsOpen, Is.False, "With a save, New game starts at once.");
+        Assert.That(rig.Flow.WorldStarts, Is.EqualTo(2));
     }
 
     /// <summary>

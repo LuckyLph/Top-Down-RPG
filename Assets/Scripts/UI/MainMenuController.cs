@@ -5,10 +5,13 @@ using UnityEngine.UI;
 using VContainer;
 
 /// <summary>
-/// The main menu (Docs/UiRevamp.md, Phase 9): a panel on the left holding the game's name, then Continue with its line
+/// The main menu (Docs/UiRevamp.md, Phase 9): a raised panel on the left over the title view (Phase 11) holding the
+/// logo, then Continue with its line
 /// (<see cref="ContinueLine"/>: where, how long played, when saved), New game, Saved games (Phase 10), Play together,
 /// Character, Options and Quit, looping; Continue, its line and Saved games hide without a save, and New game is selected
-/// then. The build version shows at the bottom right. Escape does nothing here.
+/// then. The build version shows at the bottom right. Escape does nothing here. On the first run the Welcome panel
+/// (<see cref="WelcomeController"/>) shows before it, and New game without a save goes through the Character screen,
+/// whose Back reads "Start" (Phase 11).
 /// <list type="bullet">
 /// <item><b>Starting:</b> <see cref="ContinueGame"/>, <see cref="StartNewGame"/>, <see cref="HostGame"/> and
 /// <see cref="JoinGame"/> stay as entry points for the PlayMode tests, over <see cref="MenuSessionStarter"/>; a start
@@ -30,7 +33,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     public const string PlayTogetherLabel = "Play together";
     public const string BackLabel = "Back";
     public const float PanelLeft = 16f;
-    public const float PanelWidth = 192f;
+    public const float PanelWidth = 208f;
     public const float LineHeight = 11f;
 
     [SerializeField, Tooltip("The panel on the left, a vertical layout holding the name and the buttons.")] private RectTransform panel;
@@ -49,6 +52,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     private MenuSessionStarter starter;
     private PlayTogetherController playTogether;
     private SavedGamesController savedGames;
+    private WelcomeController welcome;
     private ContinueLine line;
     private MenuNotice notice;
     private OptionsMenuController options;
@@ -69,14 +73,15 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     internal RectTransform Panel => panel;
 
     /// <summary>
-    /// Receives the session starter, Play together, Saved games, the Continue line, the menu notice, the options and
-    /// Character screens, the UI selection and the menu stack.
+    /// Receives the session starter, Play together, Saved games, the Welcome panel, the Continue line, the menu notice,
+    /// the options and Character screens, the UI selection and the menu stack.
     /// </summary>
     [Inject]
     public void Construct(
         MenuSessionStarter sessionStarter,
         PlayTogetherController playTogetherScreen,
         SavedGamesController savedGamesScreen,
+        WelcomeController welcomePanel,
         ContinueLine continueLineSource,
         MenuNotice menuNotice,
         OptionsMenuController optionsMenu,
@@ -87,6 +92,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
         starter = sessionStarter;
         playTogether = playTogetherScreen;
         savedGames = savedGamesScreen;
+        welcome = welcomePanel;
         line = continueLineSource;
         notice = menuNotice;
         options = optionsMenu;
@@ -108,7 +114,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
         }
 
         continueButton.onClick.AddListener(ContinueGame);
-        newGameButton.onClick.AddListener(StartNewGame);
+        newGameButton.onClick.AddListener(NewGame);
         savedGamesButton.onClick.AddListener(OpenSavedGames);
         playTogetherButton.onClick.AddListener(OpenPlayTogether);
         characterButton.onClick.AddListener(OpenCharacter);
@@ -134,7 +140,7 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
         }
 
         continueButton.onClick.RemoveListener(ContinueGame);
-        newGameButton.onClick.RemoveListener(StartNewGame);
+        newGameButton.onClick.RemoveListener(NewGame);
         savedGamesButton.onClick.RemoveListener(OpenSavedGames);
         playTogetherButton.onClick.RemoveListener(OpenPlayTogether);
         characterButton.onClick.RemoveListener(OpenCharacter);
@@ -146,7 +152,8 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
 
     /// <summary>
     /// Shows the build version and the buttons for whether there is a save, selects Continue (or New game without a
-    /// save), and shows the notice the session's lifecycle left, if any.
+    /// save), and shows the notice the session's lifecycle left, if any; on the first run the Welcome panel shows in the
+    /// panel's place first, and the notice once it closes.
     /// </summary>
     private void Start()
     {
@@ -159,6 +166,32 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
         dialog.Hide();
         Refresh();
         SelectFirst();
+        if (welcome != null && welcome.ShouldShow)
+        {
+            SetPanelShown(false);
+            welcome.Open(HandleWelcomeClosed);
+            return;
+        }
+
+        TakeNotice();
+    }
+
+    /// <summary>
+    /// The Welcome panel closed: shows the panel with its first button selected, then the notice left, if any.
+    /// </summary>
+    private void HandleWelcomeClosed()
+    {
+        SetPanelShown(true);
+        Refresh();
+        SelectFirst();
+        TakeNotice();
+    }
+
+    /// <summary>
+    /// Shows the notice the session's lifecycle left, if any.
+    /// </summary>
+    private void TakeNotice()
+    {
         if (notice.TryTake(out MenuNoticeKind kind, out string address))
         {
             ShowNotice(kind, address);
@@ -174,7 +207,30 @@ public class MainMenuController : MonoBehaviour, IMenuLayer
     }
 
     /// <summary>
-    /// New game: starts a new offline session, in the starting world at its entry.
+    /// The New game button: without a save on this machine (the first game), opens the Character screen in the panel's
+    /// place with its Back reading "Start", which starts the new game, while Escape brings the panel back (Docs/UiRevamp.md,
+    /// Phase 11); else starts the new game at once.
+    /// </summary>
+    public void NewGame()
+    {
+        if (!EnsureInjected() || !starter.CanStart)
+        {
+            return;
+        }
+
+        if (character == null || character.IsOpen || starter.HasSave)
+        {
+            StartNewGame();
+            return;
+        }
+
+        SetPanelShown(false);
+        character.OpenToStart(StartNewGame, () => HandleScreenClosed(newGameButton));
+    }
+
+    /// <summary>
+    /// New game: starts a new offline session, in the starting world at its entry; the entry point the PlayMode tests
+    /// drive, which never goes through the Character screen.
     /// </summary>
     public void StartNewGame()
     {

@@ -65,8 +65,8 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Vitals strip | The session line and the local player's health, shown on a full screen opened in game online |
 | Party page | The in-game menu's page of the players online, and for the host the addresses friends join at (Phase 6) |
 | Controls page | The in-game menu's page of the controls and their keys (Phase 6) |
-| Preview stage | The local character drawn into a texture by a command buffer, with no camera or light, for the Character screen and the title view (Phase 7) |
-| Title view | The still picture of the Overworld behind the main menu, rendered by a recipe |
+| Preview stage | The local character drawn into a texture by a command buffer, with no camera or light, for the Character screen (Phase 7) |
+| Title view | The still picture of the Overworld behind the main menu, rendered by a recipe (Phase 11) |
 
 ## Goals
 
@@ -114,14 +114,14 @@ The design system gave every screen one UI scale, a theme, a skin and shared com
 | Full screens in game | Options and the Character screen stay opaque raised panels. Online, they show the vitals strip, and their notice line says "You're taking damage." when the local player is hit. |
 | Options | **Layout:** a rail of categories beside a pane of rows (settled on Phase 8's previews).<br>• **Accessibility:** UI size, Reduce flashing, Reduce motion. It was the Display section; the settings file is unchanged.<br>• **Interface:** Allies' damage numbers, Chat timestamps and Chat window, the Display section's later rows (chosen in Phase 8 over Accessibility holding all six, or the chat's rows joining Controls).<br>• **Controls:** the bindings.<br>**Behaviour:**<br>• Moving onto a category shows its rows.<br>• The focused row's description, up to two lines, shows at the pane's foot, and a category's while its item is focused.<br>• Reset shows only on a row that differs from its default.<br>• The footer's reset is the category's ("Reset controls"), shown only while something in the category differs.<br>• Opened in game, the screen returns to the category used last this session. |
 | Character screen | **Layout** (settled on Phase 7's previews, where the plan's colour rows became chips): a full screen of its own, shared by the main menu and the in-game menu as the options screen is. The preview on the left, in a box of 80 x 80 art px at x3 on 640 x 360 and x2 on 480 x 270, with Turn left and Turn right, two arrow icons, either side of the pose's button; on the right **one row per part**, the option worn on its button, its colours as chips, and Reset.<br>**Grouping:** read from the dyes, not from a hand-made list: a colour goes on the one part's row whose options carry it, else on Body.<br>**Colours:** a chip opens a swatch picker, which shows the focused swatch on the preview before it is picked.<br>**Foot line:** names the focused chip or turn button.<br>The Character section leaves the options screen. This lifts PlayerCharacter.md's non-goal "An in-game character creator". |
-| Main menu | **The panel:** raised, on the left, over the title view. It holds the logo, then:<br>• Continue, with a line saying where, how long played and when saved;<br>• New game, Saved games, Play together, Character, Options and Quit, looping.<br>**Without a save,** Continue and Saved games hide.<br>**The build version** shows at the bottom right. |
+| Main menu | **The panel:** raised, on the left, over the title view (Phase 11). It holds the logo, the game's name drawn by the title view recipe, then:<br>• Continue, with a line saying where, how long played and when saved;<br>• New game, Saved games, Play together, Character, Options and Quit, looping.<br>**Without a save,** Continue and Saved games hide.<br>**The build version** shows at the bottom right. |
 | Play together | One screen with two columns:<br>• **Host:** Host and continue, Host a new game, Host another saved game (shown while there is a save besides the latest, Phase 10), then the addresses friends join with, each with Copy, and the port.<br>• **Join:** an address field taking `host` or `host:port`, checked before connecting and remembered; Join; and up to five recent hosts as buttons.<br>**Connecting** shows a modal with a count and Cancel. |
 | Host addresses | Shown openly on the Party page, two at most. They are read from this machine's network interfaces: the home network and a virtual LAN. None is the public internet address behind the router, and none is ever sent anywhere. |
 | Saved games | A screen listing every session and joined copy, newest first (settled on Phase 10's previews):<br>• **A card** shows the place, "from a host's game" after a joined copy, the time played and the last save. Only the selected card shows its actions, Play, Host and Delete, and its frame in `Accent`.<br>• **Delete** asks first and keeps one `.bak` copy.<br>• **Opened to host** from Play together's Host another saved game, it is titled "Host a saved game" and its cards hold Host and Delete, without Play.<br>• **A joined copy plays on its own,** its host gone or not, as a session of its own (the user's call in Phase 10: a save the game keeps for a client is one it can play), and Continue takes the latest save of any kind. |
-| Title view | A still picture of the Overworld at dusk, rendered by an editor recipe into a sprite of 768 x 432 art px, which covers every canvas in the Scale table. The local character stands in it, drawn by the preview stage. |
-| First run | On the first launch, a Welcome panel offers UI size, Reduce flashing and Reduce motion before the menu. The first New game goes through the Character screen, whose Back reads "Start". Later New games do not. |
+| Title view | A still picture of the Overworld at sunset (settled on Phase 11's previews: the Clearing's camp, a campfire among stumps with the Clearing's waystone and lamp beside it, lit at 0.79 of the day, the sun's shadows long), rendered by an editor recipe into a sprite of 768 x 432 art px, which covers every canvas in the Scale table. No character stands in it: the user removed the local character the plan put there. |
+| First run | On the first launch, a Welcome panel offers UI size, Reduce flashing and Reduce motion before the menu. The first New game goes through the Character screen, whose Back reads "Start". Later New games do not: a New game goes through it while this machine holds no save (Phase 11). |
 | Online pause | Kept as it is: the game never pauses online. |
-| New art | From recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, the slot badge, a disc at 5 and 16 px, and a window's move and resize grips (Phase 12);<br>• **a new title view recipe.**<br>And two licensed icons: Pixelarticons' left and right arrows (MIT), the Character screen's turn buttons, which the user asked for in place of generated icons (Phase 7). CLAUDE.md's art rule allows licensed UI icons kept with their licence.<br>No Aseprite work is needed. |
+| New art | From recipes:<br>• **`UiSkinRecipe` gains:** a bar tick, slot corner brackets, a hatch, a debuff notch, the slot badge, a disc at 5 and 16 px, and a window's move and resize grips (Phase 12);<br>• **a title view recipe,** which writes the title view and the logo (Phase 11).<br>And two licensed icons: Pixelarticons' left and right arrows (MIT), the Character screen's turn buttons, which the user asked for in place of generated icons (Phase 7). CLAUDE.md's art rule allows licensed UI icons kept with their licence.<br>No Aseprite work is needed. |
 | New theme roles | `HealthPlayer`, `HealthLost`, and `Player1` to `Player4`. Each is measured in `UiTheme.md` like every other role. |
 
 ## Behaviour
@@ -287,7 +287,7 @@ Settled on Phase 7's previews, where the colour rows became chips on each part's
   - `Delete(name)` keeps a `.bak` through a new `ISaveFolder.Delete`;
   - it keeps whether the last write failed, for the in-game menu's confirmations (Phase 6).
 - **`UiCharacters`** (`Core/UI`, Phase 12): the characters the UI's fonts hold, which the font writer puts in the atlases and the chat keeps typed text to.
-- **`UserSettingsData`** gains `recentHosts` and `firstRunDone`. A file from before reads them empty and false, or true when it already holds bindings or picks. The format version stays 1.
+- **`UserSettingsData`** gains `recentHosts` and `firstRunDone`. A file from before reads them empty and false, or true when it already holds bindings, picks or a preference away from its default (Phase 11). The format version stays 1.
 - **`WorldDefinition`** gains a display name for the world and for each entry (content rule 5, checked by `ContentTests`).
 - **`UnscaledClock`** (`Core/Clock`, Phase 7): an `IClock` on unscaled time, for the preview stage.
 - **`UserSettings.ResetCharacter`** (Phase 7): the look, every part and every colour forgotten in one write, for Reset all; **`UISelection.Current`**, the object selected, for the foot line.
@@ -329,14 +329,15 @@ Settled on Phase 7's previews, where the colour rows became chips on each part's
 - **Main menu:**
   - `MainMenuController` keeps `ContinueGame`, `StartNewGame`, `HostGame` and `JoinGame` as entry points, since the PlayMode tests drive them. Their logic moves into a plain `MenuSessionStarter` that the new screens share.
   - `PlayTogetherController` and `SavedGamesController`, with their views; `ContinueLine`, the line under Continue and Host and continue (Phase 9);
-  - new components: `Field` (Phase 12) and its `FieldControl` variant for the join field (Phase 9), `SessionCard`, `DialogNotice` (a `Dialog` variant with a message and one or two plain buttons), `InviteBlock` (Phase 9: the Party page's invite block, shared with Play together through `HostInvite`) and `TitleView`;
+  - new components: `Field` (Phase 12) and its `FieldControl` variant for the join field (Phase 9), `SessionCard`, `DialogNotice` (a `Dialog` variant with a message and one or two plain buttons), `InviteBlock` (Phase 9: the Party page's invite block, shared with Play together through `HostInvite`) and `TitleView` (Phase 11);
+  - `WelcomeController` and `WelcomeView` (Phase 11): the first run's Welcome panel;
   - `LoadingLine`, on a canvas above the fader in `Main`. It is placed through the Main scope's auto-inject list, so Core stays free of TextMesh Pro.
 - **`NoticeLine`** gains wrapping to two lines.
 
 ### Editor
 
 - **`UiSkinRecipe`** appends its new pieces (tick, corners, hatch, notch, badges); the pieces are append-only, as before.
-- **`TitleViewRecipe`** and its writer render the title view into `Assets/Sprites/UI/Title`, through the probe-render path the design system's previews used.
+- **`TitleViewRecipe`** and its writer render the title view into `Assets/Sprites/UI/Title`, through the probe-render path the design system's previews used, and draw the logo there (Phase 11).
 
 ## Networking
 
@@ -903,12 +904,60 @@ The Character button arrived with Phase 7.
 
 ### Phase 11: the title view and the first run
 
-- [ ] Open question settled: the game's name and logo.
-- [ ] `TitleViewRecipe` and the title view sprite, with `UiContentTests` allowing the title sprites.
-- [ ] `TitleView` behind the menu, with the local character standing in it.
-- [ ] The logo.
-- [ ] The Welcome panel and `firstRunDone`.
-- [ ] The first New game going through the Character screen.
+- [x] Open question settled: the game's name and logo.
+- [x] `TitleViewRecipe` and the title view sprite, with `UiContentTests` allowing the title sprites.
+- [x] `TitleView` behind the menu. The local character standing in it went, by the user's call.
+- [x] The logo.
+- [x] The Welcome panel and `firstRunDone`.
+- [x] The first New game going through the Character screen.
+
+#### Phase 11 notes
+
+- **Settled with the user on 2026-11-12,** in one round of previews at 640 x 360 (x3) and 480 x 270 (x4), with sheets of every display in the Scale table at x2, composed in the gitignored `Recordings/UiRevamp/Phase11` over views the probe rendered from the Overworld:
+  - **The name and logo** (open question 2): "Top-Down RPG" stays until the game is named, and a recipe draws the logo.
+  - **The view:** an overview of the whole Overworld (`overview/`) showed every waystone on the same paved square, so three spots were framed instead: `A`, the Lakeside lake's shore and dock; `B`, the north beach where the road ends; `C`, the Clearing's camp. Each at sunset (0.79 of the day: the sun low, its shadows long, the lights coming on) and at dusk (0.83: no sun, the lights on), with the local character standing in it. The user chose `C` at sunset, without the character.
+  - **The logo:** `L1`, Galmuri11 with every pixel doubled, 186 UI px wide, the panel widened from 192 to 208 (the proposal's width); `L2`, Galmuri9 doubled, 138 wide, the panel kept. The user chose `L1`.
+  - **Claude's calls, accepted:** the panel raised and opaque over the view, the version outlined; the Welcome's three Accessibility rows as on the options screen, the focused one described, Continue, Escape accepting; the first New game while this machine holds no save, so no second flag; Escape on the Character screen opened to start going back without starting.
+  - **Once built,** a temporary tool, since removed, rendered the real menu and Welcome in edit mode over the real title view (`Phase11/engine`, each beside its preview in `compare_*`). The logo matched pixel for pixel, and the rest once the Welcome's description moved 3 UI px down (the preview had measured its rows 2 short).
+- **The recipe.** `TitleViewRecipe` (`Assets/Settings/UI/Recipe_TitleView.asset`):
+  - **The view:** the Overworld centred on its cell (79, 131), north-east of the Clearing's waystone, 768 x 432 art px, lit at 0.79, the terrain's animation stopped at 0 s.
+  - **The logo:** "Top-Down RPG" in Galmuri11 at 12 px, one px a font pixel, read from the font's dynamic atlas through a render texture (a font pixel drawn where it is at least half covered; Galmuri at its own size covers every pixel whole or not at all), each pixel made 2 x 2, cropped and outlined by 1 px in black, the glyphs white for the image to tint: 186 x 28 px.
+- **The writer.** `TitleViewWriter.WriteLogo` writes `Logo.png` at once.
+  - `WriteView` makes a `TitleViewRender`, which refuses while an open scene has unsaved changes, opens the world's root and the chunk scenes under the view (the Overworld's (1, 1) and (1, 2)) and lights them through `NightPreview` at the phase.
+  - Three editor updates later, since chunks draw nothing in the update they open, it renders the view through `TerrainBlendProbe.Render` at one pixel per art px, the terrain's time pinned (`TerrainBlendRenderer.SetFixedTime`), writes `TitleView.png` (the same bytes for the same pixels) and puts the scenes and the night preview back.
+  - The recipe's inspector has Generate, after offering to save the open scenes. Both sprites import as single sprites at 32 PPU, point filtered.
+  - **Renders repeat but for a few pixels:** two renders in a row differed in 31 pixels at the view's top edge, where a caster above it shades the ground differently, and the first render after the recipe was made differed more. `TitleViewWriterTests` allows a tenth of a percent, so an edited world fails it while the noise passes.
+- **The menu.**
+  - `MainMenu.unity`'s canvas holds the `Background` (kept, for a window wider than any in the Scale table), then the `TitleView`: a stretched object whose `Picture` shows the sprite at one UI px a pixel, its role `Icon`, taking no pointer, centred on whole UI px as the canvas changes size.
+  - The `Menu` became a `PanelRaised` instance (its prefab replaced, its children kept).
+  - Its `Name` text gave way to the `Logo` image (`Accent`, 28 UI px tall, taking no pointer) with a 2 UI px gap under it. `MainMenuController.PanelWidth` is 208, and the panel is 229 UI px tall with a save.
+  - The `Version` is outlined, read on `Outline` over the view.
+  - The `Welcome` instance stands after the version, before the full screens.
+- **The Welcome.** `Welcome.prefab`: a `PanelRaised` 296 x 138 UI px holding:
+  - the title 4 down;
+  - the `Rows`, 280 wide and 2 apart from 27 down: a `Row` for the UI size and two `RowToggle`s, their `ResetSlot`s off, their values 112 wide;
+  - a `DescriptionLine` 86 down;
+  - Continue 8 up.
+
+  `WelcomeView.Place` centres the panel on whole UI px and lays the rows out. `WelcomeController` (Menu scope) runs it:
+  - **Rows:** the UI size steps through the sizes the display fits, as the options screen's does, and the toggles flip; each change is saved at once.
+  - **Focus:** looping navigation, and the focused row described in the options screen's words.
+  - **Closing:** Continue, or Escape, calls `UserSettings.SetFirstRunDone` and closes it.
+- **The first run in the menu.** `MainMenuController.Start` shows the Welcome in the panel's place while `UserSettings.FirstRunDone` is false; on its close the panel shows with its first button selected, then any notice the session left.
+  - The New game button now runs `NewGame`: without a save on this machine it opens the Character screen through `CharacterScreenController.OpenToStart`, whose Back button reads "Start" (`CharacterScreenView.SetBackLabel`) and starts the game as the screen closes, while Escape closes it without starting.
+  - With a save it starts at once. `StartNewGame`, the PlayMode tests' entry point, still starts at once.
+- **Settings.** `UserSettingsData.firstRunDone`, and `UserSettings.FirstRunDone` and `SetFirstRunDone()`, one write. A file from before the flag counts as past the first run when it holds a choice (`HoldsChoices`: bindings, a look, a colour or part, a display or interface preference away from its default), so a player of an earlier build is not welcomed again.
+- **Co-op.** Nothing new is sent: the title view and the logo are assets, and the first-run flag is this machine's.
+- **Found on the way.** The scene's Continue, New game, Character, Options and Quit buttons each held a persistent call to the controller beside the listener its `Awake` adds, so every press ran twice; the second found a start in progress or the screen already open. The persistent calls went (their overrides reverted), which New game's first-run path needed.
+- **Tests.**
+  - `TitleViewWriterTests` (4, new): the committed logo is the recipe's drawing; the sprites' import; the view on its world, covering every canvas; and the view rendered now matching the committed sprite.
+  - `WelcomeControllerTests` (4, new).
+  - `MainMenuControllerTests`: the first run's Welcome then the panel and the notice; the panel over the title view with the logo; the first New game through the Character screen with Start and Escape.
+  - `MainMenuLayoutTests`: the title view covering the canvas on whole UI px, the logo inside the panel, and the Welcome at every display size.
+  - `UserSettingsTests`: the flag in one write, and older files with and without choices.
+  - `UiContentTests`: the title sprites allowed, and the title view, the logo, the raised panel, the outlined version and the Welcome built from their bases.
+  - `FirstRunPlayModeTests` (1, new): a first run from empty settings, from the Welcome to the starting world through the Character screen's Start, and a later boot opening on the panel.
+  - `SceneBootTestHelper` boots with settings past the first run unless a test gives its own.
 
 ### Phase 12: the chat
 
@@ -1003,6 +1052,7 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
   - **`OptionsMenuControllerTests`:** categories, descriptions, Reset shown only when changed, and the last category.
   - **`CharacterScreenControllerTests`:** groups from the dyes, hidden rows, and the picker's navigation and names.
   - **`SavedGamesControllerTests`** (Phase 10): the cards' order and lines, the focus, Play and Host starting the card's save, Delete asking first, the host mode and deleting the last save.
+  - **`WelcomeControllerTests`** and **`TitleViewWriterTests`** (Phase 11): the Welcome's rows, focus and closing; the logo, the sprites and the view matching its world.
   - **Core:** `HostAddresses` and `JoinAddress`; `GameSave` listing (order, copies, unreadable files) and deleting (a `.bak` kept).
   - **`UserSettingsTests`:** recent hosts, and `firstRunDone` from older files.
   - **`ContentTests`:** display names for worlds and entries.
@@ -1025,5 +1075,5 @@ Added on 2026-11-11, when Phase 5's joined, left and down notices moved to it. I
 ## Open questions
 
 1. **Phase 3, other players' damage popups.** Settled on 2026-11-10: all three, as the player's choice. The "Allies' damage numbers" preference reads Shown (the default), Smaller (at `Caption`, the ticks' size: Galmuri has nothing smaller, so there is no third size) or Hidden (Phase 3 notes).
-2. **Phase 11, the game's name and logo.** A placeholder made by a recipe from the name in Galmuri, doubled and outlined, or a logo drawn in Aseprite once the game is named?
+2. **Phase 11, the game's name and logo.** Settled on 2026-11-12: "Top-Down RPG" until the game is named, and a logo the title view recipe draws, the name in Galmuri11 with every pixel doubled, outlined in black and tinted `Accent` (Phase 11 notes).
 3. **Phase 12, the chat's place, size and fading.** Settled on 2026-11-11: 144 x 96 UI px under the party frames by default, and a line stays 10 s, then fades over 1 s. The user also asked for a window to move and resize, and for timestamps as an option (Phase 12 notes).

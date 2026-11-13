@@ -178,7 +178,7 @@ Every new RPC names who may invoke it, and `NetworkRpcTests` checks it. A joined
 
 ## Working beside the UI revamp
 
-UiRevamp.md runs in another session on `feature/ui-revamp`, with its own editor (parallel work needs a worktree and a pinned UnityMCP instance per session). What this build needs from it:
+UiRevamp.md ran in another session on `feature/ui-revamp`, with its own editor, and merged into `main` on 2026-11-13 with every phase below done. What this build needs from it:
 
 | UiRevamp.md phase | For this build | Why |
 |---|---|---|

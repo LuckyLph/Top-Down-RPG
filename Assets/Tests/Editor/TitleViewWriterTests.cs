@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -110,11 +111,12 @@ public class TitleViewWriterTests
     /// The view rendered now, its world's scenes opened and lit at its phase and given a few editor updates to draw,
     /// matches the committed sprite but for at most a tenth of a percent of its pixels (a caster at its top edge can
     /// shade a few differently from one render to the next): a world edited under it changes far more, and its recipe
-    /// must be generated again. The open scenes are put back.
+    /// must be generated again. It starts from an empty scene, as earlier tests can leave the untitled one with changes.
     /// </summary>
     [UnityTest]
     public IEnumerator TheView_MatchesItsWorld()
     {
+        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         TitleViewRecipe recipe = Recipe();
         Color32[] now;
         int width;

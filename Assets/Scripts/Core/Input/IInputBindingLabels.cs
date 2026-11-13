@@ -1,8 +1,8 @@
 using System;
 
 /// <summary>
-/// Short labels for the keys the player has bound to the ability slots, for HUD text that has to follow rebinding and the
-/// keyboard layout.
+/// Short labels for the keys the player has bound to the ability slots and the other controls, for HUD and menu text that
+/// has to follow rebinding and the keyboard layout.
 /// </summary>
 public interface IInputBindingLabels
 {
@@ -13,4 +13,11 @@ public interface IInputBindingLabels
     /// empty string outside the bar.
     /// </summary>
     string GetAbilityKeyLabel(int slot);
+
+    /// <summary>
+    /// A short label for the key or mouse button bound to the <c>Player</c> map's action named
+    /// <paramref name="actionName"/> (<see cref="PlayerInputService.MoveClickActionName"/> and the like), or an empty
+    /// string for an action the map lacks.
+    /// </summary>
+    string GetActionKeyLabel(string actionName);
 }

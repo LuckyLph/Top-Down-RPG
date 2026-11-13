@@ -59,7 +59,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.6039216, g: 0.61960787, b: 0.7019608, a: 1}
+  m_Color: {r: 0.61960787, g: 0.61960787, b: 0.5882353, a: 1}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -89,7 +89,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
-  role: 22
+  role: 24
+  track: {fileID: 0}
 --- !u!1 &3285380260408034077
 GameObject:
   m_ObjectHideFlags: 0
@@ -180,6 +181,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 5
+  track: {fileID: 0}
 --- !u!1 &6078693637614646595
 GameObject:
   m_ObjectHideFlags: 0
@@ -329,6 +331,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 11
+  track: {fileID: 0}
 --- !u!1001 &2327308003746968713
 PrefabInstance:
   m_ObjectHideFlags: 0

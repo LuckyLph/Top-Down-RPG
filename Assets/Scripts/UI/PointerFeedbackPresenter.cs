@@ -3,8 +3,9 @@ using VContainer.Unity;
 
 /// <summary>
 /// Local-only cursor feedback for the local player: every frame it picks under the pointer and, over a living
-/// enemy, shows the hover ring and the attack cursor; a move click that is not on an enemy drops a move marker, and
-/// an attack move drops one in the attack move colour wherever it points.
+/// enemy, shows the hover ring and the attack cursor, and over another living player the ally hover marker
+/// (Docs/UiRevamp.md, Phase 4), never under the local player itself; a move click that is not on an enemy drops a move
+/// marker, and an attack move drops one in the attack move colour wherever it points.
 /// Nothing is shown while gameplay input is off, the pointer is over UI, or the local player is missing or dead.
 /// </summary>
 public sealed class PointerFeedbackPresenter : ITickable
@@ -42,9 +43,9 @@ public sealed class PointerFeedbackPresenter : ITickable
     }
 
     /// <summary>
-    /// Advances the move markers by <paramref name="deltaTime"/>, then updates the hover ring and attack cursor for
+    /// Advances the move markers by <paramref name="deltaTime"/>, then updates the hover markers and attack cursor for
     /// the unit under the pointer and drops a marker on a move click away from enemies or on an attack move. Hides
-    /// the ring and cursor when feedback is suppressed. Tests call it directly with a fixed step.
+    /// the markers and cursor when feedback is suppressed. Tests call it directly with a fixed step.
     /// </summary>
     internal void Tick(float deltaTime)
     {
@@ -54,6 +55,7 @@ public sealed class PointerFeedbackPresenter : ITickable
         if (!input.GameplayEnabled || camera == null || player == null || !player.Handle.IsAlive || input.IsPointerOverUI)
         {
             layer.SetHovered(null);
+            layer.SetHoveredAlly(null);
             layer.SetAttackCursor(false);
             return;
         }
@@ -62,7 +64,9 @@ public sealed class PointerFeedbackPresenter : ITickable
         Vector2 pointerWorld = camera.ScreenToWorldPoint(new Vector3(screen.x, screen.y, 0f));
         UnitTarget hovered = picker.Pick(pointerWorld);
         bool overEnemy = hovered.Team == UnitTeam.Enemy;
+        bool overAlly = hovered.Team == UnitTeam.Ally && hovered.Health != player.Handle.Health;
         layer.SetHovered(overEnemy ? hovered.Health.transform : null);
+        layer.SetHoveredAlly(overAlly ? hovered.Health.transform : null);
         layer.SetAttackCursor(overEnemy);
 
         if (input.AttackMovePressedThisFrame)

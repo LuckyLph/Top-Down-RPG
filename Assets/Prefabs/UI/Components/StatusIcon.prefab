@@ -244,6 +244,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 22
+  track: {fileID: 0}
 --- !u!1 &2008852237263819034
 GameObject:
   m_ObjectHideFlags: 0
@@ -488,6 +489,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 11
+  track: {fileID: 0}
 --- !u!1 &5463436415824646948
 GameObject:
   m_ObjectHideFlags: 0
@@ -585,6 +587,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 20
+  track: {fileID: 0}
 --- !u!114 &3230580688601285577
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -603,6 +606,7 @@ MonoBehaviour:
   elapsedFill: {fileID: 6583493946324973888}
   stacksText: {fileID: 6764958546170635370}
   frameAlpha: 0.9
+  theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
 --- !u!114 &4075891647863119191
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -616,6 +620,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: TopDownRPG.Gameplay::TooltipTrigger
   tooltip: {fileID: 0}
+  clearOf: {fileID: 0}
 --- !u!1 &5994236771652780146
 GameObject:
   m_ObjectHideFlags: 0
@@ -706,3 +711,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 20
+  track: {fileID: 0}

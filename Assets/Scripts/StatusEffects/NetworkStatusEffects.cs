@@ -139,27 +139,30 @@ public class NetworkStatusEffects : NetworkBehaviour, IStatusHold
     }
 
     /// <summary>
-    /// Host: tells clients a status in the catalog was blocked by an immunity on this unit.
+    /// Host: tells clients a status in the catalog was blocked by an immunity on this unit, naming its source unit when
+    /// it is spawned, so a client's popups know whether its own player sent it (Docs/UiRevamp.md, Phase 3).
     /// </summary>
-    private void HandleBlocked(StatusEffectDefinition definition)
+    private void HandleBlocked(StatusEffectDefinition definition, GameObject sourceObject)
     {
         int index = catalog != null ? catalog.IndexOf(definition) : -1;
         if (index >= 0)
         {
-            BlockedRpc((ushort)index);
+            bool hasSource = NetworkHealth.TryGetSourceObject(sourceObject, out NetworkObject source);
+            BlockedRpc((ushort)index, hasSource ? new NetworkObjectReference(source) : default, hasSource);
         }
     }
 
     /// <summary>
     /// Runs on clients: publishes the host's block of the status at <paramref name="catalogIndex"/> for the Immune
-    /// popup.
+    /// popup, from this client's copy of its source when it names one this client has.
     /// </summary>
     [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
-    private void BlockedRpc(ushort catalogIndex)
+    private void BlockedRpc(ushort catalogIndex, NetworkObjectReference source, bool hasSource)
     {
         if (statusService != null && catalog != null)
         {
-            statusService.PublishReplicatedBlock(receiver, catalog.Get(catalogIndex));
+            GameObject sourceObject = hasSource && source.TryGet(out NetworkObject sourceNetworkObject, NetworkManager) ? sourceNetworkObject.gameObject : null;
+            statusService.PublishReplicatedBlock(receiver, catalog.Get(catalogIndex), sourceObject);
         }
     }
 

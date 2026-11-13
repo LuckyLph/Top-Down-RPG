@@ -19,9 +19,9 @@ public class DamageReceiver : MonoBehaviour
     private bool statusesResolved;
 
     /// <summary>
-    /// Raised on the authoritative machine for a hit this unit was immune to, which changes no HP.
+    /// Raised on the authoritative machine for a hit this unit was immune to, which changes no HP, with its source.
     /// </summary>
-    public event Action<DamageType, DamageFlags> ImmuneHit;
+    public event Action<DamageType, DamageFlags, GameObject> ImmuneHit;
 
     public Health Health
     {
@@ -116,9 +116,9 @@ public class DamageReceiver : MonoBehaviour
     /// Raises <see cref="ImmuneHit"/>; called by <see cref="DamageService"/> on the authority when a hit resolves as
     /// immune.
     /// </summary>
-    internal void NotifyImmuneHit(DamageType type, DamageFlags flags)
+    internal void NotifyImmuneHit(DamageType type, DamageFlags flags, GameObject source)
     {
-        ImmuneHit?.Invoke(type, flags);
+        ImmuneHit?.Invoke(type, flags, source);
     }
 
     /// <summary>

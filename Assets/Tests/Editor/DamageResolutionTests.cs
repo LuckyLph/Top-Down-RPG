@@ -242,7 +242,7 @@ public class DamageResolutionTests
         int damagedEvents = 0;
         target.Health.Damaged += _ => damagedEvents++;
         DamageType? immuneType = null;
-        target.ImmuneHit += (type, _) => immuneType = type;
+        target.ImmuneHit += (type, _, _) => immuneType = type;
 
         DamageResult result = TestCombat.CreateDamageService(FixedGameAuthority.Authoritative, events).ApplyDamage(target, 20, DamageType.Fire);
 
@@ -333,7 +333,7 @@ public class DamageResolutionTests
         Health health = unit.Health;
         int healedEvents = 0;
         int lastHealed = 0;
-        health.Healed += (_, amount) =>
+        health.Healed += (_, amount, _) =>
         {
             healedEvents++;
             lastHealed = amount;
@@ -461,7 +461,7 @@ public class DamageResolutionTests
         DamagePopupLayer layer = CreatePopupLayer();
         CombatEvents events = new();
         CombatSettings settings = TestCombat.Settings;
-        DamagePopupPresenter presenter = new(events, layer, camera, settings);
+        DamagePopupPresenter presenter = new(events, layer, camera, settings, null, null, null);
         presenter.Start();
 
         events.Publish(new DamageReport(null, 20, DamageType.Fire, DamageFlags.None, null, Vector3.zero));

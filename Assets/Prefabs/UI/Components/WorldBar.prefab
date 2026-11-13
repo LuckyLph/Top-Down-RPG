@@ -28,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.078125, y: 0.171875, z: 0}
-  m_LocalScale: {x: 0.83199996, y: 0.83199996, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4032185244693773892}
@@ -106,6 +106,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 20
+  track: {fileID: 0}
 --- !u!1 &1619878384482262154
 GameObject:
   m_ObjectHideFlags: 0
@@ -212,6 +213,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 18
+  track: {fileID: 7824508111795384551}
 --- !u!1 &2436124936982873971
 GameObject:
   m_ObjectHideFlags: 0
@@ -405,6 +407,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 19
+  track: {fileID: 0}
 --- !u!1 &4406779682019618623
 GameObject:
   m_ObjectHideFlags: 0
@@ -433,7 +436,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.265625, y: 0.171875, z: 0}
-  m_LocalScale: {x: 0.83199996, y: 0.83199996, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4032185244693773892}
@@ -511,6 +514,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 20
+  track: {fileID: 0}
 --- !u!1 &4573720397381009464
 GameObject:
   m_ObjectHideFlags: 0
@@ -539,7 +543,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.296875, y: 0.171875, z: 0}
-  m_LocalScale: {x: 0.83199996, y: 0.83199996, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4032185244693773892}
@@ -617,6 +621,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 20
+  track: {fileID: 0}
 --- !u!1 &8356313584897683917
 GameObject:
   m_ObjectHideFlags: 0
@@ -645,7 +650,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.109375, y: 0.171875, z: 0}
-  m_LocalScale: {x: 0.83199996, y: 0.83199996, z: 1}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 4032185244693773892}
@@ -723,3 +728,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: TopDownRPG.Gameplay::ThemedGraphic
   theme: {fileID: 11400000, guid: 1d8d835566043a94fbdf054c2f51851c, type: 2}
   role: 20
+  track: {fileID: 0}

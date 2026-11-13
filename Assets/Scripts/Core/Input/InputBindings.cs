@@ -38,6 +38,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     private readonly List<int> bindingIndices = new();
     private readonly List<string> displayNames = new();
     private readonly List<string> sections = new();
+    private readonly List<string> descriptions = new();
     private readonly InputAction[] abilityActions = new InputAction[AbilitySlots.Count];
     private InputActionRebindingExtensions.RebindingOperation rebinding;
     private Action<RebindOutcome, InputAction> rebindFinished;
@@ -78,6 +79,7 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
             bindingIndices.Add(bindingIndex);
             displayNames.Add(rebindableActions[i].Label);
             sections.Add(rebindableActions[i].Section);
+            descriptions.Add(rebindableActions[i].Description ?? string.Empty);
         }
     }
 
@@ -123,6 +125,26 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     }
 
     /// <summary>
+    /// What <paramref name="action"/> does, as the options screen describes it while its row is focused
+    /// (Docs/UiRevamp.md, Phase 8), or an empty string when it is not rebindable.
+    /// </summary>
+    public string GetDescription(InputAction action)
+    {
+        int index = IndexOf(action);
+        return index >= 0 ? descriptions[index] : string.Empty;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="action"/> is bound to its default input, the one the asset gives it; true for an action
+    /// that is not rebindable.
+    /// </summary>
+    public bool IsDefault(InputAction action)
+    {
+        int index = IndexOf(action);
+        return index < 0 || SamePath(EffectivePath(index), DefaultPath(index));
+    }
+
+    /// <summary>
     /// The control path <paramref name="action"/> is bound to now, override included, or null when it is not rebindable.
     /// </summary>
     public string GetPath(InputAction action)
@@ -138,6 +160,16 @@ public sealed class InputBindings : IInitializable, IDisposable, IInputBindingLa
     public string GetAbilityKeyLabel(int slot)
     {
         return slot >= 0 && slot < abilityActions.Length ? GetShortLabel(abilityActions[slot]) : string.Empty;
+    }
+
+    /// <summary>
+    /// The short label of the input bound to the <c>Player</c> map's action named <paramref name="actionName"/>, or an
+    /// empty string when the asset or the action is missing.
+    /// </summary>
+    public string GetActionKeyLabel(string actionName)
+    {
+        InputAction action = actions != null ? actions.FindAction($"{PlayerInputService.PlayerMapName}/{actionName}", false) : null;
+        return GetShortLabel(action);
     }
 
     /// <summary>

@@ -23,6 +23,13 @@ public interface ISaveFolder
     ISaveStore Open(string name);
 
     /// <summary>
+    /// Deletes the save file named <paramref name="name"/> from the folder, keeping one copy of it beside it as
+    /// <c>&lt;name&gt;.bak</c>, which replaces the copy an earlier delete of that name kept (Docs/UiRevamp.md, Phase 10).
+    /// Returns false when there is no such file or the disk refuses.
+    /// </summary>
+    bool Delete(string name);
+
+    /// <summary>
     /// Puts the legacy save file out of the way once it was imported, under a name of its own beside it, so it is never
     /// imported again; <paramref name="moved"/> names it. Returns false when the disk refuses.
     /// </summary>

@@ -1,42 +1,117 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using VContainer.Unity;
 
 /// <summary>
-/// Drives the <see cref="OptionsMenuView"/>: a Character section first, when the view names a catalog of more than one
-/// look or colours a look carries: a Look row whose button shows the look of the local settings and moves to the next
-/// one, its reset going back to the first (Docs/AsepriteCharacters.md, Phase 2), then a row per part slot of more than
-/// one option of the first look that wears parts (Docs/PlayerCharacter.md, Phases 6 and 7; not the weapon's, which
-/// shows the equipped weapon's gear), its button showing the option the
-/// local settings pick and moving to the next, its reset going back to the first, then a row per colour choice whose
-/// dyes a look's sheets or parts carry (Phase 5), its button showing the swatch the local settings pick and moving to the
-/// next one of its list, its reset going back to the choice's own; then a Display section with the UI size row
-/// (Docs/DesignSystem.md, Phase 3), its button showing the size the display shows and moving to the next one that fits,
-/// its reset going back to Normal, and the Reduce flashing and Reduce motion toggle rows (Phase 6), each button reading
-/// On or Off and turning it the other way, each reset turning it off; then a row per rebindable action of
-/// <see cref="InputBindings"/> under its section, rebinding a row when its binding is selected (listening starts on the
-/// next tick, so the click itself is never captured), naming the action that moved on a swap, resetting one row or all
-/// of them after a confirmation; and it closes on Back. While open it is a layer on the <see cref="MenuStack"/>; Back
-/// closes the confirmation, or else the screen, and does nothing while a rebind is pending or listening (the rebind
-/// itself takes Escape as cancel). Opening it selects the first row.
+/// Drives the <see cref="OptionsMenuView"/> (Docs/KeyBindings.md, Options screen; Docs/UiRevamp.md, Phase 8): a rail of
+/// three categories beside a pane of the current one's rows.
+/// <list type="bullet">
+/// <item><b>Accessibility:</b> the UI size row (Docs/DesignSystem.md, Phase 3), its button showing the size the display
+/// shows and moving to the next one that fits, its reset going back to Normal; the Reduce flashing and Reduce motion
+/// toggle rows (Phase 6), each button reading On or Off and turning it the other way, each reset turning it off.</item>
+/// <item><b>Interface:</b> the allies' damage numbers row (Docs/UiRevamp.md, Phase 3), its button showing Shown, Smaller
+/// or Hidden and moving to the next, its reset going back to Shown; the Chat timestamps toggle row and the Chat window
+/// row (Phase 12), its button reading Default or Moved and, like its reset, putting a moved chat window back.</item>
+/// <item><b>Controls:</b> a row per rebindable action of <see cref="InputBindings"/> under its section, rebinding a row
+/// when its binding is selected (listening starts on the next tick, so the click itself is never captured), naming the
+/// action that moved on a swap, its reset putting its default back.</item>
+/// </list>
+/// Moving onto a category shows its rows; Right or Submit enters its first row, and Left from any row returns to it. The
+/// focused row's description shows at the pane's foot, and a category's while its item is focused. A row's Reset shows
+/// only while it differs from its default, and is out of navigation while hidden; the footer's reset, shown while
+/// anything in the category differs, puts the whole category back after a confirmation. Opening from the main menu shows
+/// the first category, in game the one used last this session (Controls the first time), and the Controls page's Change
+/// keys the Controls' first row. While open it is a layer on the <see cref="MenuStack"/>; Back closes the confirmation,
+/// or else the screen, and does nothing while a rebind is pending or listening (the rebind itself takes Escape as
+/// cancel). Online in game it is a full screen with the vitals strip (<see cref="IVitalsScreen"/>). The look, parts and
+/// colours are the Character screen's (<see cref="CharacterScreenController"/>, Docs/UiRevamp.md, Phase 7).
 /// </summary>
-public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, IMenuLayer
+public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, IMenuLayer, IVitalsScreen
 {
+    /// <summary>The options screen's categories, in the rail's order.</summary>
+    public enum Category
+    {
+        Accessibility,
+        Interface,
+        Controls
+    }
+
+    /// <summary>
+    /// Where the screen opens: on the first category (the main menu), on the category used last this session, Controls
+    /// the first time (the in-game menu), or on the Controls' first row (the in-game menu's Change keys).
+    /// </summary>
+    public enum Opening
+    {
+        First,
+        Last,
+        Controls
+    }
+
     public const string ListeningPromptFormat = "Press a key or mouse button for {0}.\nEsc to cancel.";
     public const string MovedNoticeFormat = "{0} moved to {1}.";
-    public const string ResetAllNotice = "All controls are back to their defaults.";
-    public const string CharacterSection = "Character";
-    public const string LookLabel = "Look";
-    public const string DisplaySection = "Display";
     public const string UiSizeLabel = "UI size";
     public static readonly string[] UiSizeNames = { "Normal", "Large", "Larger" };
     public const string ReduceFlashingLabel = "Reduce flashing";
     public const string ReduceMotionLabel = "Reduce motion";
     public const string OnName = "On";
     public const string OffName = "Off";
+    public const string AllyPopupsLabel = "Allies' damage numbers";
+    public static readonly string[] AllyPopupsNames = { "Shown", "Smaller", "Hidden" };
+    public const string ChatTimestampsLabel = "Chat timestamps";
+    public const string ChatWindowLabel = "Chat window";
+    public const string ChatWindowDefault = "Default";
+    public const string ChatWindowMoved = "Moved";
+    public const string UiSizeDescription = "Draws the menus and the HUD larger.";
+    public const string UiSizeNoLargerSize = "Larger sizes need a larger window.";
+    public const string ReduceFlashingDescription = "Hits flash at a third of their strength, and torches and fires stop flickering.";
+    public const string ReduceMotionDescription = "The camera doesn't shake when you're hit, and damage numbers fade in place instead of rising.";
+    public const string AllyPopupsDescription = "How the numbers of hits and heals on other players show: like yours, smaller, or not at all.";
+    public const string ChatTimestampsDescription = "Starts each chat line with the time it arrived.";
+    public const string ChatWindowDescription = "Puts the chat window back in its place and size. Move it by its header while the chat is open.";
+    public static readonly string[] CategoryNames = { "Accessibility", "Interface", "Controls" };
+    public static readonly string[] CategoryDescriptions =
+    {
+        "How large the UI is drawn, and less flashing and motion.",
+        "How allies' damage numbers show, and the chat.",
+        "The key or mouse button for every control.",
+    };
+    public static readonly string[] ResetLabels = { "Reset accessibility", "Reset interface", "Reset controls" };
+    public static readonly string[] ResetQuestions =
+    {
+        "Reset all accessibility options to their defaults?",
+        "Reset all interface options to their defaults?",
+        "Reset all controls to their defaults?",
+    };
+    public static readonly string[] ResetNotices =
+    {
+        "All accessibility options are back to their defaults.",
+        "All interface options are back to their defaults.",
+        "All controls are back to their defaults.",
+    };
+
+    private const string UiSizeDescriptionNoLargerSize = UiSizeDescription + "\n" + UiSizeNoLargerSize;
+
+    /// <summary>A row of the screen: its view, its category, and the action it binds or the preference it shows.</summary>
+    private sealed class OptionRow
+    {
+        public OptionRow(KeyBindingRowView view, Category category, InputAction action, string description, Func<bool> changed)
+        {
+            View = view;
+            Category = category;
+            Action = action;
+            Description = description;
+            Changed = changed;
+        }
+
+        public KeyBindingRowView View { get; }
+        public Category Category { get; }
+        public InputAction Action { get; }
+        public string Description { get; }
+        public Func<bool> Changed { get; }
+    }
 
     private readonly OptionsMenuView view;
     private readonly InputBindings bindings;
@@ -44,23 +119,29 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     private readonly UISelection selection;
     private readonly UserSettings settings;
     private readonly UiScale uiScale;
+    private readonly RailItemView[] railItems = new RailItemView[3];
+    private readonly List<OptionRow> options = new();
     private readonly List<KeyBindingRowView> rows = new();
-    private readonly List<KeyBindingRowView> colourRows = new();
-    private readonly List<int> colourChoices = new();
-    private readonly List<KeyBindingRowView> partRows = new();
-    private readonly List<CharacterPartSlot> partSlots = new();
-    private CharacterParts parts;
-    private KeyBindingRowView lookRow;
+    private readonly List<GameObject> headers = new();
+    private readonly List<Category> headerCategories = new();
+    private readonly List<KeyBindingRowView> shownRows = new();
     private KeyBindingRowView uiSizeRow;
     private KeyBindingRowView reduceFlashingRow;
     private KeyBindingRowView reduceMotionRow;
+    private KeyBindingRowView allyPopupsRow;
+    private KeyBindingRowView chatTimestampsRow;
+    private KeyBindingRowView chatWindowRow;
+    private Category current;
+    private Category last = Category.Controls;
+    private GameObject focused;
     private Action onClosed;
     private int pendingRebind = -1;
     private int listeningRow = -1;
+    private bool started;
 
     /// <summary>
-    /// Creates a closed options controller that edits <paramref name="bindings"/>, and the look, colours, parts and UI
-    /// size step kept in <paramref name="settings"/>, through <paramref name="view"/>; the UI size row offers the steps
+    /// Creates a closed options controller that edits <paramref name="bindings"/>, and the preferences kept in
+    /// <paramref name="settings"/>, through <paramref name="view"/>; the UI size row offers the steps
     /// <paramref name="scale"/> says fit.
     /// </summary>
     public OptionsMenuController(OptionsMenuView view, InputBindings bindings, MenuStack menus, UISelection selection, UserSettings settings, UiScale scale)
@@ -75,29 +156,15 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
 
     public bool IsOpen => view.IsShown;
     public bool IsListening => listeningRow >= 0;
+    public Category CurrentCategory => current;
+    public VitalsStripView Vitals => view.Vitals;
     internal int RowCount => rows.Count;
-    internal KeyBindingRowView LookRow => lookRow;
     internal KeyBindingRowView UiSizeRow => uiSizeRow;
     internal KeyBindingRowView ReduceFlashingRow => reduceFlashingRow;
     internal KeyBindingRowView ReduceMotionRow => reduceMotionRow;
-    internal int ColourRowCount => colourRows.Count;
-    internal int PartRowCount => partRows.Count;
-
-    /// <summary>
-    /// The part row at <paramref name="index"/>, in slot order.
-    /// </summary>
-    internal KeyBindingRowView GetPartRow(int index)
-    {
-        return partRows[index];
-    }
-
-    /// <summary>
-    /// The colour row at <paramref name="index"/>, in the order its choices have in the colours.
-    /// </summary>
-    internal KeyBindingRowView GetColourRow(int index)
-    {
-        return colourRows[index];
-    }
+    internal KeyBindingRowView AllyPopupsRow => allyPopupsRow;
+    internal KeyBindingRowView ChatTimestampsRow => chatTimestampsRow;
+    internal KeyBindingRowView ChatWindowRow => chatWindowRow;
 
     /// <summary>
     /// The row built for the rebindable action at <paramref name="index"/>, in <see cref="InputBindings"/> order.
@@ -108,83 +175,69 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Hides the screen, builds the Character section and the Display section, then a section header for each new
-    /// section and a labelled row per rebindable action, wires the buttons, and keeps the rows' labels in sync with
-    /// <see cref="InputBindings.BindingsChanged"/>, <see cref="UserSettings.CharacterLookChanged"/>,
-    /// <see cref="UserSettings.CharacterColoursChanged"/>, <see cref="UserSettings.UiSizeStepChanged"/>,
-    /// <see cref="UiScale.Changed"/>, <see cref="UserSettings.ReduceFlashingChanged"/> and
-    /// <see cref="UserSettings.ReduceMotionChanged"/>.
+    /// The rail's item for <paramref name="category"/>.
+    /// </summary>
+    internal RailItemView GetRailItem(Category category)
+    {
+        return railItems[(int)category];
+    }
+
+    /// <summary>
+    /// Hides the screen, builds the rail, the Accessibility and Interface rows, then a section header for each new
+    /// section and a labelled row per rebindable action, wires the buttons, shows the first category, and keeps the rows
+    /// in sync with the bindings, the preferences and the UI sizes that fit.
     /// </summary>
     public void Start()
     {
         view.SetShown(false);
         view.HideListening();
         view.SetConfirmShown(false);
-        BuildCharacterSection();
-        BuildDisplaySection();
-
-        string section = null;
-        for (int i = 0; i < bindings.Count; i++)
+        view.SetWarning(null);
+        view.SetDescription(string.Empty);
+        for (int i = 0; i < railItems.Length; i++)
         {
-            InputAction action = bindings.GetAction(i);
-            string actionSection = bindings.GetSection(action);
-            if (actionSection != section)
-            {
-                view.AddSectionHeader(actionSection);
-                section = actionSection;
-            }
-
-            KeyBindingRowView row = view.AddRow();
-            row.SetLabel(bindings.GetDisplayName(action));
-            int index = i;
-            row.BindingButton.onClick.AddListener(() => RequestRebind(index));
-            row.ResetButton.onClick.AddListener(() => ResetRow(index));
-            rows.Add(row);
+            RailItemView item = view.AddRailItem();
+            item.SetLabel(CategoryNames[i]);
+            Category category = (Category)i;
+            item.Button.onClick.AddListener(() => EnterCategory(category));
+            railItems[i] = item;
         }
 
-        view.ResetAllButton.onClick.AddListener(AskResetAll);
+        BuildAccessibility();
+        BuildInterface();
+        BuildControls();
+        view.CategoryResetButton.onClick.AddListener(AskReset);
         view.BackButton.onClick.AddListener(Close);
-        view.ConfirmYesButton.onClick.AddListener(ConfirmResetAll);
-        view.ConfirmNoButton.onClick.AddListener(CancelResetAll);
-        bindings.BindingsChanged += RefreshRows;
-        RefreshRows();
+        view.ConfirmYesButton.onClick.AddListener(ConfirmReset);
+        view.ConfirmNoButton.onClick.AddListener(CancelReset);
+        bindings.BindingsChanged += Refresh;
+        settings.UiSizeStepChanged += Refresh;
+        uiScale.Changed += Refresh;
+        settings.ReduceFlashingChanged += Refresh;
+        settings.ReduceMotionChanged += Refresh;
+        settings.AllyPopupsChanged += Refresh;
+        settings.ChatTimestampsChanged += Refresh;
+        settings.ChatWindowChanged += Refresh;
+        started = true;
+        ShowCategory(Category.Accessibility);
+        Refresh();
     }
 
     /// <summary>
-    /// Stops following binding changes, leaves the menu stack and cancels a rebind that is still listening.
+    /// Stops following the bindings and preferences, leaves the menu stack and cancels a rebind that is still listening.
     /// </summary>
     public void Dispose()
     {
-        bindings.BindingsChanged -= RefreshRows;
-        if (lookRow != null)
+        if (started)
         {
-            settings.CharacterLookChanged -= RefreshLook;
-        }
-
-        if (colourRows.Count > 0)
-        {
-            settings.CharacterColoursChanged -= RefreshColours;
-        }
-
-        if (partRows.Count > 0)
-        {
-            settings.CharacterPartsChanged -= RefreshParts;
-        }
-
-        if (uiSizeRow != null)
-        {
-            settings.UiSizeStepChanged -= RefreshUiSize;
-            uiScale.Changed -= RefreshUiSize;
-        }
-
-        if (reduceFlashingRow != null)
-        {
-            settings.ReduceFlashingChanged -= RefreshReduceFlashing;
-        }
-
-        if (reduceMotionRow != null)
-        {
-            settings.ReduceMotionChanged -= RefreshReduceMotion;
+            bindings.BindingsChanged -= Refresh;
+            settings.UiSizeStepChanged -= Refresh;
+            uiScale.Changed -= Refresh;
+            settings.ReduceFlashingChanged -= Refresh;
+            settings.ReduceMotionChanged -= Refresh;
+            settings.AllyPopupsChanged -= Refresh;
+            settings.ChatTimestampsChanged -= Refresh;
+            settings.ChatWindowChanged -= Refresh;
         }
 
         menus.Remove(this);
@@ -195,58 +248,29 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Shows the screen with its first row selected. <paramref name="closed"/> runs once it closes.
+    /// Shows the screen as <paramref name="opening"/> asks: the first category or the one used last with its rail item
+    /// selected, or the Controls with their first row selected. <paramref name="closed"/> runs once it closes.
     /// </summary>
-    public void Open(Action closed)
+    public void Open(Action closed, Opening opening = Opening.First)
     {
         onClosed = closed;
         pendingRebind = -1;
         view.SetNotice(string.Empty);
         view.SetConfirmShown(false);
         view.HideListening();
-        RefreshRows();
         view.SetShown(true);
+        Category category = opening == Opening.First ? Category.Accessibility : opening == Opening.Controls ? Category.Controls : last;
+        ShowCategory(category);
+        Refresh();
         menus.Push(this);
-        KeyBindingRowView first = FirstRow();
-        selection.Select(first != null ? first.BindingButton : view.BackButton);
+        Selectable first = opening == Opening.Controls ? FirstRowControl() : railItems[(int)category].Button;
+        selection.Select(first);
+        ShowFocus(first.gameObject);
     }
 
     /// <summary>
-    /// The first row of the screen: the Look row, a part row, a colour row, the UI size row, the Reduce flashing row or
-    /// a binding row, in that order; null without rows.
-    /// </summary>
-    private KeyBindingRowView FirstRow()
-    {
-        if (lookRow != null)
-        {
-            return lookRow;
-        }
-
-        if (partRows.Count > 0)
-        {
-            return partRows[0];
-        }
-
-        if (colourRows.Count > 0)
-        {
-            return colourRows[0];
-        }
-
-        if (uiSizeRow != null)
-        {
-            return uiSizeRow;
-        }
-
-        if (reduceFlashingRow != null)
-        {
-            return reduceFlashingRow;
-        }
-
-        return rows.Count > 0 ? rows[0] : null;
-    }
-
-    /// <summary>
-    /// Hides the screen, cancelling a rebind that is listening, and runs the callback given to <see cref="Open"/>.
+    /// Hides the screen, cancelling a rebind that is listening, keeps its category as the one used last, and runs the
+    /// callback given to <see cref="Open"/>.
     /// </summary>
     public void Close()
     {
@@ -261,6 +285,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
             bindings.CancelRebind();
         }
 
+        last = current;
         view.SetConfirmShown(false);
         view.HideListening();
         view.SetShown(false);
@@ -271,21 +296,33 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Starts listening for the rebind requested on an earlier frame, so the click that asked for it is not
-    /// captured as the new binding.
+    /// Starts listening for the rebind requested on an earlier frame, so the click that asked for it is not captured as
+    /// the new binding, and follows the selection: moving onto a category's item shows it, and the description follows
+    /// the focused row.
     /// </summary>
     public void Tick()
     {
-        if (IsOpen && pendingRebind >= 0)
+        if (!IsOpen)
+        {
+            return;
+        }
+
+        if (pendingRebind >= 0)
         {
             int row = pendingRebind;
             pendingRebind = -1;
             BeginListening(row);
         }
+
+        GameObject selected = selection.Current;
+        if (selected != focused)
+        {
+            ShowFocus(selected);
+        }
     }
 
     /// <summary>
-    /// Closes the Reset all confirmation, or else the screen. Ignored while a rebind is pending or listening.
+    /// Closes the confirmation, or else the screen. Ignored while a rebind is pending or listening.
     /// </summary>
     public void HandleBack()
     {
@@ -296,7 +333,7 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
 
         if (view.IsConfirmShown)
         {
-            CancelResetAll();
+            CancelReset();
         }
         else
         {
@@ -305,20 +342,399 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
+    /// Shows <paramref name="text"/> as the notice line's warning over the notice, or clears it for null.
+    /// </summary>
+    public void SetWarning(string text)
+    {
+        view.SetWarning(text);
+    }
+
+    /// <summary>
+    /// Whether nothing is being rebound or confirmed, so a row's button or reset may act.
+    /// </summary>
+    private bool CanChange => !IsListening && !view.IsConfirmShown;
+
+    /// <summary>
+    /// The UI size step the display shows: the one the local settings ask for, lowered to the steps that fit.
+    /// </summary>
+    private int UiSizeStep => Mathf.Clamp(settings.UiSizeStep, 0, Mathf.Min(uiScale.StepsThatFit, UiSizeNames.Length - 1));
+
+    /// <summary>
+    /// Builds the Accessibility rows: UI size, Reduce flashing and Reduce motion.
+    /// </summary>
+    private void BuildAccessibility()
+    {
+        uiSizeRow = view.AddRow();
+        uiSizeRow.SetLabel(UiSizeLabel);
+        uiSizeRow.BindingButton.onClick.AddListener(NextUiSize);
+        uiSizeRow.ResetButton.onClick.AddListener(() => Change(() => settings.SetUiSizeStep(0)));
+        AddOption(uiSizeRow, Category.Accessibility, UiSizeDescription, () => UiSizeStep != 0);
+        reduceFlashingRow = AddToggleRow(ReduceFlashingLabel, () => settings.SetReduceFlashing(!settings.ReduceFlashing), () => settings.SetReduceFlashing(false));
+        AddOption(reduceFlashingRow, Category.Accessibility, ReduceFlashingDescription, () => settings.ReduceFlashing);
+        reduceMotionRow = AddToggleRow(ReduceMotionLabel, () => settings.SetReduceMotion(!settings.ReduceMotion), () => settings.SetReduceMotion(false));
+        AddOption(reduceMotionRow, Category.Accessibility, ReduceMotionDescription, () => settings.ReduceMotion);
+    }
+
+    /// <summary>
+    /// Builds the Interface rows: Allies' damage numbers, Chat timestamps and Chat window.
+    /// </summary>
+    private void BuildInterface()
+    {
+        allyPopupsRow = view.AddRow();
+        allyPopupsRow.SetLabel(AllyPopupsLabel);
+        allyPopupsRow.BindingButton.onClick.AddListener(() => Change(() => settings.SetAllyPopups((AllyPopups)(((int)settings.AllyPopups + 1) % AllyPopupsNames.Length))));
+        allyPopupsRow.ResetButton.onClick.AddListener(() => Change(() => settings.SetAllyPopups(AllyPopups.Shown)));
+        AddOption(allyPopupsRow, Category.Interface, AllyPopupsDescription, () => settings.AllyPopups != AllyPopups.Shown);
+        chatTimestampsRow = AddToggleRow(ChatTimestampsLabel, () => settings.SetChatTimestamps(!settings.ChatTimestamps), () => settings.SetChatTimestamps(false));
+        AddOption(chatTimestampsRow, Category.Interface, ChatTimestampsDescription, () => settings.ChatTimestamps);
+        chatWindowRow = view.AddRow();
+        chatWindowRow.SetLabel(ChatWindowLabel);
+        chatWindowRow.BindingButton.onClick.AddListener(() => Change(() => settings.SetChatWindow(default)));
+        chatWindowRow.ResetButton.onClick.AddListener(() => Change(() => settings.SetChatWindow(default)));
+        AddOption(chatWindowRow, Category.Interface, ChatWindowDescription, () => settings.ChatWindow.IsMoved);
+    }
+
+    /// <summary>
+    /// Builds the Controls rows: a section header for each new section, then a labelled row per rebindable action.
+    /// </summary>
+    private void BuildControls()
+    {
+        string section = null;
+        for (int i = 0; i < bindings.Count; i++)
+        {
+            InputAction action = bindings.GetAction(i);
+            string actionSection = bindings.GetSection(action);
+            if (actionSection != section)
+            {
+                headers.Add(view.AddSectionHeader(actionSection).gameObject);
+                headerCategories.Add(Category.Controls);
+                section = actionSection;
+            }
+
+            KeyBindingRowView row = view.AddRow();
+            row.SetLabel(bindings.GetDisplayName(action));
+            int index = i;
+            row.BindingButton.onClick.AddListener(() => RequestRebind(index));
+            row.ResetButton.onClick.AddListener(() => ResetRow(index));
+            rows.Add(row);
+            options.Add(new OptionRow(row, Category.Controls, action, null, null));
+        }
+    }
+
+    /// <summary>
+    /// Keeps <paramref name="row"/>, a preference's, in <paramref name="category"/>, described by
+    /// <paramref name="description"/> and differing from its default while <paramref name="changed"/>.
+    /// </summary>
+    private void AddOption(KeyBindingRowView row, Category category, string description, Func<bool> changed)
+    {
+        options.Add(new OptionRow(row, category, null, description, changed));
+    }
+
+    /// <summary>
+    /// Adds a toggle row labelled <paramref name="label"/> whose button runs <paramref name="toggle"/> and whose reset
+    /// runs <paramref name="reset"/>, each ignored while listening or confirming.
+    /// </summary>
+    private KeyBindingRowView AddToggleRow(string label, Func<bool> toggle, Func<bool> reset)
+    {
+        KeyBindingRowView row = view.AddToggleRow();
+        row.SetLabel(label);
+        row.BindingButton.onClick.AddListener(() => Change(toggle));
+        row.ResetButton.onClick.AddListener(() => Change(reset));
+        return row;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="change"/>, a preference's setter, unless a rebind is listening or a confirmation shows.
+    /// </summary>
+    private void Change(Func<bool> change)
+    {
+        if (CanChange)
+        {
+            change();
+        }
+    }
+
+    /// <summary>
+    /// UI size button: keeps the next size that fits, after the largest Normal. Ignored while listening or confirming.
+    /// </summary>
+    private void NextUiSize()
+    {
+        if (CanChange)
+        {
+            int sizes = Mathf.Min(uiScale.StepsThatFit, UiSizeNames.Length - 1) + 1;
+            settings.SetUiSizeStep((UiSizeStep + 1) % sizes);
+        }
+    }
+
+    /// <summary>
+    /// A rail item's press (a click or Submit): shows its category and enters its first row. Ignored while listening or
+    /// confirming.
+    /// </summary>
+    private void EnterCategory(Category category)
+    {
+        if (!CanChange)
+        {
+            return;
+        }
+
+        if (category != current)
+        {
+            ShowCategory(category);
+        }
+
+        Selectable first = FirstRowControl();
+        selection.Select(first);
+        ShowFocus(first.gameObject);
+    }
+
+    /// <summary>
+    /// Makes <paramref name="category"/> the current one: its rail item raised, its rows and headers shown and the
+    /// others hidden, the footer's reset its own, the rows from the top.
+    /// </summary>
+    private void ShowCategory(Category category)
+    {
+        current = category;
+        for (int i = 0; i < railItems.Length; i++)
+        {
+            railItems[i].SetCurrent(i == (int)category);
+        }
+
+        foreach (OptionRow option in options)
+        {
+            SetActive(option.View.gameObject, option.Category == category);
+        }
+
+        for (int i = 0; i < headers.Count; i++)
+        {
+            SetActive(headers[i], headerCategories[i] == category);
+        }
+
+        ShowResets();
+        if (IsOpen)
+        {
+            view.ScrollToTop();
+        }
+    }
+
+    /// <summary>
+    /// Shows every row's value: the UI size the display shows, each toggle's state, the allies' popups, whether the
+    /// chat window moved and each action's binding; then each Reset and the footer's.
+    /// </summary>
+    private void Refresh()
+    {
+        uiSizeRow.SetBinding(UiSizeNames[UiSizeStep]);
+        ShowToggle(reduceFlashingRow, settings.ReduceFlashing);
+        ShowToggle(reduceMotionRow, settings.ReduceMotion);
+        allyPopupsRow.SetBinding(AllyPopupsNames[(int)settings.AllyPopups]);
+        ShowToggle(chatTimestampsRow, settings.ChatTimestamps);
+        chatWindowRow.SetBinding(settings.ChatWindow.IsMoved ? ChatWindowMoved : ChatWindowDefault);
+        for (int i = 0; i < rows.Count; i++)
+        {
+            rows[i].SetBinding(bindings.GetLabel(bindings.GetAction(i)));
+        }
+
+        ShowResets();
+        if (IsOpen)
+        {
+            Describe(selection.Current);
+        }
+    }
+
+    /// <summary>
+    /// Shows each row's Reset while the row differs from its default, and the footer's reset while any row of the
+    /// current category does; rewires the navigation and moves the selection off a Reset that just hid.
+    /// </summary>
+    private void ShowResets()
+    {
+        bool any = false;
+        foreach (OptionRow option in options)
+        {
+            bool changed = option.Action != null ? !bindings.IsDefault(option.Action) : option.Changed();
+            option.View.SetResetShown(changed);
+            any |= changed && option.Category == current;
+        }
+
+        view.SetCategoryReset(ResetLabels[(int)current], any);
+        Navigate();
+        KeepSelectionShown();
+    }
+
+    /// <summary>
+    /// When the selection is a Reset that just hid, selects its row's button; when it is the footer's reset, Back.
+    /// </summary>
+    private void KeepSelectionShown()
+    {
+        GameObject selected = selection.Current;
+        if (!IsOpen || selected == null || selected.activeSelf)
+        {
+            return;
+        }
+
+        foreach (OptionRow option in options)
+        {
+            if (option.View.ResetButton.gameObject == selected)
+            {
+                selection.Select(option.View.BindingButton);
+                return;
+            }
+        }
+
+        if (selected == view.CategoryResetButton.gameObject)
+        {
+            selection.Select(view.BackButton);
+        }
+    }
+
+    /// <summary>
+    /// The first row's button in the current category, or Back when it has none.
+    /// </summary>
+    private Selectable FirstRowControl()
+    {
+        foreach (OptionRow option in options)
+        {
+            if (option.Category == current)
+            {
+                return option.View.BindingButton;
+            }
+        }
+
+        return view.BackButton;
+    }
+
+    /// <summary>
+    /// Wires the explicit navigation: the rail's items loop up and down and go right to the first row; within the pane a
+    /// row's button goes left to the current item and right to its Reset when shown, Up and Down move to the same kind
+    /// of control in the row above or below (a hidden Reset's row giving its button), and Down from the last row reaches
+    /// the footer, whose buttons go left to the rail and up to the last row.
+    /// </summary>
+    private void Navigate()
+    {
+        shownRows.Clear();
+        foreach (OptionRow option in options)
+        {
+            if (option.Category == current)
+            {
+                shownRows.Add(option.View);
+            }
+        }
+
+        Selectable item = railItems[(int)current].Button;
+        Selectable footer = view.IsCategoryResetShown ? view.CategoryResetButton : view.BackButton;
+        Selectable firstRow = shownRows.Count > 0 ? shownRows[0].BindingButton : footer;
+        Selectable lastRow = shownRows.Count > 0 ? shownRows[shownRows.Count - 1].BindingButton : item;
+        for (int i = 0; i < railItems.Length; i++)
+        {
+            SetNavigation(railItems[i].Button, null, firstRow, railItems[(i + railItems.Length - 1) % railItems.Length].Button, railItems[(i + 1) % railItems.Length].Button);
+        }
+
+        for (int r = 0; r < shownRows.Count; r++)
+        {
+            KeyBindingRowView row = shownRows[r];
+            KeyBindingRowView above = r > 0 ? shownRows[r - 1] : null;
+            KeyBindingRowView below = r < shownRows.Count - 1 ? shownRows[r + 1] : null;
+            SetNavigation(row.BindingButton, item, row.IsResetShown ? row.ResetButton : null, above != null ? above.BindingButton : null, below != null ? below.BindingButton : footer);
+            if (row.IsResetShown)
+            {
+                SetNavigation(row.ResetButton, row.BindingButton, null, above != null ? ResetOrButton(above) : null, below != null ? ResetOrButton(below) : footer);
+            }
+        }
+
+        SetNavigation(view.CategoryResetButton, item, view.BackButton, lastRow, null);
+        SetNavigation(view.BackButton, view.IsCategoryResetShown ? view.CategoryResetButton : item, null, lastRow, null);
+    }
+
+    /// <summary>
+    /// <paramref name="row"/>'s Reset when shown, else its button.
+    /// </summary>
+    private static Selectable ResetOrButton(KeyBindingRowView row)
+    {
+        return row.IsResetShown ? row.ResetButton : row.BindingButton;
+    }
+
+    /// <summary>
+    /// Follows <paramref name="selected"/>, the selection just moved to: a category's item shows its category, and the
+    /// description follows (<see cref="Describe"/>).
+    /// </summary>
+    private void ShowFocus(GameObject selected)
+    {
+        focused = selected;
+        if (selected == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < railItems.Length; i++)
+        {
+            if (railItems[i].gameObject == selected && (Category)i != current)
+            {
+                ShowCategory((Category)i);
+            }
+        }
+
+        Describe(selected);
+    }
+
+    /// <summary>
+    /// Describes <paramref name="selected"/> at the pane's foot: a category's item its category, a row's button or Reset
+    /// the row, anything else nothing; nothing selected (a rebind listening) keeps the last.
+    /// </summary>
+    private void Describe(GameObject selected)
+    {
+        if (selected == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < railItems.Length; i++)
+        {
+            if (railItems[i].gameObject == selected)
+            {
+                view.SetDescription(CategoryDescriptions[i]);
+                return;
+            }
+        }
+
+        foreach (OptionRow option in options)
+        {
+            if (option.View.BindingButton.gameObject == selected || option.View.ResetButton.gameObject == selected)
+            {
+                view.SetDescription(DescriptionOf(option));
+                return;
+            }
+        }
+
+        view.SetDescription(string.Empty);
+    }
+
+    /// <summary>
+    /// <paramref name="option"/>'s description: its action's, or its preference's; the UI size row's says too that a
+    /// larger size needs a larger window where none fits.
+    /// </summary>
+    private string DescriptionOf(OptionRow option)
+    {
+        if (option.Action != null)
+        {
+            return bindings.GetDescription(option.Action);
+        }
+
+        return option.View == uiSizeRow && uiScale.StepsThatFit < 1 ? UiSizeDescriptionNoLargerSize : option.Description;
+    }
+
+    /// <summary>
     /// Binding button of row <paramref name="index"/>: queues its rebind for the next tick. Ignored while closed,
     /// listening or confirming.
     /// </summary>
     private void RequestRebind(int index)
     {
-        if (IsOpen && !IsListening && !view.IsConfirmShown)
+        if (IsOpen && CanChange)
         {
             pendingRebind = index;
         }
     }
 
     /// <summary>
-    /// Shows the listening prompt for row <paramref name="index"/>, clears the selection and starts the
-    /// interactive rebind; if it cannot start, hides the prompt and reselects the row's binding button.
+    /// Shows the listening prompt for row <paramref name="index"/>, clears the selection and starts the interactive
+    /// rebind; if it cannot start, hides the prompt and reselects the row's binding button.
     /// </summary>
     private void BeginListening(int index)
     {
@@ -336,8 +752,8 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Ends listening: hides the prompt, names the action that moved when the new input was assigned, and
-    /// reselects the row's binding button if the screen is still open.
+    /// Ends listening: hides the prompt, names the action that moved when the new input was assigned, and reselects the
+    /// row's binding button if the screen is still open.
     /// </summary>
     private void HandleRebindFinished(RebindOutcome outcome, InputAction swappedWith)
     {
@@ -356,12 +772,12 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Reset button of row <paramref name="index"/>: puts that action back on its default input and names the
-    /// action that moved, if any. Ignored while listening or confirming.
+    /// Reset button of row <paramref name="index"/>: puts that action back on its default input and names the action
+    /// that moved, if any. Ignored while listening or confirming.
     /// </summary>
     private void ResetRow(int index)
     {
-        if (IsListening || view.IsConfirmShown)
+        if (!CanChange)
         {
             return;
         }
@@ -371,206 +787,62 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// Reset all button: shows the confirmation with Cancel selected. Ignored while listening.
+    /// The footer's reset: asks whether to put the current category back, with Cancel selected. Ignored while listening.
     /// </summary>
-    private void AskResetAll()
+    private void AskReset()
     {
         if (IsListening)
         {
             return;
         }
 
+        view.SetConfirmQuestion(ResetQuestions[(int)current]);
         view.SetConfirmShown(true);
         selection.Select(view.ConfirmNoButton);
     }
 
     /// <summary>
-    /// Confirmation accepted: puts every action back on its default, hides the confirmation and says so.
+    /// Confirmation accepted: puts every row of the current category back on its default in one write, hides the
+    /// confirmation and says so.
     /// </summary>
-    private void ConfirmResetAll()
+    private void ConfirmReset()
     {
-        bindings.ResetAll();
         view.SetConfirmShown(false);
-        view.SetNotice(ResetAllNotice);
-        selection.Select(view.ResetAllButton);
+        switch (current)
+        {
+            case Category.Accessibility:
+                settings.ResetAccessibility();
+                break;
+            case Category.Interface:
+                settings.ResetInterface();
+                break;
+            default:
+                bindings.ResetAll();
+                break;
+        }
+
+        view.SetNotice(ResetNotices[(int)current]);
+        selection.Select(view.IsCategoryResetShown ? view.CategoryResetButton : view.BackButton);
     }
 
     /// <summary>
-    /// Confirmation declined: hides it and reselects Reset all.
+    /// Confirmation declined: hides it and reselects the footer's reset.
     /// </summary>
-    private void CancelResetAll()
+    private void CancelReset()
     {
         view.SetConfirmShown(false);
-        selection.Select(view.ResetAllButton);
+        selection.Select(view.IsCategoryResetShown ? view.CategoryResetButton : view.BackButton);
     }
 
     /// <summary>
-    /// Shows which action <paramref name="swappedWith"/> moved to which input, or clears the notice when nothing
-    /// was swapped.
+    /// Shows which action <paramref name="swappedWith"/> moved to which input, or clears the notice when nothing was
+    /// swapped.
     /// </summary>
     private void ShowMoved(InputAction swappedWith)
     {
         view.SetNotice(swappedWith != null
             ? string.Format(MovedNoticeFormat, bindings.GetDisplayName(swappedWith), bindings.GetLabel(swappedWith))
             : string.Empty);
-    }
-
-    /// <summary>
-    /// Builds the Character section: its Look row when the view names a catalog of more than one look, and a row per
-    /// colour choice whose dyes a look of the catalog carries; nothing without either.
-    /// </summary>
-    private void BuildCharacterSection()
-    {
-        CharacterLookCatalog looks = view.Looks;
-        CharacterColours colours = view.Colours;
-        if (looks == null || settings == null)
-        {
-            return;
-        }
-
-        int carried = 0;
-        for (int i = 0; i < looks.Count; i++)
-        {
-            CharacterLook look = looks.Get(i);
-            carried |= look != null && look.AnimationSet != null ? look.AnimationSet.Dyes : 0;
-            carried |= look != null && look.Parts != null ? look.Parts.Dyes : 0;
-            if (parts == null && look != null && look.Parts != null)
-            {
-                parts = look.Parts;
-            }
-        }
-
-        if (parts != null)
-        {
-            foreach (CharacterPartSlot slot in parts.Slots)
-            {
-                if (slot != null && !slot.FollowsWeapon && slot.Options.Count > 1)
-                {
-                    partSlots.Add(slot);
-                }
-            }
-        }
-
-        for (int i = 0; colours != null && i < colours.Count && i < CharacterColourPicks.MaxChoices; i++)
-        {
-            if (colours.Colours(i, carried) && colours.Swatches(i).Count > 0)
-            {
-                colourChoices.Add(i);
-            }
-        }
-
-        if (looks.Count < 2 && colourChoices.Count == 0 && partSlots.Count == 0)
-        {
-            return;
-        }
-
-        view.AddSectionHeader(CharacterSection);
-        if (looks.Count >= 2)
-        {
-            BuildLookRow();
-        }
-
-        foreach (CharacterPartSlot slot in partSlots)
-        {
-            KeyBindingRowView row = view.AddRow();
-            row.SetLabel(slot.Slot.ToString());
-            row.BindingButton.onClick.AddListener(() => NextPart(slot));
-            row.ResetButton.onClick.AddListener(() => ResetPart(slot));
-            partRows.Add(row);
-        }
-
-        if (partRows.Count > 0)
-        {
-            settings.CharacterPartsChanged += RefreshParts;
-            RefreshParts();
-        }
-
-        foreach (int choice in colourChoices)
-        {
-            KeyBindingRowView row = view.AddSwatchRow();
-            row.SetLabel(colours.Get(choice).Name);
-            row.BindingButton.onClick.AddListener(() => NextColour(choice));
-            row.ResetButton.onClick.AddListener(() => ResetColour(choice));
-            colourRows.Add(row);
-        }
-
-        if (colourRows.Count > 0)
-        {
-            settings.CharacterColoursChanged += RefreshColours;
-            RefreshColours();
-        }
-    }
-
-    /// <summary>
-    /// Builds the Display section: its UI size row, when there is a UI zoom to follow, then the Reduce flashing and
-    /// Reduce motion toggle rows.
-    /// </summary>
-    private void BuildDisplaySection()
-    {
-        if (settings == null)
-        {
-            return;
-        }
-
-        view.AddSectionHeader(DisplaySection);
-        if (uiScale != null)
-        {
-            uiSizeRow = view.AddRow();
-            uiSizeRow.SetLabel(UiSizeLabel);
-            uiSizeRow.BindingButton.onClick.AddListener(NextUiSize);
-            uiSizeRow.ResetButton.onClick.AddListener(ResetUiSize);
-            settings.UiSizeStepChanged += RefreshUiSize;
-            uiScale.Changed += RefreshUiSize;
-            RefreshUiSize();
-        }
-
-        reduceFlashingRow = AddToggleRow(ReduceFlashingLabel, () => SetToggle(settings.SetReduceFlashing, !settings.ReduceFlashing), () => SetToggle(settings.SetReduceFlashing, false));
-        reduceMotionRow = AddToggleRow(ReduceMotionLabel, () => SetToggle(settings.SetReduceMotion, !settings.ReduceMotion), () => SetToggle(settings.SetReduceMotion, false));
-        settings.ReduceFlashingChanged += RefreshReduceFlashing;
-        settings.ReduceMotionChanged += RefreshReduceMotion;
-        RefreshReduceFlashing();
-        RefreshReduceMotion();
-    }
-
-    /// <summary>
-    /// Adds a toggle row labelled <paramref name="label"/> whose button runs <paramref name="toggle"/> and whose reset
-    /// runs <paramref name="reset"/>.
-    /// </summary>
-    private KeyBindingRowView AddToggleRow(string label, UnityAction toggle, UnityAction reset)
-    {
-        KeyBindingRowView row = view.AddToggleRow();
-        row.SetLabel(label);
-        row.BindingButton.onClick.AddListener(toggle);
-        row.ResetButton.onClick.AddListener(reset);
-        return row;
-    }
-
-    /// <summary>
-    /// Keeps <paramref name="on"/> through <paramref name="set"/>, a toggle row's setter. Ignored while listening or
-    /// confirming.
-    /// </summary>
-    private void SetToggle(Func<bool, bool> set, bool on)
-    {
-        if (!IsListening && !view.IsConfirmShown)
-        {
-            set(on);
-        }
-    }
-
-    /// <summary>
-    /// Shows whether flashing is reduced on the Reduce flashing row.
-    /// </summary>
-    private void RefreshReduceFlashing()
-    {
-        ShowToggle(reduceFlashingRow, settings.ReduceFlashing);
-    }
-
-    /// <summary>
-    /// Shows whether motion is reduced on the Reduce motion row.
-    /// </summary>
-    private void RefreshReduceMotion()
-    {
-        ShowToggle(reduceMotionRow, settings.ReduceMotion);
     }
 
     /// <summary>
@@ -583,196 +855,28 @@ public sealed class OptionsMenuController : IStartable, ITickable, IDisposable, 
     }
 
     /// <summary>
-    /// The UI size step the display shows: the one the local settings ask for, lowered to the steps that fit.
+    /// Shows or hides <paramref name="target"/>, touching it only when that changes.
     /// </summary>
-    private int UiSizeStep => Mathf.Clamp(settings.UiSizeStep, 0, Mathf.Min(uiScale.StepsThatFit, UiSizeNames.Length - 1));
-
-    /// <summary>
-    /// UI size button: keeps the next size that fits, after the largest Normal. Ignored while listening or confirming.
-    /// </summary>
-    private void NextUiSize()
+    private static void SetActive(GameObject target, bool active)
     {
-        if (!IsListening && !view.IsConfirmShown)
+        if (target.activeSelf != active)
         {
-            int sizes = Mathf.Min(uiScale.StepsThatFit, UiSizeNames.Length - 1) + 1;
-            settings.SetUiSizeStep((UiSizeStep + 1) % sizes);
+            target.SetActive(active);
         }
     }
 
     /// <summary>
-    /// UI size reset button: back to Normal. Ignored while listening or confirming.
+    /// Sets <paramref name="control"/>'s explicit navigation.
     /// </summary>
-    private void ResetUiSize()
+    private static void SetNavigation(Selectable control, Selectable left, Selectable right, Selectable up, Selectable down)
     {
-        if (!IsListening && !view.IsConfirmShown)
+        control.navigation = new Navigation
         {
-            settings.SetUiSizeStep(0);
-        }
-    }
-
-    /// <summary>
-    /// Shows the UI size the display shows on the UI size row's button.
-    /// </summary>
-    private void RefreshUiSize()
-    {
-        uiSizeRow.SetBinding(UiSizeNames[UiSizeStep]);
-    }
-
-    /// <summary>
-    /// Builds the Character section's Look row.
-    /// </summary>
-    private void BuildLookRow()
-    {
-        lookRow = view.AddRow();
-        lookRow.SetLabel(LookLabel);
-        lookRow.BindingButton.onClick.AddListener(NextLook);
-        lookRow.ResetButton.onClick.AddListener(ResetLook);
-        settings.CharacterLookChanged += RefreshLook;
-        RefreshLook();
-    }
-
-    /// <summary>
-    /// The catalog index of the look the local settings name, the first for an empty or unknown name.
-    /// </summary>
-    private int LookIndex => Mathf.Max(0, view.Looks.IndexOf(settings.CharacterLook));
-
-    /// <summary>
-    /// Look button: keeps the catalog's next look, after the last the first. Ignored while listening or confirming.
-    /// </summary>
-    private void NextLook()
-    {
-        if (!IsListening && !view.IsConfirmShown)
-        {
-            settings.SetCharacterLook(view.Looks.Get((LookIndex + 1) % view.Looks.Count).Name);
-        }
-    }
-
-    /// <summary>
-    /// Look reset button: keeps the catalog's first look. Ignored while listening or confirming.
-    /// </summary>
-    private void ResetLook()
-    {
-        if (!IsListening && !view.IsConfirmShown)
-        {
-            settings.SetCharacterLook(view.Looks.Get(0).Name);
-        }
-    }
-
-    /// <summary>
-    /// Shows the look the local settings name on the Look row's button.
-    /// </summary>
-    private void RefreshLook()
-    {
-        lookRow.SetBinding(view.Looks.Get(LookIndex).Name);
-    }
-
-    /// <summary>
-    /// The index in its list of the swatch the local settings pick for colour choice <paramref name="choice"/>, its own
-    /// for an empty or unknown name.
-    /// </summary>
-    private int ColourIndex(int choice)
-    {
-        CharacterColours colours = view.Colours;
-        int picked = colours.IndexOfSwatch(choice, settings.CharacterColour(colours.Get(choice).Name));
-        return picked >= 0 ? picked : Mathf.Max(0, colours.OwnIndex(choice));
-    }
-
-    /// <summary>
-    /// A colour row's button: keeps the next swatch of its choice's list, after the last the first (the choice's own
-    /// kept as no pick). Ignored while listening or confirming.
-    /// </summary>
-    private void NextColour(int choice)
-    {
-        if (IsListening || view.IsConfirmShown)
-        {
-            return;
-        }
-
-        CharacterColours colours = view.Colours;
-        int next = (ColourIndex(choice) + 1) % colours.Swatches(choice).Count;
-        settings.SetCharacterColour(colours.Get(choice).Name, next == colours.OwnIndex(choice) ? string.Empty : colours.Swatches(choice)[next].Name);
-    }
-
-    /// <summary>
-    /// A colour row's reset button: back to the choice's own swatch. Ignored while listening or confirming.
-    /// </summary>
-    private void ResetColour(int choice)
-    {
-        if (!IsListening && !view.IsConfirmShown)
-        {
-            settings.SetCharacterColour(view.Colours.Get(choice).Name, string.Empty);
-        }
-    }
-
-    /// <summary>
-    /// Shows the swatch the local settings pick for each colour row's choice on its button.
-    /// </summary>
-    private void RefreshColours()
-    {
-        CharacterColours colours = view.Colours;
-        for (int i = 0; i < colourRows.Count; i++)
-        {
-            int choice = colourChoices[i];
-            CharacterSwatch swatch = colours.Swatches(choice)[ColourIndex(choice)];
-            colourRows[i].SetBinding(swatch.Name);
-            colourRows[i].SetSwatch(swatch.Ramps.Count > 0 ? swatch.Ramps[0].Middle : Color.clear);
-        }
-    }
-
-    /// <summary>
-    /// The index of the option the local settings pick for <paramref name="slot"/>, the first for an empty or unknown
-    /// name.
-    /// </summary>
-    private int PartIndex(CharacterPartSlot slot)
-    {
-        return Mathf.Max(0, slot.IndexOf(settings.CharacterPart(slot.Slot.ToString())));
-    }
-
-    /// <summary>
-    /// A part row's button: keeps the slot's next option, after the last the first (kept as no pick). Ignored while
-    /// listening or confirming.
-    /// </summary>
-    private void NextPart(CharacterPartSlot slot)
-    {
-        if (IsListening || view.IsConfirmShown)
-        {
-            return;
-        }
-
-        int next = (PartIndex(slot) + 1) % slot.Options.Count;
-        settings.SetCharacterPart(slot.Slot.ToString(), next == 0 ? string.Empty : slot.Options[next].Name);
-    }
-
-    /// <summary>
-    /// A part row's reset button: back to the slot's first option. Ignored while listening or confirming.
-    /// </summary>
-    private void ResetPart(CharacterPartSlot slot)
-    {
-        if (!IsListening && !view.IsConfirmShown)
-        {
-            settings.SetCharacterPart(slot.Slot.ToString(), string.Empty);
-        }
-    }
-
-    /// <summary>
-    /// Shows the option the local settings pick for each part row's slot on its button.
-    /// </summary>
-    private void RefreshParts()
-    {
-        for (int i = 0; i < partRows.Count; i++)
-        {
-            partRows[i].SetBinding(partSlots[i].Options[PartIndex(partSlots[i])].Name);
-        }
-    }
-
-    /// <summary>
-    /// Updates every row's binding button with its action's current binding label.
-    /// </summary>
-    private void RefreshRows()
-    {
-        for (int i = 0; i < rows.Count; i++)
-        {
-            rows[i].SetBinding(bindings.GetLabel(bindings.GetAction(i)));
-        }
+            mode = Navigation.Mode.Explicit,
+            selectOnLeft = left,
+            selectOnRight = right,
+            selectOnUp = up,
+            selectOnDown = down
+        };
     }
 }

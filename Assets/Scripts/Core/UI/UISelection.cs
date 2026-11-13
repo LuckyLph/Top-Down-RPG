@@ -1,3 +1,4 @@
+using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -16,6 +17,11 @@ public sealed class UISelection
     {
         this.eventSystem = eventSystem;
     }
+
+    /// <summary>
+    /// The object selected now, or null without an event system or a selection.
+    /// </summary>
+    public GameObject Current => eventSystem != null ? eventSystem.currentSelectedGameObject : null;
 
     /// <summary>
     /// Selects <paramref name="selectable"/>, or clears the selection when it is null.

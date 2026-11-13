@@ -147,15 +147,15 @@ public class PlayerWeaponSystemTests
         PlayerWeaponController weaponController = root.AddComponent<PlayerWeaponController>();
 
         HudElements hud = CreatePlayerHudCanvas(weaponController);
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.MaxHealth}"));
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{health.MaxHealth} / {health.MaxHealth}"));
         Assert.That(hud.HealthFill.fillAmount, Is.EqualTo(1f).Within(0.001f));
 
         health.ApplyDamage(3);
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.CurrentHealth}"));
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{health.CurrentHealth} / {health.MaxHealth}"));
         Assert.That(hud.HealthFill.fillAmount, Is.EqualTo((float)health.CurrentHealth / health.MaxHealth).Within(0.001f));
 
         health.Heal(2);
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {health.MaxHealth - 1}"), "Heals show too.");
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{health.MaxHealth - 1} / {health.MaxHealth}"), "Heals show too.");
 
         hudPresenter.Dispose();
         hudPresenter = null;
@@ -487,14 +487,14 @@ public class PlayerWeaponSystemTests
         HudElements hud = CreatePlayerHudCanvas(root.GetComponent<PlayerWeaponController>());
         LocalPlayerTracker localPlayer = new();
         hudPresenter.Dispose();
-        hudPresenter = new PlayerHudPresenter(localPlayer, Object.FindAnyObjectByType<PlayerHudView>());
+        hudPresenter = NewHudPresenter(localPlayer, Object.FindAnyObjectByType<PlayerHudView>());
         hudPresenter.Start();
 
         localPlayer.Assign(new LocalPlayer(secondController));
         secondHealth.ApplyDamage(4);
         firstHealth.ApplyDamage(1);
 
-        Assert.That(hud.HealthText.text, Is.EqualTo($"HP {secondHealth.CurrentHealth}"));
+        Assert.That(hud.HealthText.text, Is.EqualTo($"{secondHealth.CurrentHealth} / {secondHealth.MaxHealth}"));
     }
 
     /// <summary>
@@ -975,7 +975,7 @@ public class PlayerWeaponSystemTests
         healthTextObject.transform.SetParent(healthPanel.transform, false);
         healthTextObject.AddComponent<CanvasRenderer>();
         TextMeshProUGUI healthText = healthTextObject.AddComponent<TextMeshProUGUI>();
-        healthText.text = "HP --";
+        healthText.text = "-- / --";
         healthText.alignment = TextAlignmentOptions.Center;
 
         GameObject weaponSlotObject = new("WeaponSlot");
@@ -986,15 +986,36 @@ public class PlayerWeaponSystemTests
         weaponIconObject.AddComponent<CanvasRenderer>();
         Image weaponIcon = weaponIconObject.AddComponent<Image>();
         weaponIcon.preserveAspect = true;
+        WeaponSlotView weaponSlot = weaponSlotObject.AddComponent<WeaponSlotView>();
+        weaponSlot.ConfigureReferences(weaponIcon, TestThemes.Shared);
+
+        Image lost = new GameObject("Lost", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        lost.transform.SetParent(healthPanel.transform, false);
+        Image frame = new GameObject("Frame", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        frame.transform.SetParent(healthPanel.transform, false);
+        Image tick = new GameObject("Tick", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        tick.transform.SetParent(healthPanel.transform, false);
+        tick.gameObject.SetActive(false);
+        HealthBarView bar = healthPanel.AddComponent<HealthBarView>();
+        bar.ConfigureReferences(healthFill, lost, frame, healthText, tick, TestThemes.Shared);
 
         PlayerHudView view = canvasObject.AddComponent<PlayerHudView>();
-        view.ConfigureReferences(healthFill, healthText, weaponIcon, TestThemes.Shared);
+        view.ConfigureReferences(bar, weaponSlot);
 
         LocalPlayerTracker localPlayer = new();
         localPlayer.Assign(new LocalPlayer(weaponController.GetComponent<PlayerController>()));
-        hudPresenter = new PlayerHudPresenter(localPlayer, view);
+        hudPresenter = NewHudPresenter(localPlayer, view);
         hudPresenter.Start();
         return new HudElements(healthFill, healthText, weaponIcon);
+    }
+
+    /// <summary>
+    /// A HUD presenter for <paramref name="view"/> following <paramref name="localPlayer"/>, on a manual clock with
+    /// the default HUD settings and in-memory preferences.
+    /// </summary>
+    private PlayerHudPresenter NewHudPresenter(LocalPlayerTracker localPlayer, PlayerHudView view)
+    {
+        return new PlayerHudPresenter(localPlayer, view, new ManualClock(), Track(HudSettings.Create()), new UserSettings(new MemorySaveStore()));
     }
 
     /// <summary>

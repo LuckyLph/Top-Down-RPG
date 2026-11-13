@@ -212,7 +212,7 @@ flowchart LR
 
 - Damage popups take the damage type's colour from `CombatSettings`, show "Immune" for immune hits and blocked statuses, use a smaller size for periodic ticks, and show heals in green with a plus sign. They stay pooled.
 - Local player: a status row on `PlayerHudCanvas` above the ability bar, buffs then debuffs, each with its icon, a radial timer and a stack count. A passive view and a presenter bound through `LocalPlayerTracker`, like the health HUD.
-- Every unit with a `WorldHealthBar` (mobs): up to four small debuff icons above it, updated from the set's `Changed` event rather than polled.
+- Every unit with a `WorldHealthBar` (mobs, and players since UiRevamp.md's Phase 4): up to four small debuff icons above it, updated from the set's `Changed` event rather than polled.
 - Each status's visual prefab is attached to the unit while it is active, pooled per definition, on every machine.
 
 ## Phases

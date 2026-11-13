@@ -9,7 +9,8 @@ using UnityEngine.TestTools;
 /// <see cref="FileSaveStore"/> and <see cref="InstanceFiles"/> (Docs/KnownGaps.md, Phase 5): a save file per session,
 /// the version 4 save keyed by player id and world id round tripping with each player's weapon and terrain edits naming
 /// their layers, two sessions saved side by side with Continue loading the latest, a joined client's copy of its place
-/// counting only once its host is gone and going on as a session of its own, the save of an earlier build imported once
+/// playing on its own as a session of its own, its host gone or not (Docs/UiRevamp.md, Phase 10), every save listed
+/// newest first and deleted with one copy kept (Phase 10), the save of an earlier build imported once
 /// (its terrain edits dropped) or, when too old, ignored with its warning, newer and unreadable files ignored with a
 /// warning and kept as a copy before anything writes over them, the world clock continuing from the saved time, the
 /// files written safely, and a Multiplayer Play Mode virtual player keeping files of its own.
@@ -156,13 +157,12 @@ public class GameSaveTests
     }
 
     /// <summary>
-    /// A joined client's copy of its place is written as its host session's copy and is no save Continue loads while its
-    /// host may still be there; written with its host gone, it is the latest save, the menu hears so once, and it goes
-    /// on as a session of its own under a new id, its player's place, waystones, weapon and the time kept, the copy left
-    /// as it is.
+    /// A joined client's copy of its place is written as its host session's copy and is a save Continue loads, its host
+    /// gone or not (Docs/UiRevamp.md, Phase 10); the copy says whether its host is gone, and it goes on as a session of
+    /// its own under a new id, its player's place, waystones, weapon and the time kept, the copy left as it is.
     /// </summary>
     [Test]
-    public void AClientsCopy_CountsOnlyOnceItsHostIsGone_AndGoesOnAsASessionOfItsOwn()
+    public void AClientsCopy_PlaysOnItsOwn_AndGoesOnAsASessionOfItsOwn()
     {
         ManualWallClock wallClock = new();
         MemorySaveFolder folder = new();
@@ -175,18 +175,17 @@ public class GameSaveTests
 
         Assert.That(save.Write(copy), Is.True);
         Assert.That(folder.Names(), Is.EqualTo(new[] { $"joined-{HostSession}.json" }));
-        Assert.That(save.HasSave, Is.False, "A copy whose host may still be there is used only while joined to it.");
-        Assert.That(save.TakeHostGoneNotice(), Is.False);
+        Assert.That(save.HasSave, Is.True, "A copy whose host may still be there plays on its own too.");
         Assert.That(save.TryLoadCopy(HostSession, out GameSaveData stored), Is.True);
         Assert.That(stored.HostGone, Is.False);
+        Assert.That(save.TryLoadLatest(out GameSaveData waiting), Is.True);
+        Assert.That(waiting.IsCopy && !waiting.HostGone, Is.True);
 
         wallClock.Advance(5d);
         copy.SetHost(HostSession, true);
         Assert.That(save.Write(copy), Is.True);
-        Assert.That(save.TakeHostGoneNotice(), Is.True, "Writing a copy with its host gone leaves the menu a notice.");
-        Assert.That(save.TakeHostGoneNotice(), Is.False, "The notice is taken once.");
-        Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True, "A copy whose host is gone is a save Continue loads.");
-        Assert.That(latest.IsCopy && latest.HostGone, Is.True);
+        Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True);
+        Assert.That(latest.IsCopy && latest.HostGone, Is.True, "The copy says its host is gone.");
 
         SessionSave alone = new(new ManualClock());
         alone.StartFrom(latest);
@@ -203,6 +202,121 @@ public class GameSaveTests
         Assert.That(folder.Names(), Has.Count.EqualTo(2), "The copy is kept beside the session going on from it.");
         Assert.That(save.TryLoadLatest(out latest), Is.True);
         Assert.That(latest.Id, Is.EqualTo(alone.Id));
+    }
+
+    /// <summary>
+    /// The list holds every readable save newest first, sessions and copies alike, each with its file's name, id, time
+    /// played and whether it is a copy whose host is gone; a tie goes first to the name that sorts last; a file that
+    /// cannot be read is left out with its warning, and kept; <see cref="GameSave.TryLoad"/> reads a save by its name.
+    /// </summary>
+    [Test]
+    public void List_HoldsEverySaveNewestFirst_SessionsAndCopies_WithoutUnreadableFiles()
+    {
+        ManualWallClock wallClock = new();
+        MemorySaveFolder folder = new();
+        GameSave save = new(folder, wallClock);
+        Assert.That(save.List(), Is.Empty);
+
+        Assert.That(save.Write(Session("older", 60d)), Is.True);
+        wallClock.Advance(10d);
+        Assert.That(save.Write(Copy("gone-host", 120d, true)), Is.True);
+        wallClock.Advance(10d);
+        Assert.That(save.Write(Copy("present-host", 180d, false)), Is.True);
+        Assert.That(save.Write(Session("tied", 240d)), Is.True);
+        folder.Open("session-broken.json").Write("{ not json");
+
+        LogAssert.Expect(LogType.Warning, new Regex("could not be read as a save"));
+        var saves = save.List();
+
+        Assert.That(saves, Has.Count.EqualTo(4), "The unreadable file is left out.");
+        Assert.That(saves[0].Name, Is.EqualTo("session-tied.json"), "A tie goes first to the name that sorts last.");
+        Assert.That(saves[1].Name, Is.EqualTo(GameSave.CopyNameOf("present-host")));
+        Assert.That(saves[1].IsCopy && !saves[1].HostGone, Is.True);
+        Assert.That(saves[1].Time, Is.EqualTo(180d));
+        Assert.That(saves[2].IsCopy && saves[2].HostGone, Is.True);
+        Assert.That(saves[3].Id, Is.EqualTo("older"));
+        Assert.That(saves[3].IsCopy, Is.False);
+        Assert.That(saves[0].SavedAtUtc(), Is.EqualTo(saves[1].SavedAtUtc()));
+        Assert.That(saves[2].SavedAtUtc(), Is.LessThan(saves[1].SavedAtUtc()));
+        Assert.That(folder.Read("session-broken.json"), Is.EqualTo("{ not json"), "An unreadable file is kept.");
+        Assert.That(save.TryLoad("session-older.json", out GameSaveData older), Is.True);
+        Assert.That(older.Time, Is.EqualTo(60d));
+        Assert.That(save.TryLoad("session-broken.json", out _), Is.False);
+        Assert.That(save.TryLoad("session-none.json", out _), Is.False);
+    }
+
+    /// <summary>
+    /// Deleting a save takes it out of the list, keeps one copy of it (a second delete of the same file replacing it),
+    /// and makes the next save the latest; a file that is not there is not deleted.
+    /// </summary>
+    [Test]
+    public void Delete_KeepsOneCopy_AndTheLatestMovesOn()
+    {
+        ManualWallClock wallClock = new();
+        MemorySaveFolder folder = new();
+        GameSave save = new(folder, wallClock);
+        Assert.That(save.Write(Session("older", 60d)), Is.True);
+        wallClock.Advance(10d);
+        Assert.That(save.Write(Copy(HostSession, 120d, false)), Is.True);
+        string copyName = GameSave.CopyNameOf(HostSession);
+        string first = folder.Read(copyName);
+
+        Assert.That(save.Delete(copyName), Is.True);
+        Assert.That(save.List(), Has.Count.EqualTo(1));
+        Assert.That(folder.DeletedCopyOf(copyName), Is.EqualTo(first));
+        Assert.That(save.TryLoadLatest(out GameSaveData latest), Is.True);
+        Assert.That(latest.Id, Is.EqualTo("older"), "The latest moves on to the next save.");
+        Assert.That(save.Delete(copyName), Is.False, "It is gone.");
+
+        wallClock.Advance(10d);
+        Assert.That(save.Write(Copy(HostSession, 300d, true)), Is.True, "Joining that host again writes the copy anew.");
+        string second = folder.Read(copyName);
+        Assert.That(save.Delete(copyName), Is.True);
+        Assert.That(folder.DeletedCopyOf(copyName), Is.EqualTo(second), "A second delete replaces the copy kept.");
+        Assert.That(save.Delete("session-older.json"), Is.True);
+        Assert.That(save.HasSave, Is.False);
+    }
+
+    /// <summary>
+    /// The file folder deletes a save by moving it to <c>.bak</c> beside it, a second delete of that name replacing the
+    /// copy, which the folder does not list; a file that is not there is not deleted.
+    /// </summary>
+    [Test]
+    public void FileSaveFolder_DeletesASave_KeepingOneBakCopy()
+    {
+        string root = CreateTempDirectory();
+        FileSaveFolder folder = new(Path.Combine(root, FileSaveFolder.DefaultFolderName), Path.Combine(root, FileSaveStore.DefaultFileName));
+        Assert.That(folder.Delete("session-a.json"), Is.False);
+        Assert.That(folder.Open("session-a.json").Write("first"), Is.True);
+        Assert.That(folder.Open("session-b.json").Write("b"), Is.True);
+
+        Assert.That(folder.Delete("session-a.json"), Is.True);
+        string bak = Path.Combine(folder.FolderPath, "session-a.json" + FileSaveFolder.DeletedSuffix);
+        Assert.That(File.ReadAllText(bak), Is.EqualTo("first"));
+        Assert.That(folder.Names(), Is.EqualTo(new[] { "session-b.json" }), "The copy is not listed.");
+
+        Assert.That(folder.Open("session-a.json").Write("second"), Is.True);
+        Assert.That(folder.Delete("session-a.json"), Is.True);
+        Assert.That(File.ReadAllText(bak), Is.EqualTo("second"), "A second delete replaces the copy.");
+        Assert.That(Directory.GetFiles(folder.FolderPath, "session-a.json*"), Has.Length.EqualTo(1));
+        Assert.That(folder.Delete("session-a.json"), Is.False);
+    }
+
+    /// <summary>
+    /// The in-memory folder deletes a save the same way, keeping its text as its one copy.
+    /// </summary>
+    [Test]
+    public void MemorySaveFolder_DeletesASave_KeepingOneCopy()
+    {
+        MemorySaveFolder folder = new();
+        Assert.That(folder.Delete("session-a.json"), Is.False);
+        folder.Open("session-a.json").Write("first");
+        Assert.That(folder.Delete("session-a.json"), Is.True);
+        Assert.That(folder.Names(), Is.Empty);
+        Assert.That(folder.DeletedCopyOf("session-a.json"), Is.EqualTo("first"));
+        folder.Open("session-a.json").Write("second");
+        Assert.That(folder.Delete("session-a.json"), Is.True);
+        Assert.That(folder.DeletedCopyOf("session-a.json"), Is.EqualTo("second"));
     }
 
     /// <summary>
@@ -402,6 +516,27 @@ public class GameSaveTests
         Assert.That(File.Exists(legacy), Is.False);
         Assert.That(folder.RetireLegacy(out string none), Is.True);
         Assert.That(none, Is.Null);
+    }
+
+    /// <summary>
+    /// A session's save <paramref name="id"/> played for <paramref name="time"/> s, Alice alone in it.
+    /// </summary>
+    private static GameSaveData Session(string id, double time)
+    {
+        GameSaveData data = new(time, new[] { new GameSaveData.Player(Alice, WorldA, Vector2.one) }, new GameSaveData.World[0]);
+        data.SetSession(id);
+        return data;
+    }
+
+    /// <summary>
+    /// Alice's copy of her place in the host's session <paramref name="host"/>, played for <paramref name="time"/> s,
+    /// its host gone or not as <paramref name="gone"/> says.
+    /// </summary>
+    private static GameSaveData Copy(string host, double time, bool gone)
+    {
+        GameSaveData data = new(time, new[] { new GameSaveData.Player(Alice, WorldA, Vector2.one) }, new GameSaveData.World[0]);
+        data.SetHost(host, gone);
+        return data;
     }
 
     /// <summary>

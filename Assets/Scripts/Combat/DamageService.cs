@@ -83,16 +83,17 @@ public sealed class DamageService
     }
 
     /// <summary>
-    /// Applies and publishes a heal the host already decided, regardless of authority. Used by clients.
+    /// Applies and publishes a heal the host already decided, regardless of authority, from this machine's copy of its
+    /// <paramref name="source"/> when it knows one. Used by clients.
     /// </summary>
-    public int ApplyReplicatedHeal(DamageReceiver target, int amount)
+    public int ApplyReplicatedHeal(DamageReceiver target, int amount, GameObject source = null)
     {
         if (target == null || amount <= 0 || target.Health == null)
         {
             return 0;
         }
 
-        return HealAndPublish(target, amount, null);
+        return HealAndPublish(target, amount, source);
     }
 
     /// <summary>
@@ -124,7 +125,7 @@ public sealed class DamageService
         DamageResult result = DamageMath.Resolve(amount, type, dealtMultiplier, target.GetDefense(type), settings, flags);
         if (result.IsImmune)
         {
-            target.NotifyImmuneHit(result.Type, result.Flags);
+            target.NotifyImmuneHit(result.Type, result.Flags, source);
         }
 
         return ApplyAndPublish(target, health, result, source, origin);
@@ -154,7 +155,7 @@ public sealed class DamageService
     private int HealAndPublish(DamageReceiver target, int amount, GameObject source)
     {
         Health health = target.Health;
-        int healed = health.Heal(amount);
+        int healed = health.Heal(amount, source);
         if (healed > 0)
         {
             combatEvents.Publish(new HealReport(health, healed, source, target.PopupWorldPosition));

@@ -81,7 +81,7 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
    - Information never depends on colour alone.
 3. **Direct control.** Click to move, with orders that cancel and buffer like a MOBA's. What the player sees is what the game will do.
 4. **Content is data.** Mechanics are assets composed from a small set of building blocks. A new idea first extends a block in its spec, then becomes content.
-5. **Made in the project.** Every sprite, effect and UI piece comes from a recipe in the editor or is drawn in Aseprite for the game. Fonts licensed for use in a game are the one exception, for now.
+5. **Made in the project.** Every sprite, effect and UI piece comes from a recipe in the editor or is drawn in Aseprite for the game. Fonts licensed for use in a game, and UI icons licensed for it and kept with their licence (UiRevamp.md's Phase 7), are the exceptions, for now.
 
 ## Decisions
 
@@ -95,9 +95,9 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
 | UI scale | A UI px is drawn as a whole number of display pixels: the UI zoom. See Foundations for how it is chosen. |
 | Text | Five sizes. The smallest, `Caption`, is Galmuri7 at 8 UI px, a 24 px body at 1080p. Nothing is smaller, and nothing auto-sizes. Changed in Phase 4 from LiberationSans at 7 UI px (19.5 px). |
 | Font | Galmuri, a pixel font (SIL OFL 1.1), in four sizes: a static SDF font asset of each in `Assets/Fonts`, with the atlas padding a 1 UI px outline needs and an outlined material preset. The theme holds a font per text size. Chosen in Phase 4 over LiberationSans, which TMP keeps as its default. |
-| Colour | UI code and prefabs name colour roles, never raw colours. Damage-type, status and waystone colours stay on their gameplay assets but follow the same contrast and never-colour-alone rules. |
+| Colour | UI code and prefabs name colour roles, never raw colours. Damage-type and status colours stay on their gameplay assets but follow the same contrast and never-colour-alone rules (the waystone's popup colour went with its popup in UiRevamp.md's Phase 3). |
 | Theme | **Asset:** a read-only `UiTheme` in Gameplay holds the colour roles, the text sizes and the font.<br>**Applying it:** themed components reference the asset and set their own instance once when they wake. Nothing reads the theme per frame, and no tool writes it into prefabs or scenes.<br>**Edit mode:** prefabs show their serialized values in the editor; Phase 4's conversion set them to the theme's once. |
-| UI art | Generated in the editor from a recipe, like every other sprite: 9-sliced frames, bars and outlines in greyscale, tinted by role (`UiSkinRecipe`, Phase 5). |
+| UI art | Generated in the editor from a recipe, like every other sprite: 9-sliced frames, bars and outlines in greyscale, tinted by role (`UiSkinRecipe`, Phase 5). Licensed icons are the exception, kept with their licence in `Assets/Sprites/UI/Icons`: Pixelarticons' left and right arrows (MIT), which the user asked for in place of generated ones (UiRevamp.md's Phase 7). |
 | Damage types on popups | A popup shows its hit's damage type by colour alone, and shows neither the type nor the `Resisted` and `Weakness` flags otherwise. Settled in Phase 5 on previews of a type icon and of arrows for the flags: left as it was. |
 | Accessibility baseline | The Game Accessibility Guidelines' basic items listed under Accessibility, plus XAG 101's text size and XAG 102's contrast. We link and paraphrase them rather than copy their text. |
 | Preferences | UI size (Phase 3); reduce flashing and reduce motion (Phase 6). They are local, saved in `settings.json`, and never replicated. Reduce motion covers the camera kick and the popups' rise; a hit's nudge and hit stop stay, as neither moves the screen (settled with the user in Phase 6). |
@@ -169,7 +169,7 @@ The test's failure message names the menu item, and says to regenerate after a m
 2. **Ids.** A kind that crosses the wire has a list whose index is the id: a catalog, or a definition's own list (the colour choices and swatches, the parts' options). Entries are appended, never reordered or replaced. The ids only hold between machines on the same build, since join approval does not compare builds while the version stays fixed. Saves name assets by GUID, and the settings file names choices by name.
 3. **Shared values.** Values shared across a system (floors, caps, layers, popup colours) live in that system's one settings asset (`CombatSettings`, `HitFeedbackSettings`), not on each definition.
 4. **Building blocks.** A definition only combines building blocks. It holds no game logic of its own (derived helpers such as `PlayerWeapon.HitCentre` are fine). A new block is added in its spec first. Then it gets a vocabulary row, a `Create` parameter, tests and a column in its generated table.
-5. **Display text.** Every definition or option players see (a swatch, a colour choice, a part) has a display name unique within its kind or list. Every status has an abbreviation unique among statuses and a description, and every ability a description, because the HUD and its tooltips show them.
+5. **Display text.** Every definition or option players see (a swatch, a colour choice, a part, and since UiRevamp.md's Phase 3 a world and each of its entries) has a display name unique within its kind or list: a world's among worlds, an entry's among its world's entries. A world's name takes no article, since its notice reads "Entering the" and the name. Display names are written by hand, so the world generator keeps an entry's when it rewrites the entry. Every status has an abbreviation unique among statuses and a description, and every ability a description, because the HUD and its tooltips show them.
 
 ### Adding content
 
@@ -212,15 +212,27 @@ Unity Search's table view shows a kind's assets side by side with editable prope
 
 At 720p, 1080p, 1440p and 4K this equals the Pixel Perfect Camera's zoom, so a UI px is an art pixel. Elsewhere the UI is one step larger than the world's pixels, which keeps text readable where the camera rounds down. Layouts anchor to the canvas's edges and must fit 480 x 270 UI px.
 
+**Screen regions.** In game, each part of the screen has one owner, so nothing overlaps at 480 x 270 (UiRevamp.md's Decisions, written here in its Phase 2):
+
+| Region | Where (UI px) | Holds |
+|---|---|---|
+| Bottom centre | 378 wide, from the bottom edge up to 68 | The command bar: the ability row 8 above the bottom edge, the health bar and the message line over it, a status group at each side |
+| Top centre | 240 wide and 24 tall, 8 below the top edge | The notice line (since UiRevamp.md's Phase 3): a panel sized to its notice, 15 tall for one line, the whole band for two |
+| Left edge | 104 wide and 82 tall, 8 from the left and top edges | The party frames, three of 26 with 2 between (since UiRevamp.md's Phase 5) |
+| Chat | 144 wide and 96 tall, 8 from the left edge and 98 from the top: 8 under the party frames and, at 480 x 270, 8 above the command bar's region | The chat's default place (since UiRevamp.md's Phase 12). The player may move its window anywhere on the screen and resize it from 104 x 52 to 240 x 160, covering what it then lies over by their own choice |
+| Top right | 104 wide and 82 tall, 8 from the right and top edges | Kept free for a place name and a minimap |
+
+Tooltips float over the regions, above the command bar so its health stays in view. Online, menus opened in game stay clear of the command bar and the notice band. `HudLayoutTests` checks that the HUD keeps to its region at 480 x 270 and at every display and size step of the Scale table, the chat open in its default place, and that the regions never overlap.
+
 **Type.** The UI's font is Galmuri, a pixel font, drawn at one UI px per font pixel: each size is a Galmuri size at its em in UI px. The body height (the top of a d to the bottom of a p) is from the fonts' glyphs, at 1080p (zoom 3). [UiTheme.md](Generated/UiTheme.md) has the current values.
 
 | Size | Font | UI px | Body at 1080p | Used for |
 |---|---|---|---|---|
 | `Caption` | Galmuri7 | 8 | 24 px | The HUD's key labels, ability names, status letters and stacks, periodic popups |
-| `Body` | Galmuri7 | 8 | 24 px | Menu rows, buttons, notices, the HP and cooldown seconds |
-| `Heading` | Galmuri9 | 10 | 30 px | Section headers, damage popups, the main menu's buttons and status line |
+| `Body` | Galmuri7 | 8 | 24 px | Menu rows, buttons, notices, the HP and cooldown seconds, the chat's lines and field |
+| `Heading` | Galmuri9 | 10 | 30 px | Section headers, damage popups, the main menu's buttons (and its status line until UiRevamp.md's Phase 9) |
 | `Title` | Galmuri11 | 12 | 39 px | Screen titles |
-| `Display` | Galmuri14 | 15 | 51 px | The game's name on the main menu |
+| `Display` | Galmuri14 | 15 | 51 px | The game's name on the main menu until UiRevamp.md's Phase 11, where the logo took its place; unused since |
 
 `Caption` and `Body` are the same today, since Galmuri has nothing smaller than Galmuri7; they stay two sizes, so the HUD's labels and the menus' rows can part later with one change to the theme.
 
@@ -228,6 +240,7 @@ Further rules:
 
 - **No auto-size:** a pixel font is crisp only at its own size.
 - **Whole UI px:** `ThemedText` moves each glyph onto the whole UI px of its canvas whenever its text is built, and popups move in whole UI px; text is crisp wherever its rect lands.
+- **Smaller, on whole display pixels:** since UiRevamp.md's Phase 3 a text may draw smaller than the zoom through `PixelTextScale`: each font pixel covers the whole number of display pixels nearest a target share of the zoom's (three quarters for the health bar's numbers: 2 at x3, 3 at x4, 5 at x6, unchanged at x2), and `ThemedText` snaps such a text to whole display pixels. Any other scale leaves the pixel grid.
 - **Damage popups** use `Heading`, and periodic ticks `Caption` (`CombatSettings.PeriodicPopupSize`), a smaller font rather than a scale, which would leave the pixel grid.
 - **Text style:** sentence case, no bold (the fonts have none, and TMP's faux bold blurs the pixels), no italics or all-caps below `Title`, left-aligned rows (the Game Accessibility Guidelines' "simple, clear text formatting").
 
@@ -237,30 +250,36 @@ Further rules:
 |---|---|---|
 | `Text` | White | Light text on dark panels, and the rows' off-white |
 | `TextOnControl` | (0.1, 0.1, 0.12) | The dark button labels |
-| `TextMuted`, `TextDisabled` | Light and mid greys: `TextMuted` for the tooltips' descriptions (Phase 5); `TextDisabled` unused yet | Secondary and disabled text |
+| `TextMuted`, `TextDisabled` | Light and mid greys: `TextMuted` for the tooltips' descriptions (Phase 5), and since UiRevamp.md's Phase 12 the chat's party lines, timestamps and field placeholder; `TextDisabled` unused yet | Secondary and disabled text |
 | `Placeholder` | `#595959`, 4.9:1 on the field | The join field's placeholder (about 2.9:1, and italic) |
-| `Accent` | (1, 0.85, 0.4) | Section headers, the notices and the main menu's status line, the HUD's key labels (a paler yellow), the selected control |
+| `Accent` | (1, 0.85, 0.4) | Section headers, the notices (the options screen's and, since UiRevamp.md's Phase 9, Play together's notice line, where the main menu's status line was), the HUD's key labels (a paler yellow), the selected control; since UiRevamp.md's Phase 1 the frame of the slot whose cast runs and the brackets of a queued cast; since its Phase 12 a window's title and the frame of the field taking the typing |
 | `Surface`, `SurfaceEmpty` | The filled slot frame (0.12, 0.12, 0.16) at 0.85; at 0.75 when empty, where it was 0.35, so a key label reads on bright ground | HUD frames, and the health panel's grey |
 | `SurfaceRaised` | (0.08, 0.09, 0.12) | Menu boxes, full-screen panels, and the dialogs' lighter box |
 | `Scrim`, `ScrimModal` | Black at 0.6; black at 0.85 | The in-game menu's dimmer; the confirmation and listening panels |
 | `Shade` | Black at 0.65 | Cooldown and elapsed fills (0.55), the weapon icon's mask (0.42), the scroll list's track |
 | `ControlNormal`, `ControlHighlighted`, `ControlPressed` | Today's button colour block | Button states (`Selected` uses `Accent`) |
-| `ControlDisabled` | An opaque grey, `#6E6E73`, where it was a translucent tint, so a label keeps 3.4:1 | A disabled button |
-| `ControlSecondary` | `#9E9E96`, dimmer than `ControlNormal`, 6.4:1 under `TextOnControl` | A secondary button's face (new in Phase 5) |
+| `ControlDisabled` | An opaque grey, `#6E6E73`, where it was a translucent tint, so a label keeps 3.4:1 | A disabled button; since UiRevamp.md's Phase 1 the hatch of an ability slot crowd control blocks |
+| `ControlSecondary` | `#9E9E96`, dimmer than `ControlNormal`, 6.4:1 under `TextOnControl` | A secondary button's face (new in Phase 5); since UiRevamp.md's Phase 3 the toggle row's box frame, which a black `Border` would lose on the dark panel; since its Phase 12 a window's grips |
 | `Danger` | `#FF4D40` | The hover marker, the attack-move marker and the failure flash (at 0.6 opacity), three reds; a danger button's face since Phase 5 |
 | `Positive` | The move marker's green | |
-| `Health`, `HealthTrack` | The HUD's fill and track | The world bar's brighter fill and its frame |
+| `Health`, `HealthTrack` | The HUD's fill and track; the track opaque since UiRevamp.md's Phase 1, so the fill reads at 3.68:1 on it, where it was 2.37:1 at 85%. Since Phase 2 `Health` is the mobs' (the world bar's) and the track also colours the health bar's ticks | The world bar's brighter fill and its frame |
+| `HealthPlayer` | `#4CC25A`, settled on UiRevamp.md's Phase 2 previews of three greens; 8.04:1 on `HealthTrack` | New: players' health, green, where mobs' is red; the badge and the bar's shape still tell them apart |
+| `HealthLost` | `#D6D6D6`, 12.67:1 on `HealthTrack` | New (Phase 2): the part of a health bar just lost, under its fill for 0.4 s |
+| `Player1` to `Player4` | `#4FA3FF` blue, `#C084FC` violet, `#2DD4BF` teal and `#FB923C` orange, settled on UiRevamp.md's Phase 5 previews; `TextOnControl` reads at 4.5:1 or more on each | New (Phase 5): each player slot's badge, a disc beside its world bar and in its party frame; since Phase 12 a sender's name in the chat |
 | `Icon` | White | Icons and art shown in their own colours (new) |
 | `IconMissing` | White at 0.25 | The missing weapon icon |
-| `Border` | `#9A9EB3`, a grey-blue, settled on Phase 5's previews (white until then) | Every frame: panels, dialogs, slots, status icons, the health bar and the tooltip (new) |
+| `Border` | Black since UiRevamp.md's Phase 3, settled on its previews; `#9A9EB3`, a grey-blue, from Phase 5's previews until then (white before) | Every frame: panels, dialogs, slots, status icons, the health bar, the notice line and the tooltip (new) |
 | `Outline` | Black | The outline of text drawn over the world, and of the HUD's status letters and stacks |
 
 The Physical popup red, 3.11:1 against the outline, became `#E64040` (5.17:1). It stays on `CombatSettings` with the other damage-type colours.
 
-**Art.** `UiSkinRecipe` is an editor recipe in the manner of the prop and terrain recipes (Phase 5).
+**Art.** `UiSkinRecipe` is an editor recipe in the manner of the prop and terrain recipes (Phase 5). Since UiRevamp.md's Phase 7, `Assets/Sprites/UI/Icons` also holds two licensed icons, Pixelarticons' `arrow-left` and `arrow-right` (MIT), white, 16 x 14 at one UI px a pixel, with `Pixelarticons - MIT.txt` beside them; `UiContentTests` checks the licence stays with them. Since UiRevamp.md's Phase 11, `Assets/Sprites/UI/Title` holds the two title sprites the title view recipe writes, the only UI images besides the skin and those icons: the title view, a still render of the Overworld shown in its own colours (`Icon`), and the logo, the game's name in Galmuri11 with every pixel doubled, white outlined in black, tinted `Accent`.
 - It writes greyscale sprites into `Assets/Sprites/UI/Skin`, which the pixel art postprocessor imports at 32 PPU, so one sprite pixel is one UI px, or one art pixel in the world:
-  - 9-sliced, their corners cut by 1 px along a diagonal: a panel, the 1 px frame around it, a raised panel whose face sits on a 2 px darker lip, a slot frame with a dark line inside it, a bar's frame (the track its fill sits in) and its fill;
-  - shown whole: the three marker shapes, a 5 px pip and, since Phase 6, an 8 x 5 check mark, a toggle row's mark.
+  - 9-sliced, their corners square since UiRevamp.md's Phase 3 (cut by 1 px along a diagonal before, which left a 1 px frame meeting itself only at a diagonal and a square fill showing past it, so frames looked chipped; the recipe's corner cut can still cut them): a panel, the 1 px frame around it, a raised panel whose face sits on a 2 px darker lip, a slot frame with a dark line inside it, a bar's frame (the track its fill sits in) and its fill;
+  - shown whole: the three marker shapes, a 5 px pip and, since Phase 6, an 8 x 5 check mark, a toggle row's mark;
+  - since UiRevamp.md's Phase 1: a slot's corner brackets (an L of 5 px arms in each corner, 9-sliced so they keep to any slot's corners), shown 1 UI px outside a slot whose cast is queued, and a hatch, a 4 px tile of one diagonal, tiled over a slot crowd control blocks;
+  - since Phase 2: a health bar's tick, a 1 x 3 px line down from the top of its fill every 10 HP, and a debuff's notch, a 5 px right triangle in its icon's top right corner;
+  - since Phase 12: a window's two grips, the move grip at its header's right end, six 2 px dots three across and two down, and the resize grip in its bottom right corner, three 1 px diagonal strokes 3 px apart across the lower half of a 7 px square.
 - Images and SpriteRenderers tint them by role. A fill is white, so it shows its role's colour exactly and the contrast measured on a role is what shows; only edges are shaded.
 - They replaced `Square.png`, the HUD's other smooth sprites and the world bar's `RoundedBar.png`.
 - Paddings and gaps are multiples of 2 UI px. The components showed no need for spacing in the theme.
@@ -271,43 +290,67 @@ UI is built from these prefabs in `Assets/Prefabs/UI/Components` (Phase 5), with
 
 | Component | Prefabs | Used by |
 |---|---|---|
-| Button | `Button` (Primary: raised, `ControlNormal`), its variants `ButtonSecondary` (flat, `ControlSecondary`), `ButtonDanger` (raised, `Danger`) and `ButtonLarge` (Primary with `Heading` text, 160 x 20) | Primary: the in-game menu, Back, a row's value. Secondary: Cancel, a row's Reset, Reset all. Danger: a dialog's confirm. Large: the main menu, whose buttons are `Heading` since Phase 3 |
-| Panel | `Panel` (`Surface`, framed in `Border`), its variants `PanelRaised` (`SurfaceRaised`) and `Scrim` (full screen, no sprite or frame), and `ScrimModal`, a variant of `Scrim` | Menu boxes and full-screen panels are raised; the in-game menu's dimmer is a scrim; the listening panel a modal scrim |
-| Dialog | `Dialog`, a variant of `ScrimModal`: a raised box with its question, a danger confirm and a secondary Cancel | The in-game menu's and the options screen's confirmations |
+| Button | `Button` (Primary: raised, `ControlNormal`), its variants `ButtonSecondary` (flat, `ControlSecondary`), `ButtonDanger` (raised, `Danger`) and `ButtonLarge` (Primary with `Heading` text, 160 x 20); `ButtonIcon` (UiRevamp.md's Phase 7), a variant of `Button` with its text off and a 16 x 14 icon in `TextOnControl` | Primary: the in-game menu, Back, a row's value. Secondary: Cancel, a row's Reset, Reset all and the options screen's category reset. Danger: a dialog's confirm. Large: the main menu, whose buttons are `Heading` since Phase 3, and since UiRevamp.md's Phase 9 176 UI px wide in its panel. Primary also: a notice dialog's first button (Phase 9), and a session card's Play and Host (Phase 10), whose Delete is secondary. Icon: the Character screen's Turn left and Turn right |
+| Rail item | `RailItem` (UiRevamp.md's Phase 8), a variant of `ButtonSecondary`, 104 x 16, `RailItemView`: its label left-aligned after the slot of the skin's pip; the current category's item raised on the raised panel's lip in `ControlNormal` with the pip in `TextOnControl`, the others flat in `ControlSecondary`, so shape and the pip mark the current one, not colour alone | The options screen's rail: Accessibility, Interface and Controls |
+| Panel | `Panel` (`Surface`, framed in `Border`), its variants `PanelRaised` (`SurfaceRaised`) and `Scrim` (full screen, no sprite or frame), and `ScrimModal`, a variant of `Scrim` | Menu boxes and full-screen panels are raised; the in-game menu's dimmer is a scrim, shown offline only since UiRevamp.md's Phase 6; the listening panel a modal scrim; the HUD's notice line sits on a `Panel` (UiRevamp.md's Phase 3); the main menu's panel was a `Panel` on a full-screen `PanelRaised` until UiRevamp.md's Phase 11, and is a `PanelRaised` over the title view since, beside the first run's Welcome panel; Play together is a full-screen `PanelRaised` (UiRevamp.md's Phase 9), as is Saved games (Phase 10), whose cards are `Panel` variants |
+| Dialog | `Dialog`, a variant of `ScrimModal`: a raised box with its question, a danger confirm and a secondary Cancel. Its variant `DialogNotice` (UiRevamp.md's Phase 9, `DialogNoticeView`): a message wrapping at 224 UI px, each sentence starting a line, and one or two plain buttons, the first primary and the second secondary, a lone one centred; the box as tall as its message, centred on whole UI px | The in-game menu's, the options screen's and the Character screen's confirmations, and Saved games' Delete (UiRevamp.md's Phase 10, its box as tall as its question). `DialogNotice`: the main menu's notices (the host gone, a join lost, a start that cannot go ahead) and Play together's connecting dialog |
 | Section header | `SectionHeader` (was `OptionsSectionHeader`) | The options screen |
-| Row | `Row` (a label, a value button and Reset; was `KeyBindingRow`) and its variants `RowSwatch` (a 12 UI px chip showing the swatch before the value) and `RowToggle` (Phase 6: a 12 UI px box there, `Shade` framed in `Border`, holding the skin's check mark in `Accent` while on; its button reads On or Off and flips it, its Reset turns it off) | Binding and choice rows share `Row`, since they look the same; colour rows are swatch rows; the Display section's on-off preferences are toggle rows |
-| Scroll list | `ScrollList`: a `ScrollRect`, its viewport, its rows and scrollbar | The options screen |
-| Notice line | `NoticeLine` | The options screen's notice, and the main menu's status line (at `Heading`) |
-| Slot | `Slot` (frame, icon, slot frame) and its variant `SlotAbility` (`AbilitySlotView`: name, cooldown fill and seconds, key, failure flash, tooltip) | The weapon slot is a `Slot`; the six ability slots are `SlotAbility` |
-| Status icon | `StatusIcon` (`StatusIconView`, its frame taking the click, and a tooltip) | The HUD's status row |
-| Tooltip | `Tooltip` (`HudTooltip`: a raised panel with a title in `Accent` and a description in `TextMuted`, 150 UI px wide) | Shows a status's or an ability's name and description while the pointer is over its icon or slot, or it is selected. The status row blocks clicks, as the ability bar does |
-| Bar | `Bar` (screen: a frame, a fill, a frame in `Border` and the HP text) and `WorldBar` (world: `WorldHealthBar` and `WorldStatusIcons`, a 22 x 4 art px bar with its 20 x 2 fill and four pips above it) | The HUD's health bar; the Weasel's bar |
-| Popup text | `PopupText` (was `DamagePopup`) | Damage, heal and immune popups and the waystone notice |
-| Marker | `Marker` and its variants `MarkerMove` (four chevrons pointing in, `Positive`), `MarkerAttackMove` (a variant of `MarkerMove`: the ring crossed by four ticks, `Danger`) and `MarkerHover` (four brackets on the ring's diagonals, `Danger`) | Each a different shape, so colour is never the only cue |
+| Row | `Row` (a label, a value button and Reset; was `KeyBindingRow`; since UiRevamp.md's Phase 8 its Reset stands in a 44 UI px `ResetSlot` that keeps the column while the options screen hides the button on a row at its default) and its variant `RowToggle` (Phase 6: a 12 UI px box there, `Shade` framed in `ControlSecondary` (in `Border` until UiRevamp.md's Phase 3), holding the skin's check mark in `Accent` while on; its button reads On or Off and flips it, its Reset turns it off); `RowChips` (UiRevamp.md's Phase 7, `RowChipsView`: a label, the value's button, kept as a column when hidden, up to four `SwatchChip`s and Reset, 16 UI px tall). `RowSwatch` (a 12 UI px chip before the value) went with the options screen's colour rows in UiRevamp.md's Phase 7 | Binding and choice rows share `Row`, since they look the same; the Display section's on-off preferences are toggle rows; the Character screen's rows, a part with its colours, are chip rows; the first run's Welcome panel holds a row and two toggle rows, their `ResetSlot`s off (UiRevamp.md's Phase 11) |
+| Swatch chip | `SwatchChip` (UiRevamp.md's Phase 7, `SwatchChipView`): a 12 UI px button whose face shows the swatch, with no colour transition, framed in `Border`; selected, a frame in `Accent` rings it in the 2 UI px between chips. `SwatchPicker`, a variant of `PanelRaised` framed in `Accent` (`SwatchPickerView`): its title, a grid of up to twelve chips, six to a line, and the focused swatch's name, placed under or over the chip that opened it | The Character screen's colours: a chip per colour on a part's row, and the picker a chip opens |
+| Scroll list | `ScrollList`: a `ScrollRect`, its viewport, its rows and scrollbar | The options screen's pane, its scrollbar shown only while the rows overflow, its viewport leaving it room so the rows keep their width (UiRevamp.md's Phase 8); Saved games' cards, the same way (Phase 10) |
+| Notice line | `NoticeLine` (`Accent`, centred; wrapping since UiRevamp.md's Phase 3), its variant `DescriptionLine` (UiRevamp.md's Phase 8: `TextMuted`, left-aligned at the top, two lines in 354 x 22 UI px, ending in an ellipsis past them), its variant `MessageLine` (UiRevamp.md's Phase 1: `Text` outlined in `Outline`, for text over the world) and that one's variant `ChatLine` (UiRevamp.md's Phase 12: left-aligned, a 1 px top margin centring its glyphs in an 11 UI px line) | The options screen's notice and, over it online, its warning (UiRevamp.md's Phase 8), and the description of its focused row (`DescriptionLine`); Play together's notice line (UiRevamp.md's Phase 9: 360 x 22 UI px over Back, a sentence a line, its lines at its foot), where the main menu's status line was, and Saved games' (Phase 10); the message line above the ability bar, where a failed press says why; the chat's lines (`ChatLine`, Phase 12); since Phase 3 the HUD's notice line at the top centre: a `NoticeLine` on a `Panel` sized to its text (`NoticeView`), up to 240 UI px and two lines, 4 UI px of padding at its sides and 2 above and below (less for two lines, which take the band's 24), read against the panel's `Surface`, ending in an ellipsis past two lines |
+| Slot | `Slot` (frame, icon, slot frame) and its variant `SlotAbility` (`AbilitySlotView`: name, cooldown fill and seconds, key, failure flash, tooltip; the key in its top left corner and the seconds in its top right since UiRevamp.md's Phase 3; since UiRevamp.md's Phase 1 its states: the slot frame in `Accent` while its cast runs, the skin's corner brackets in `Accent` just outside it while its cast is queued, and the skin's hatch in `ControlDisabled` under its name while crowd control blocks it) | The weapon slot is a `Slot` with a `WeaponSlotView` and a tooltip (Phase 1), in the ability row since Phase 2, after the gap and before its two abilities; the six ability slots are `SlotAbility` |
+| Status icon | `StatusIcon` (`StatusIconView`, its frame taking the click, and a tooltip) and its variant `StatusIconDebuff` (UiRevamp.md's Phase 2: its frame in `Danger` and the skin's notch in `Danger` in its top right corner). The last icon of a full group shows "+n" on `Surface` for the statuses that do not fit, its tooltip naming them | The command bar's status groups: buffs left of the abilities, debuffs right of them, so both their side and their shape carry their kind |
+| Tooltip | `Tooltip` (`HudTooltip`: a raised panel with a title in `Accent`, since UiRevamp.md's Phase 1 a line of numbers in `Text`, and a description in `TextMuted`, 150 UI px wide; an empty line hides) | Shows a status's or an ability's name and description while the pointer is over its icon or slot, or it is selected; an ability's numbers are its cooldown, cast time and range, and the weapon slot's tooltip gives the weapon's damage, type and range. It shows below a target with no room above it, and above the command bar for the command bar's slots and icons (Phase 2), so the health bar stays in view. The status groups block clicks, as the ability bar does |
+| Bar | `Bar` (screen, `HealthBarView`: a frame, a fill, a frame in `Border` and the HP text, "72 / 100" since UiRevamp.md's Phase 1; the fill names its track, so its contrast is measured. Since UiRevamp.md's Phase 3 its text draws at three quarters of the zoom, on whole display pixels (`PixelTextScale`). Since Phase 2 the fill is `HealthPlayer`, the part just lost shows under it in `HealthLost`, a tick marked every 10 HP from the top until UiRevamp.md's Phase 3, which set the spacing to 0, none, the text is outlined in `Outline`, and the frame turns `Danger` and pulses at 30% or less) and `WorldBar` (world: `WorldHealthBar` and `WorldStatusIcons`, a 22 x 4 art px bar with its 20 x 2 fill and four 5 px pips above it, scaled to 4.16 px until UiRevamp.md's Phase 4), and its variant `WorldBarPlayer` (UiRevamp.md's Phase 4: its fill in `HealthPlayer`, and under it a cast bar, `WorldCastBar`, 22 x 3 with a 20 x 1 fill in `Accent`, sharing the bar's bottom border and hidden until a cast) | The command bar's health bar, 242 x 13 (12 until UiRevamp.md's Phase 3, when its text could not centre); the Weasel's bar; every player's bar, 46 art px above its feet |
+| Small bar | `BarSmall` (UiRevamp.md's Phase 6): a 40 x 6 bar, its fill in `HealthPlayer` read against its `HealthTrack` and a 1 px frame in `ControlSecondary`, so the empty part shows on a dark panel; `VitalsStrip` (UiRevamp.md's Phase 7, `VitalsStripView`): the session line in `TextMuted` and an 84 x 12 `BarSmall` with "72 / 100" outlined over it | The rows of the in-game menu's Party page; the vitals strip at the top right of the Character screen and, since UiRevamp.md's Phase 8, of the options screen, online |
+| Party row | `PartyRow` (UiRevamp.md's Phase 6), `PartyRowView`, 144 x 12: the skin's 5 px badge in its slot's colour role, "Player 2" in `Text`, a tag ("You", "Host") in `TextMuted`, and a `BarSmall`, or in its place "Down" in `Danger` or a line in `TextMuted` ("In another world", "Joining") | The in-game menu's Party page, a row per player |
+| Key cap | `KeyCap` (UiRevamp.md's Phase 6): a key's short label in `Caption` and `Accent`, the HUD's key colour, on `SurfaceRaised` framed in `ControlSecondary`, 12 UI px tall and as wide as its label plus 3 a side, 12 at least | The in-game menu's Controls page, a cap per key |
+| Popup text | `PopupText` (was `DamagePopup`) | Damage, heal and immune popups (the waystone notice moved to the notice line in UiRevamp.md's Phase 3) |
+| Party frame | `PartyFrame` (UiRevamp.md's Phase 5), a variant of `Panel`, 104 x 26, `PartyFrameView`: the skin's 16 px badge in its slot's colour role with the number on it in `TextOnControl`, "Player 2" in `Text`, and a 74 x 6 bar in `HealthPlayer` on `HealthTrack` with four debuff pips in its top right corner, or in its place a line in `TextMuted` | The HUD's party frames at the left edge, one per other player; the badge's small disc beside every player's world bar (`PlayerSlotBadge` on `WorldBarPlayer`) |
+| Window | `Window` (UiRevamp.md's Phase 12), a variant of `Panel`: a 13 UI px `Header` in `SurfaceRaised`, framed in `Border`, holding its title in `Accent` and the skin's move grip in `ControlSecondary`, and the skin's resize grip in `ControlSecondary` in its bottom right corner. The header and the grip are `WindowDragHandle`s: dragging the header moves the window and the grip resizes it | The HUD's chat, shown while it is open for typing |
+| Field | `Field` (UiRevamp.md's Phase 12): a one-line `TMP_InputField` on a `SurfaceRaised` face framed in `Accent`, its text in `Text` and its placeholder in `TextMuted`, without rich text or a transition, so its face stays dark while it takes the typing and its frame marks it | The chat's field. Its variant `FieldControl` (UiRevamp.md's Phase 9), in the control look: a colour tint over a white face (`ControlNormal`, `Accent` while selected), framed in `Border`, its text in `TextOnControl` and its placeholder in `Placeholder`, centred down it; selecting it does not start the typing, so the arrows pass over it, Submit or a click does, and Escape keeps what was typed: Play together's address field |
+| Invite block | `InviteBlock` (UiRevamp.md's Phase 9, `InviteBlockView`, cut from Phase 6's Party page): "Friends join at" and the port in `TextMuted`, then up to two addresses in `Text`, each with its network's name in `TextMuted` under it and a secondary Copy button at the right, or "No network found"; its Copy buttons and port keep to its right edge at any width | The in-game menu's Party page (144 UI px) and Play together's host column (232), both filled by `HostInvite` |
+| Session card | `SessionCard` (UiRevamp.md's Phase 10), a variant of `Panel`, `SessionCardView`, 466 x 30: the place in `Text`, a joined copy's tag ("from a host's game") after it and the time played with the last save under it in `TextMuted`; at its right its actions, Play and Host (primary) and Delete (secondary), 48 x 16. Only the selected card shows its actions and its frame in `Accent`; the others' stay reachable by the arrows, hidden and blind to the pointer, and a click on a card selects its first action | The Saved games screen, a card per save, newest first |
+| Marker | `Marker` and its variants `MarkerMove` (four chevrons pointing in, `Positive`), `MarkerAttackMove` (a variant of `MarkerMove`: the ring crossed by four ticks, `Danger`) and `MarkerHover` (four brackets on the ring's diagonals, `Danger`); `MarkerHover`'s own variant `MarkerHoverAlly` (UiRevamp.md's Phase 4: the same brackets in `Positive`) | The three kinds are each a different shape, so colour is never the only cue. The ally hover marker under another player shares the enemy's shape, by the user's choice; the attack cursor, shown over enemies only, tells them apart |
 
 The themed components:
 
 - **`ThemedText`:** a TMP text's colour role, background role and size. It sets the font, size, colour and outline (the size's outlined material preset when the background is `Outline`) on its own instance when it wakes, and snaps its glyphs to whole UI px each time its text is built. Views that change a text's size call `SetSize` and `ResetSize`.
-- **`ThemedGraphic`:** an Image's or a SpriteRenderer's role.
+- **`ThemedGraphic`:** an Image's or a SpriteRenderer's role, and for a bar's fill the track it is read against (UiRevamp.md's Phase 1).
 - **`ThemedSelectable`:** a Selectable's colour block, set from the control roles: its own normal role (`ControlNormal`, `ControlSecondary` or `Danger`, since Phase 5) and the shared highlighted, pressed, selected and disabled ones.
 
 Each references the `UiTheme` asset directly, so pooled prefabs that are never injected (the markers) work too. Views that pick colours at runtime (the failure flash, the marker kinds, the missing weapon tint) also reference the theme, and read their roles' colours once when they wake. A control's target graphic stays white, its colour block holding the roles.
 
 ### Patterns
 
-- **Feedback.** Every order and cast is answered on the frame it is given: a marker, a cast clip, or a failure flash on its slot. Every hit shows a popup and a flash on every machine that learns of it.
+- **Feedback.** Every order and cast is answered on the frame it is given: a marker, a cast clip, or a failure flash on its slot. Every hit shows a flash on every machine that learns of it, and a popup there; an ally's popup (a hit, tick, heal or block involving another player but not the local one) shows as the local player's Allies' damage numbers preference asks (UiRevamp.md's Phase 3).
+  - **A failure is answered in words too** (UiRevamp.md's Phase 1): beside the flash, the message line above the ability bar says why for 1.2 s ("On cooldown", "Already casting", "No target", "Stunned", "Silenced", "Rooted"), from one table keyed by the outcome. An empty slot, death, and a queued cast that expired or was dropped say nothing.
+  - **A slot shows its state** before it is pressed: framed in `Accent` while its cast runs, bracketed while a cast waits in the buffer, hatched while crowd control blocks it (every slot stunned or silenced, the slots whose cast moves the caster rooted). Each state is a shape, not only a colour.
 - **Menus.**
-  - Escape or gamepad East closes the top layer through `MenuStack`.
-  - An action that ends the game for other players, or loses data, asks first: the host's Leave game and Quit online, and Reset all (KeyBindings.md).
+  - Escape or gamepad East closes the top layer through `MenuStack`. The chat's window is a layer while it is open for typing (UiRevamp.md's Phase 12), so Escape closes it before it could open the in-game menu.
+  - An action that ends the game for other players, or loses data, asks first: the host's Leave game and Quit with others connected, saying how many; leaving or quitting after this machine's last save failed (both since UiRevamp.md's Phase 6, before which the host was asked even alone); Reset all (KeyBindings.md; the options screen's category reset since UiRevamp.md's Phase 8, and the Character screen's); and deleting a saved game (UiRevamp.md's Phase 10), naming it, Cancel selected. Nothing else asks.
+  - The scrim marks a paused game (UiRevamp.md's Phase 6): offline the in-game menu dims the game and is titled "Paused"; online nothing dims and it is titled "Menu", the game running on around it.
+  - A menu shows its buttons and nothing else by default; what it holds besides (the party, the controls) is a page of its own, opened in its place, with Back (UiRevamp.md's Phase 6). A list shows the actions of its selected item only (Saved games' cards, UiRevamp.md's Phase 10).
   - Changes apply and save at once, with no Apply step.
+  - The main menu (UiRevamp.md's Phase 9) is a panel of buttons on the left, Continue's line under Continue; Saved games (Phase 10), Play together, Character and Options open as full screens in its place, and Escape does nothing on the panel itself. Since Phase 11 it stands over the title view, the logo at its top; on the first run a Welcome panel comes before it, and the first New game goes through the Character screen, its Back reading "Start".
 - **Focus.**
   - Every control can be reached by mouse, keyboard and gamepad, through `UISelection` only.
   - A screen selects its first control when it opens.
   - Closing a screen selects the control that opened it.
+  - Menus loop: Down from the last control reaches the first, Up from the first the last (the in-game menu since UiRevamp.md's Phase 6, the main menu since its Phase 9).
+  - A list of cards (Saved games, UiRevamp.md's Phase 10) moves Up and Down to the same action of the card above or below, through Back past either end, and Left and Right along the card's actions.
+  - A screen of two columns (Play together, UiRevamp.md's Phase 9) moves Up and Down along a column, through Back, and Left and Right across to the same row of the other column.
+  - A text field is reached by the arrows like any control, and takes the typing only on Submit or a click (Play together's address field); Escape while typing stops the typing, not the screen.
 - **Messages.**
-  - Each screen has one place for messages: the main menu's status line, the options screen's notice.
-  - In game, short notices float over the local player as popups (Waystone discovered).
-  - A failure says what happened and, when the player can act on it, what to do.
+  - Each screen has one place for messages: the main menu's dialog (a `DialogNotice`, since UiRevamp.md's Phase 9 in place of its status line: why the menu was reached, such as the host leaving or a join lost, or why a start could not go ahead), Play together's notice line, Saved games' notice line (UiRevamp.md's Phase 10: a save that cannot be read, a delete refused, a host that cannot start), the options screen's notice.
+  - In game, notices queue on the notice line at the top centre, each for 3 s, a repeat restarting it: "Waystone discovered", "Entering the Overworld", and while the local player is dead "You fell. Respawning in 3", then "Respawning..." (UiRevamp.md's Phase 3). Popups are left to hits and heals. Each machine raises its own notices from what it already knows.
+  - Online, the chat holds the session's lines (UiRevamp.md's Phase 12), in a window under the party frames that the player may move and resize while it is open:
+    - players' messages, "Player 2: on my way", the name in its slot's colour, so the label carries the sender beside the colour;
+    - the party's lines in `TextMuted`: "Player 2 joined", "Player 2 left" and "Player 2 is down", each machine raising its own, not as notices;
+    - at rest a line shows 10 s, then fades over 1 s, and opening the window shows them all; with the Chat timestamps option each starts with its time, "14:32".
+    Offline there is nobody to talk to, and the chat does not show.
+  - A failure says what happened and, when the player can act on it, what to do; on a dialog or a notice line each sentence starts a line of its own.
 - **World-space UI.**
   - Bars and status icons sit on the `Overlay` layer, unlit.
   - Markers stay on the `Terrain` layer, under the units they mark.
@@ -315,20 +358,25 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
   - World-space UI is sized in world units and follows the camera's zoom, not the UI size step.
 - **Co-op.**
   - The HUD shows only the local player.
-  - Other players' state will show above their units in the world. Players have no world bar yet (Later).
+  - Every player's state shows above its unit, on every machine, the local player's own included (UiRevamp.md's Phase 4): a green world bar, its debuff pips, and a cast bar under it while it casts. An ally under the pointer gets the ally hover marker; the local player never does.
+  - Every player online has a slot from 1 to 4 that every machine agrees on (UiRevamp.md's Phase 5), shown as a disc in its colour role (`Player1` to `Player4`) beside its world bar. The party frames at the left edge show the other players: their badge with its number, their health and debuffs, or why there is none (joining, in another world, respawning). Playing alone, none show.
+  - The in-game menu's Party page (UiRevamp.md's Phase 6) lists every player on every machine in the same slot order, the local one tagged "You" and the host's own "Host" on the others; the host also sees the addresses friends join at, each with a Copy button.
 - **Never colour alone.** A colour that carries meaning comes with a shape, an icon, a label or a size.
   - **Since Phase 5:** the move, attack-move and hover markers are different shapes, and the HUD's statuses and abilities have tooltips.
+  - **Since UiRevamp.md's Phase 2:** buffs and debuffs sit on different sides of the abilities and debuffs carry a notch; a low health bar's frame says so beside the numbers.
+  - **Since UiRevamp.md's Phase 4:** the ally hover marker is the enemy's shape in `Positive`; over an enemy the attack cursor shows too.
+  - **Since UiRevamp.md's Phase 5,** by the user's choice: a slot's badge beside a world bar is a disc told from the others by its colour alone; its party frame names it, "Player 2", and its badge there carries the number.
   - **Known gaps:** world status icons and auras stay colour-only until statuses have icon art (Later). A popup's damage type stays colour-only, and its `Resisted` and `Weakness` flags unshown, as settled in Phase 5 (Decisions): a hit's weapon or ability tells its type.
 
 ### Accessibility
 
 | Rule | Threshold | Enforced by |
 |---|---|---|
-| Text size | A body height (ascender to descender) of at least 18 px per 1080 display lines, by default (XAG 101's PC minimum): `Caption` at the chosen zoom | `UiScale`'s zoom rule; `UiThemeTests` (from the theme font's glyphs); `UiContentTests` (every text themed, none auto-sizing) |
-| Contrast | **Text:** 4.5:1 under `Title`, 3:1 for `Title` and above (XAG 102's large text is a 36 px body at 1080p).<br>**Shapes that carry meaning:** 4.5:1 when small, 3:1 when large.<br>**Others:** 3:1 for disabled text; 4.5:1 for placeholders.<br>Text over the world is measured against its outline. | `UiThemeTests` through `UiThemeUsage`: every pair of text role and background role that a `ThemedText` uses (a translucent background over white and over black, the lower ratio; a control in its normal, highlighted, selected and disabled states), and the damage-type, heal, immune and waystone colours against `Outline` |
+| Text size | A body height (ascender to descender) of at least 18 px per 1080 display lines, by default (XAG 101's PC minimum): `Caption` at the chosen zoom. One exception, settled in UiRevamp.md's Phase 3: the health bar's numbers, drawn smaller (`PixelTextScale`), have 14 px digits at 1080p, since the bar's fill shows the health too | `UiScale`'s zoom rule; `UiThemeTests` (from the theme font's glyphs); `UiContentTests` (every text themed, none auto-sizing) |
+| Contrast | **Text:** 4.5:1 under `Title`, 3:1 for `Title` and above (XAG 102's large text is a 36 px body at 1080p).<br>**Shapes that carry meaning:** 4.5:1 when small, 3:1 when large.<br>**Others:** 3:1 for disabled text; 4.5:1 for placeholders.<br>Text over the world is measured against its outline. | `UiThemeTests` through `UiThemeUsage`: every pair of text role and background role that a `ThemedText` uses (a translucent background over white and over black, the lower ratio; a control in its normal, highlighted, selected and disabled states), and the damage-type, heal and immune colours against `Outline`; since UiRevamp.md's Phase 1, every bar's fill on its track at 3:1 (`UiThemeUsage.MeasureFills`) |
 | Never colour alone | Essential information also has a shape, icon, label or size (Game Accessibility Guidelines, basic) | Patterns above; `ContentTests`: every status has a unique abbreviation and a description, and every ability a description; `UiContentTests`: the marker kinds draw different sprites |
 | Flashing | Nothing flashes more than three times a second over more than a quarter of a 10° field, about 2.8% of a 1080p display (WCAG 2.3.1; Game Accessibility Guidelines, basic) | **Hit flash:** one unit flashes: a Weasel covers 0.27% of a 1080p display, its luminance rising by 0.96 under a full hit flash at night.<br>**Light flicker:** measured on Phase 6's previews at night (Phase 6 notes): only the flames' own pixels change by 10% or more in a step, 450 to 729 px (0.022 to 0.035% of 1080p) for a torch, a brazier or a campfire, and 1,566 px (0.076%) for all three in one view, about 37 times under the threshold; their light pools change by under 2%.<br>**Reduce flashing:** every flash at a third (a hit at night rises by 0.32, a tick's wash by 0.044, under 10%), and the flicker still: nothing in those views changes by 5%. `HitFeedbackTests` and `PropLightingTests` check both. |
-| Controls | At least 12 UI px in each direction and 2 UI px apart. Our number; the guidelines ask "large and well spaced" without one. | `UiContentTests` on every Selectable in the UI prefabs and menu scenes, the scroll list's scrollbar excepted (it shows the list's place; the list scrolls with the selection and the wheel) |
+| Controls | At least 12 UI px in each direction and 2 UI px apart. The chat window's 7 UI px resize grip is not a control: no keyboard or gamepad reaches it, and the options' Chat window row puts the window back from either (UiRevamp.md's Phase 12). Our number; the guidelines ask "large and well spaced" without one. | `UiContentTests` on every Selectable in the UI prefabs and menu scenes, the scroll list's scrollbar excepted (it shows the list's place; the list scrolls with the selection and the wheel) |
 | Reachable UI | Menus work with keyboard and gamepad alone | `UiContentTests`: no Selectable but that scrollbar has navigation off |
 | Remapping | Every gameplay control can be rebound | KeyBindings.md, done |
 | Settings remembered | Every preference is saved | `settings.json`, done |
@@ -336,13 +384,16 @@ Each references the `UiTheme` asset directly, so pooled prefabs that are never i
 
 ### Preferences
 
-There are new rows in a Display section of the options screen. Each is saved at once, in `settings.json` through `UserSettings`, and never replicated.
+There are new rows in a Display section of the options screen, split since UiRevamp.md's Phase 8 into its Accessibility category (UI size, Reduce flashing, Reduce motion) and its Interface category (Allies' damage numbers, the chat's rows). Each is saved at once, in `settings.json` through `UserSettings`, and never replicated. Since UiRevamp.md's Phase 11 the first run's Welcome panel offers the Accessibility category's three before the main menu.
 
 | Preference | Phase | Values | Effect |
 |---|---|---|---|
 | UI size | 3 | Normal; Large and Larger where the display fits them | Adds 0, 1 or 2 to the UI zoom. Screen-space UI and popups grow; world-space UI does not. |
 | Reduce flashing | 6 | Off, On | `HitFeedbackPresenter`'s flashes (a hit's, an immunity's and a tick's) at a third of their strength, `HitFeedbackSettings.ReducedFlashShare` (the asset is never edited at runtime). Light props, flame pixels and flame frames stop flickering, as the lighting dev panel's flicker override stills them; the override stays the panel's, and the flicker stands still while either asks (Phase 6 notes). |
 | Reduce motion | 6 | Off, On | No camera kick on hits. Popups fade in place instead of rising. |
+| Allies' damage numbers | UiRevamp.md's Phase 3 | Shown, Smaller, Hidden | How the popups of hits, ticks, heals and blocks that involve another player but not the local one show: like the others (the default), at `Caption` (`CombatSettings.AllyPopupSize`, the ticks' size, since Galmuri has nothing smaller), or not at all. The local player's own and those no player is part of always show. |
+| Chat timestamps | UiRevamp.md's Phase 12 | Off, On | Each chat line starts with the time it arrived on this machine, "14:32", in `TextMuted`. |
+| Chat window | UiRevamp.md's Phase 12 | Default, Moved | Where the player moved the chat window and how large they made it, kept by the screen corner nearest it. The row's button, like its reset, puts it back in its default place. |
 
 ## Architecture
 
@@ -364,9 +415,10 @@ There are new rows in a Display section of the options screen. Each is saved at 
   - It has getters only and a `Create(...)` factory for tests.
   - It lives in Gameplay because Core does not reference TextMesh Pro.
 - `ThemedText`, `ThemedGraphic`, `ThemedSelectable`: described under Components. They change only their own instance and have no `Update`.
-- `AbilitySlotView`, `MoveMarker` and `PlayerHudView` swap their colour fields for roles and a theme reference. Each marker prefab names its own role (Phase 5).
-- `HudTooltip`, `TooltipTrigger` and `ITooltipSource` (Phase 5): a trigger on a slot or status icon shows the HUD's tooltip for the view on its object (`AbilitySlotView`, `StatusIconView`) while the pointer is over it or it is selected, and follows its changes. Local, never replicated.
+- `AbilitySlotView`, `MoveMarker` and `PlayerHudView` swap their colour fields for roles and a theme reference. Each marker prefab names its own role (Phase 5). UiRevamp.md's Phase 1 moved the weapon icon and its theme from `PlayerHudView` to `WeaponSlotView`.
+- `HudTooltip`, `TooltipTrigger` and `ITooltipSource` (Phase 5): a trigger on a slot or status icon shows the HUD's tooltip for the view on its object (`AbilitySlotView`, `StatusIconView`, and since UiRevamp.md's Phase 1 `WeaponSlotView`) while the pointer is over it or it is selected, and follows its changes; the numbers come from `TooltipDetails`. Local, never replicated.
 - `FloatingDamageText` takes a text size per popup, through its `ThemedText`, and places itself on whole UI px.
+- `PartyRowView` (UiRevamp.md's Phase 6) reads its badge's slot colour from its theme, as `PartyFrameView` does.
 - The display preferences (Phase 6), each read from `UserSettings` on this machine only: `HitFeedbackPresenter` shows every flash at `HitFeedbackSettings.ReducedFlashShare` of its strength with Reduce flashing on, and kicks no camera with Reduce motion on; `PropLighting` stills the flicker with Reduce flashing on, as the panel's `FlickerOverride` does, without writing it; `DamagePopupLayer` (injected through an `[Inject]` method) has a popup spawned with Reduce motion on fade in place. The options screen's two toggle rows come from `RowToggle` (`OptionsMenuView.AddToggleRow`, `KeyBindingRowView.SetToggle`).
 
 ### Editor (`Assets/Editor/Design`, `Assets/Editor/UI`)
@@ -374,8 +426,8 @@ There are new rows in a Display section of the options screen. Each is saved at 
 - `DesignTables`: `Build()` returns each file's name and Markdown, built from the assets with `DamageMath`; `Write()` writes them to `Docs/Generated`. Menu item: `Tools/TopDownRPG/Design/Write Design Tables`.
 - `DesignSearches`: the tuning views, a menu item per kind under `Tools/TopDownRPG/Design/Tune/` (`ViewState(kind)`, `Table(context, kind)`).
 - `UiFonts`: `Tools/TopDownRPG/UI/Write Fonts` writes the font assets and their outlined presets (Phase 4).
-- `UiThemeUsage`: the themed texts of the prefabs and menu scenes, and the contrast of each pair of roles they use, for `DesignTables` and `UiThemeTests` (Phase 4).
-- `UiSkinRecipe`, `UiSkinWriter` and the recipe's inspector (Phase 5): `Assets/Settings/UI/Recipe_UiSkin.asset`. `Generate(piece)` draws a piece without touching an asset; Generate writes every piece and sets its 9-slice border. Phase 6 appended `Check`, the toggle row's mark.
+- `UiThemeUsage`: the themed texts of the prefabs and menu scenes, and the contrast of each pair of roles they use, for `DesignTables` and `UiThemeTests` (Phase 4); since UiRevamp.md's Phase 1 also each bar's fill on its track.
+- `UiSkinRecipe`, `UiSkinWriter` and the recipe's inspector (Phase 5): `Assets/Settings/UI/Recipe_UiSkin.asset`. `Generate(piece)` draws a piece without touching an asset; Generate writes every piece and sets its 9-slice border. Phase 6 appended `Check`, the toggle row's mark, and UiRevamp.md's Phase 1 `SlotCorners` and `Hatch`.
 
 ### Font
 
@@ -383,7 +435,7 @@ Galmuri by Lee Minseo, under the SIL Open Font License 1.1, which allows it in a
 
 ### Settings
 
-`UserSettingsData` gains `uiSizeStep` (Phase 3), `reduceFlashing` and `reduceMotion` (Phase 6). A file from before reads them as their defaults, so the format version stays 1.
+`UserSettingsData` gains `uiSizeStep` (Phase 3), `reduceFlashing` and `reduceMotion` (Phase 6), and `allyPopups` (UiRevamp.md's Phase 3). A file from before reads them as their defaults, so the format version stays 1.
 
 ## Networking
 
@@ -621,9 +673,7 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - Text scaling to 200% (XAG), which needs layouts that reflow.
 - Status icon art, for the HUD and the world status icons.
 - Colour-vision options for damage-type and status colours.
-- Co-op identity:
-  - player identity colours and markers (not the colours a player picks for its character), which need a player slot the host assigns so every machine agrees;
-  - players' world bars and status icons.
+- Co-op identity came with UiRevamp.md: players' world bars and status icons in its Phase 4, and player slots with their colours and badges in its Phase 5.
 - World-space UI and the attack cursor sized by the UI zoom. Today the cursor is a fixed 32 px hardware cursor.
 - A component gallery scene, if the component set grows past what the screens themselves show.
 - Shared durations, once the first menu animates.
@@ -668,14 +718,14 @@ Each phase ships on its own, keeps the game playable offline and hosted, and com
 - **PlayMode.** In Testlands, with the in-process host and client:
   - changing the preferences sends nothing (the UI size from Phase 3, checked by what the client shows; the others from Phase 6, checked by each machine's flash and kick and by settings that never follow the other machine's);
   - the host's HP and statuses, and the client copy's hit reports, are the same with reduce flashing on and off.
-- **EditMode, `UiSkinWriterTests`.** Every skin piece greyscale and sliced around its corners, the panels' cut corners and the raised panel's lip, the markers different shapes on one canvas, the check mark's two arms, and the project's sprites what its recipe draws.
+- **EditMode, `UiSkinWriterTests`.** Every skin piece greyscale and sliced around its corners, the panels' square corners (cut at a recipe's cut) and the raised panel's lip, the markers different shapes on one canvas, the check mark's two arms, and the project's sprites what its recipe draws.
 - **EditMode, `TooltipTests`.** A slot's or a status icon's tooltip on hover and on selection, following its source and inside its canvas; a shown status icon taking the click; the HUD's one tooltip wired to every slot and icon.
 - **Manual.** The Phase 3 and 4 previews at each display in the Scale table, the Phase 5 skin previews, and Phase 6's toggle rows, flashes, popups and flicker measurement.
 - **Before merging into `main`:** the full EditMode and PlayMode suites.
 
 ## Open questions
 
-None are left. Each was settled with the user at the start of the phase named: the principles in Phase 1, the balance targets in Phase 2, the control size in Phase 3 (12 UI px kept), the font in Phase 4 (Galmuri, a pixel font) and the damage types on popups in Phase 5 (left as they are; Decisions).
+None are left. Each was settled with the user at the start of the phase named: the principles in Phase 1, the balance targets in Phase 2, the control size in Phase 3 (12 UI px kept), the font in Phase 4 (Galmuri, a pixel font) and the damage types on popups in Phase 5 (left as they are; Decisions). UiRevamp.md's Phase 3 settled other players' popups as a preference (Preferences: Allies' damage numbers).
 
 ## Tools considered
 

@@ -8,15 +8,21 @@ using UnityEngine.UI;
 
 /// <summary>
 /// Content checks for the UI (Docs/DesignSystem.md, Phases 4 to 6, and Accessibility), on the UI prefabs (the
-/// components among them), the mobs' world UI and the menu scenes, which are only read: every text, image, world UI
+/// components among them), the mobs' and the player's world UI and the menu scenes, which are only read: every text, image, world UI
 /// sprite and control is themed with the project's theme, no text auto-sizes, is bold, or is italic or in capitals
 /// below Title, every image draws the skin or nothing, every UI canvas keeps the UI scale, every control is large
-/// enough and reachable, the marker kinds are different shapes, and the toggle row shows its state as a check mark.
+/// enough and reachable, the marker kinds are different shapes, the toggle row shows its state as a check mark, and
+/// the ability slot's states and the message line are skinned and themed (Docs/UiRevamp.md, Phase 1), the command
+/// bar is built from its components (Phase 2), the options screen's rail item and description line are built from
+/// the skin and the notice line (Phase 8), the main menu's dialog, join field and invite block from theirs (Phase 9), and
+/// the session card and the Saved games screen from theirs (Phase 10), and the title view, the logo and the Welcome
+/// panel from theirs (Phase 11).
 /// </summary>
 public class UiContentTests
 {
-    private static readonly string[] PrefabFolders = { "Assets/Prefabs/UI", "Assets/Prefabs/Mobs" };
+    private static readonly string[] PrefabFolders = { "Assets/Prefabs/UI", "Assets/Prefabs/Mobs", "Assets/Prefabs/Player" };
     private const string Components = "Assets/Prefabs/UI/Components/";
+    private const string IconsFolder = "Assets/Sprites/UI/Icons";
 
     private readonly List<(string where, GameObject root)> roots = new();
     private readonly List<UnityEngine.SceneManagement.Scene> opened = new();
@@ -147,8 +153,8 @@ public class UiContentTests
     }
 
     /// <summary>
-    /// The world UI's sprites (the world health bar and its status pips, the markers and the hover marker) have a
-    /// <see cref="ThemedGraphic"/> with the project's theme.
+    /// The world UI's sprites (the world health bars with their status pips and the players' cast bars, the markers
+    /// and the hover markers) have a <see cref="ThemedGraphic"/> with the project's theme.
     /// </summary>
     [Test]
     public void TheWorldUisSprites_AreThemed()
@@ -171,6 +177,7 @@ public class UiContentTests
             foreach (PointerFeedbackLayer layer in root.GetComponentsInChildren<PointerFeedbackLayer>(true))
             {
                 sprites.Add(layer.HoverRing);
+                sprites.Add(layer.AllyHoverRing);
             }
 
             foreach (SpriteRenderer sprite in sprites)
@@ -184,7 +191,7 @@ public class UiContentTests
             }
         }
 
-        Assert.That(count, Is.GreaterThanOrEqualTo(10), "The Weasel's bar and four pips, the markers and the hover marker.");
+        Assert.That(count, Is.GreaterThanOrEqualTo(18), "The Weasel's and the player's bars with their pips, the player's cast bar, the markers and the hover markers.");
         Assert.That(problems, Is.Empty, string.Join("\n", problems));
     }
 
@@ -205,7 +212,7 @@ public class UiContentTests
             Check(themed.Theme, where, themed, problems);
         }
 
-        foreach (System.Type view in new[] { typeof(AbilitySlotView), typeof(MoveMarker), typeof(PlayerHudView) })
+        foreach (System.Type view in new[] { typeof(AbilitySlotView), typeof(MoveMarker), typeof(WeaponSlotView), typeof(HealthBarView), typeof(StatusIconView) })
         {
             foreach ((string where, GameObject root) in roots)
             {
@@ -220,7 +227,10 @@ public class UiContentTests
     }
 
     /// <summary>
-    /// Every UI image draws a sprite of the skin (Assets/Sprites/UI/Skin) or none: the views give icons at runtime.
+    /// Every UI image draws a sprite of the skin (Assets/Sprites/UI/Skin), one of the licensed icons
+    /// (Assets/Sprites/UI/Icons, the Character screen's turn arrows, Docs/UiRevamp.md, Phase 7), one of the title
+    /// sprites the title view recipe writes (Assets/Sprites/UI/Title, the title view and the logo, Phase 11) or none: the
+    /// views give the other icons at runtime.
     /// </summary>
     [Test]
     public void EveryImage_DrawsTheSkinOrNothing()
@@ -229,7 +239,7 @@ public class UiContentTests
         foreach ((string where, Image image) in All<Image>())
         {
             string sprite = image.sprite != null ? AssetDatabase.GetAssetPath(image.sprite) : null;
-            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/"))
+            if (sprite != null && !sprite.StartsWith(UiSkinRecipe.Folder + "/") && !sprite.StartsWith(IconsFolder + "/") && !sprite.StartsWith(TitleViewRecipe.Folder + "/"))
             {
                 problems.Add($"{where}: {Path(image.transform)} draws {sprite}.");
             }
@@ -239,9 +249,25 @@ public class UiContentTests
     }
 
     /// <summary>
+    /// The licensed icons (Assets/Sprites/UI/Icons, Docs/UiRevamp.md, Phase 7) keep their licence beside them:
+    /// Pixelarticons' MIT notice, which the art rule's exception for licensed UI icons asks for.
+    /// </summary>
+    [Test]
+    public void TheLicensedIcons_KeepTheirLicenceBesideThem()
+    {
+        string[] icons = System.IO.Directory.GetFiles(IconsFolder, "*.png");
+        string licence = System.IO.Path.Combine(IconsFolder, "Pixelarticons - MIT.txt");
+        Assert.That(icons, Is.Not.Empty);
+        Assert.That(System.IO.File.Exists(licence), Is.True);
+        Assert.That(System.IO.File.ReadAllText(licence), Does.Contain("Copyright (c) 2019 Gerrit Halfmann"));
+    }
+
+    /// <summary>
     /// The move, attack move and hover markers are three prefabs, each drawing its own skin shape in its role (so
     /// colour is never the only cue), and the Gameplay scene's pointer feedback drops the move and attack move markers
-    /// and puts a hover marker under the hovered enemy.
+    /// and puts a hover marker under the hovered enemy. The ally hover marker (Docs/UiRevamp.md, Phase 4) is a variant
+    /// of the hover marker, its shape in Positive, which the feedback puts under the hovered ally: the attack cursor,
+    /// shown over enemies only, tells the two apart besides their colour.
     /// </summary>
     [Test]
     public void TheMarkerKinds_HaveDifferentSprites()
@@ -279,12 +305,162 @@ public class UiContentTests
         Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("attackMarkerPrefab").objectReferenceValue), Is.EqualTo($"{Components}MarkerAttackMove.prefab"));
         SpriteRenderer hover = (SpriteRenderer)serialized.FindProperty("hoverRing").objectReferenceValue;
         Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(hover.gameObject), Is.EqualTo($"{Components}MarkerHover.prefab"));
+
+        GameObject allyMarker = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}MarkerHoverAlly.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(allyMarker)), Is.EqualTo($"{Components}MarkerHover.prefab"), "A variant of the hover marker.");
+        Assert.That(allyMarker.GetComponent<SpriteRenderer>().sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.MarkerHover))), "The enemy's shape.");
+        Assert.That(allyMarker.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Positive));
+        SpriteRenderer allyHover = (SpriteRenderer)serialized.FindProperty("allyHoverRing").objectReferenceValue;
+        Assert.That(allyHover, Is.Not.Null, "The Gameplay scene's ally hover marker.");
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(allyHover.gameObject), Is.EqualTo($"{Components}MarkerHoverAlly.prefab"));
+    }
+
+    /// <summary>
+    /// The chat (Docs/UiRevamp.md, Phase 12): the HUD holds a <c>ChatView</c> anchored at the top left, 144 x 96 UI px,
+    /// 8 from the left edge and 98 from the top, drawn after the command bar and before the notice line, the party
+    /// frames and the tooltip, taking no pointer at rest. Its window is a hidden <c>Window</c> titled "Chat", the
+    /// component a variant of the panel whose header (SurfaceRaised, framed in Border, its title in Accent and its move
+    /// grip in ControlSecondary) moves it and whose resize grip in its bottom right corner resizes it; its eleven lines
+    /// are hidden <c>ChatLine</c>s, a variant of the message line, left-aligned Text on Outline taking no pointer; and its
+    /// field a hidden <c>Field</c>, 13 UI px tall: SurfaceRaised framed in Accent, Text, its placeholder in TextMuted,
+    /// one line without rich text.
+    /// </summary>
+    [Test]
+    public void TheHudsChat_IsAWindowOfLinesAndAField()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        ChatView chat = hud.GetComponentInChildren<ChatView>(true);
+        Assert.That(chat, Is.Not.Null);
+        RectTransform rect = (RectTransform)chat.transform;
+        Assert.That(rect.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(rect.anchorMax, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(rect.pivot, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(rect.anchoredPosition, Is.EqualTo(new Vector2(8f, -98f)));
+        Assert.That(rect.sizeDelta, Is.EqualTo(new Vector2(144f, 96f)));
+        int index = chat.transform.GetSiblingIndex();
+        Assert.That(index, Is.GreaterThan(hud.transform.Find("CommandBar").GetSiblingIndex()));
+        Assert.That(index, Is.LessThan(hud.GetComponentInChildren<NoticeView>(true).transform.GetSiblingIndex()), "Drawn under the notice line.");
+        Assert.That(index, Is.LessThan(hud.GetComponentInChildren<PartyFramesView>(true).transform.GetSiblingIndex()));
+        Assert.That(chat.GetComponent<CanvasGroup>().blocksRaycasts, Is.False, "At rest it takes no pointer.");
+
+        SerializedObject serialized = new(chat);
+        GameObject window = (GameObject)serialized.FindProperty("window").objectReferenceValue;
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(window), Is.EqualTo($"{Components}Window.prefab"));
+        Assert.That(window.activeSelf, Is.False);
+        Assert.That(window.transform.Find("Header/Title").GetComponent<TMP_Text>().text, Is.EqualTo("Chat"));
+        Assert.That(chat.MoveHandle.Kind, Is.EqualTo(WindowDrag.Move));
+        Assert.That(chat.MoveHandle.transform.IsChildOf(window.transform), Is.True);
+        Assert.That(chat.ResizeHandle.Kind, Is.EqualTo(WindowDrag.Resize));
+        Assert.That(chat.LineCapacity, Is.EqualTo(11), "Enough for the largest window.");
+        SerializedProperty lines = serialized.FindProperty("lines");
+        for (int i = 0; i < lines.arraySize; i++)
+        {
+            TMP_Text line = (TMP_Text)lines.GetArrayElementAtIndex(i).objectReferenceValue;
+            Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(line.gameObject), Is.EqualTo($"{Components}ChatLine.prefab"));
+            Assert.That(line.gameObject.activeSelf, Is.False);
+        }
+
+        Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(chat.Field.gameObject), Is.EqualTo($"{Components}Field.prefab"));
+        Assert.That(chat.Field.gameObject.activeSelf, Is.False);
+        Assert.That(((RectTransform)chat.Field.transform).rect.height, Is.EqualTo(13f));
+
+        GameObject windowComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}Window.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(windowComponent)), Is.EqualTo($"{Components}Panel.prefab"), "A variant of the panel.");
+        Transform header = windowComponent.transform.Find("Header");
+        Assert.That(header.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.SurfaceRaised));
+        Assert.That(header.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(header.Find("Title").GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Accent));
+        Assert.That(header.Find("Title").GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.SurfaceRaised));
+        Image moveGrip = header.Find("MoveGrip").GetComponent<Image>();
+        Assert.That(moveGrip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.GripMove))));
+        Assert.That(moveGrip.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.ControlSecondary));
+        Image resizeGrip = windowComponent.transform.Find("ResizeGrip").GetComponent<Image>();
+        Assert.That(resizeGrip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.GripResize))));
+        Assert.That(resizeGrip.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.ControlSecondary));
+        Assert.That(resizeGrip.GetComponent<WindowDragHandle>().Kind, Is.EqualTo(WindowDrag.Resize));
+
+        GameObject lineComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}ChatLine.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(lineComponent)), Is.EqualTo($"{Components}MessageLine.prefab"), "A variant of the message line.");
+        TMP_Text lineText = lineComponent.GetComponent<TMP_Text>();
+        Assert.That(lineText.alignment, Is.EqualTo(TextAlignmentOptions.TopLeft));
+        Assert.That(lineText.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal));
+        Assert.That(lineText.raycastTarget, Is.False);
+        Assert.That(lineComponent.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(lineComponent.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
+
+        GameObject fieldComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}Field.prefab");
+        TMP_InputField field = fieldComponent.GetComponent<TMP_InputField>();
+        Assert.That(fieldComponent.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.SurfaceRaised));
+        Assert.That(fieldComponent.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(field.textComponent.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(field.placeholder.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(field.lineType, Is.EqualTo(TMP_InputField.LineType.SingleLine));
+        Assert.That(field.richText, Is.False);
+        Assert.That(field.transition, Is.EqualTo(Selectable.Transition.None), "Its face stays dark while typing; its frame marks it.");
+    }
+
+    /// <summary>
+    /// The party frames (Docs/UiRevamp.md, Phase 5): the HUD holds three <c>PartyFrame</c>s at the left edge, 104 x 82 UI
+    /// px 8 from the left and top edges, 28 apart and hidden, before the tooltip. The component is a variant of the panel,
+    /// 104 x 26: the skin's large badge with its number in TextOnControl, the name in Text and the state line in
+    /// TextMuted on Surface, a bar whose fill in HealthPlayer is read against its track in HealthTrack, and four pips in
+    /// its top right corner, hidden; nothing in it but the panel takes the pointer.
+    /// </summary>
+    [Test]
+    public void TheHudsPartyFrames_AreThreePartyFramesAtTheLeftEdge()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        PartyFramesView party = hud.GetComponentInChildren<PartyFramesView>(true);
+        Assert.That(party, Is.Not.Null);
+        RectTransform region = (RectTransform)party.transform;
+        Assert.That(region.anchorMin, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(region.anchorMax, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(region.pivot, Is.EqualTo(new Vector2(0f, 1f)));
+        Assert.That(region.anchoredPosition, Is.EqualTo(new Vector2(8f, -8f)));
+        Assert.That(region.sizeDelta, Is.EqualTo(new Vector2(104f, 82f)));
+        Assert.That(party.transform.GetSiblingIndex(), Is.LessThan(hud.GetComponentInChildren<HudTooltip>(true).transform.GetSiblingIndex()), "Drawn under the tooltip.");
+        Assert.That(party.Count, Is.EqualTo(PlayerSlots.Count - 1), "One frame for each other player there can be.");
+        for (int i = 0; i < party.Count; i++)
+        {
+            PartyFrameView frame = party.Frame(i);
+            Assert.That(PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(frame.gameObject), Is.EqualTo($"{Components}PartyFrame.prefab"));
+            Assert.That(frame.gameObject.activeSelf, Is.False, "Hidden until the presenter shows it.");
+            Assert.That(((RectTransform)frame.transform).anchoredPosition, Is.EqualTo(new Vector2(0f, -28f * i)));
+        }
+
+        GameObject component = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}PartyFrame.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(component)), Is.EqualTo($"{Components}Panel.prefab"), "A variant of the panel.");
+        Assert.That(((RectTransform)component.transform).sizeDelta, Is.EqualTo(new Vector2(104f, 26f)));
+        PartyFrameView view = component.GetComponent<PartyFrameView>();
+        SerializedObject serialized = new(view);
+        Assert.That(view.Badge.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.BadgeLarge))));
+        Assert.That(((Component)serialized.FindProperty("number").objectReferenceValue).GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextOnControl));
+        Assert.That(((Component)serialized.FindProperty("playerName").objectReferenceValue).GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(view.State.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(view.State.gameObject.activeSelf, Is.False);
+        ThemedGraphic fill = view.Fill.GetComponent<ThemedGraphic>();
+        Assert.That(fill.Role, Is.EqualTo(UiColour.HealthPlayer));
+        Assert.That(fill.Track, Is.Not.Null);
+        Assert.That(fill.Track.Role, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(view.Fill.type, Is.EqualTo(Image.Type.Filled));
+        Assert.That(view.Pips.Length, Is.EqualTo(4));
+        foreach (Image pip in view.Pips)
+        {
+            Assert.That(pip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Pip))));
+            Assert.That(pip.enabled, Is.False);
+        }
+
+        foreach (Graphic graphic in component.GetComponentsInChildren<Graphic>(true))
+        {
+            Assert.That(graphic.raycastTarget, Is.EqualTo(graphic.gameObject == component), $"{graphic.name} takes the pointer only as the panel.");
+        }
     }
 
     /// <summary>
     /// The toggle row (Docs/DesignSystem.md, Phase 6) is a variant of the row with a 12 UI px box before its value, in
-    /// Shade framed in Border, holding the skin's check mark in Accent while it is on: its state shows as a mark and
-    /// as the On or Off its button reads, never as colour alone. The mark keeps 4.5:1 against the box on the screen's
+    /// Shade framed in ControlSecondary (in Border until Docs/UiRevamp.md's Phase 3 made frames black, which a box on the
+    /// dark panel would lose), holding the skin's check mark in Accent while it is on: its state shows as a mark and as
+    /// the On or Off its button reads, never as colour alone. The mark keeps 4.5:1 against the box on the screen's
     /// raised panel, and the frame 3:1 against the panel. Every options screen makes its toggle rows from it.
     /// </summary>
     [Test]
@@ -295,7 +471,6 @@ public class UiContentTests
         KeyBindingRowView view = row.GetComponent<KeyBindingRowView>();
         Image mark = view.ToggleMark;
         Assert.That(mark, Is.Not.Null);
-        Assert.That(view.Swatch, Is.Null);
         Assert.That(mark.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Check))));
         Assert.That(mark.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
         Assert.That(mark.enabled, Is.False, "Unmarked until the row shows its preference on.");
@@ -306,13 +481,13 @@ public class UiContentTests
         ThemedGraphic frame = null;
         foreach (ThemedGraphic graphic in box.GetComponentsInChildren<ThemedGraphic>(true))
         {
-            if (graphic.Role == UiColour.Border)
+            if (graphic.Role == UiColour.ControlSecondary)
             {
                 frame = graphic;
             }
         }
 
-        Assert.That(frame, Is.Not.Null, "The box is framed in Border.");
+        Assert.That(frame, Is.Not.Null, "The box is framed in ControlSecondary.");
         Assert.That(box.transform.parent.GetSiblingIndex(), Is.LessThan(view.BindingButton.transform.GetSiblingIndex()), "The box comes before the value.");
 
         Color panel = theme.Colour(UiColour.SurfaceRaised);
@@ -320,7 +495,7 @@ public class UiContentTests
         Color well = Color.Lerp(panel, shade, shade.a);
         well.a = 1f;
         Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.Accent), well), Is.GreaterThanOrEqualTo(4.5), "The mark against its box.");
-        Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.Border), panel), Is.GreaterThanOrEqualTo(3.0), "The box's frame against the panel.");
+        Assert.That(DesignMath.ContrastRatio(theme.Colour(UiColour.ControlSecondary), panel), Is.GreaterThanOrEqualTo(3.0), "The box's frame against the panel.");
 
         int screens = 0;
         foreach ((string where, OptionsMenuView options) in All<OptionsMenuView>())
@@ -331,6 +506,425 @@ public class UiContentTests
         }
 
         Assert.That(screens, Is.GreaterThanOrEqualTo(2), "The options prefab and the main menu's screen.");
+    }
+
+    /// <summary>
+    /// The options screen's rail item (Docs/UiRevamp.md, Phase 8) is a variant of the secondary button, 104 x 16 UI px
+    /// and never stretched by its column: its label left-aligned after the slot of the skin's pip, which shows in
+    /// TextOnControl on the current category's item only and never takes the pointer, its faces the skin's flat panel and
+    /// raised panel. The description line is a variant of the notice line in TextMuted, two wrapping lines of 22 UI px
+    /// at the top left, ending in an ellipsis past them. Every options screen builds its rail from the one and shows its
+    /// description on the other.
+    /// </summary>
+    [Test]
+    public void TheRailItemAndTheDescriptionLine_AreBuiltFromTheSkinAndTheNoticeLine()
+    {
+        GameObject item = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}RailItem.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(item)), Is.EqualTo($"{Components}ButtonSecondary.prefab"), "A variant of the secondary button.");
+        Assert.That(((RectTransform)item.transform).sizeDelta, Is.EqualTo(new Vector2(104f, 16f)));
+        LayoutElement layout = item.GetComponent<LayoutElement>();
+        Assert.That(layout.preferredHeight, Is.EqualTo(16f));
+        Assert.That(layout.flexibleHeight, Is.Zero, "The rail's column never stretches it.");
+        RailItemView view = item.GetComponent<RailItemView>();
+        Assert.That(view.Button, Is.SameAs(item.GetComponent<Button>()));
+        Assert.That(view.Label.horizontalAlignment, Is.EqualTo(HorizontalAlignmentOptions.Left));
+        Image pip = view.Pip;
+        Assert.That(pip.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Pip))));
+        Assert.That(pip.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.TextOnControl));
+        Assert.That(pip.enabled, Is.False, "Shown on the current category's item only.");
+        Assert.That(pip.raycastTarget, Is.False);
+        Assert.That(view.Label.margin.x, Is.GreaterThanOrEqualTo(pip.rectTransform.anchoredPosition.x + pip.rectTransform.sizeDelta.x), "The label starts after the pip's slot.");
+        SerializedObject faces = new(view);
+        Assert.That(faces.FindProperty("flat").objectReferenceValue, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Panel))));
+        Assert.That(faces.FindProperty("raised").objectReferenceValue, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.PanelRaised))));
+        Assert.That(faces.FindProperty("themed").objectReferenceValue, Is.SameAs(item.GetComponent<ThemedSelectable>()));
+
+        GameObject line = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}DescriptionLine.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(line)), Is.EqualTo($"{Components}NoticeLine.prefab"), "A variant of the notice line.");
+        TMP_Text text = line.GetComponent<TMP_Text>();
+        Assert.That(line.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(text.alignment, Is.EqualTo(TextAlignmentOptions.TopLeft));
+        Assert.That(text.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal));
+        Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis));
+        Assert.That(text.raycastTarget, Is.False);
+        Assert.That(((RectTransform)line.transform).sizeDelta.y, Is.EqualTo(22f), "Two 11 UI px lines.");
+
+        int screens = 0;
+        foreach ((string where, OptionsMenuView options) in All<OptionsMenuView>())
+        {
+            screens++;
+            SerializedObject serialized = new(options);
+            Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("railItemPrefab").objectReferenceValue), Is.EqualTo($"{Components}RailItem.prefab"), $"{where}'s rail.");
+            Assert.That(ComesFrom(serialized.FindProperty("description").objectReferenceValue, $"{Components}DescriptionLine.prefab"), Is.True, $"{where}'s description is a description line.");
+        }
+
+        Assert.That(screens, Is.GreaterThanOrEqualTo(2), "The options prefab and the main menu's screen.");
+    }
+
+    /// <summary>
+    /// The main menu's components (Docs/UiRevamp.md, Phase 9):
+    /// <list type="bullet">
+    /// <item><c>DialogNotice</c>, a variant of the dialog with its view: a wrapping message centred at the top and two
+    /// plain buttons, the first primary (ControlNormal, its label read on it) and the second secondary;</item>
+    /// <item><c>FieldControl</c>, a variant of the field in the control look: no face of its own but its colour block
+    /// (ControlNormal, Accent while selected), a frame in Border, its text in TextOnControl and its placeholder in
+    /// Placeholder, centred down it; selecting it does not start the typing, and Escape keeps what was typed;</item>
+    /// <item><c>InviteBlock</c> with its view, shared by the in-game menu's Party page and Play together, its Copy buttons
+    /// and port anchored at its right edge.</item>
+    /// </list>
+    /// Play together, in its prefab and in the main menu, is built from them: its field a FieldControl, its dialog a
+    /// DialogNotice, its notice a notice line; the main menu's dialog is a DialogNotice; and Main's loading line is a themed
+    /// Body text in Text, read on Outline, taking no pointer.
+    /// </summary>
+    [Test]
+    public void TheMainMenusComponents_AreBuiltFromTheirBases()
+    {
+        GameObject dialog = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}DialogNotice.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(dialog)), Is.EqualTo($"{Components}Dialog.prefab"), "A variant of the dialog.");
+        DialogNoticeView notice = dialog.GetComponent<DialogNoticeView>();
+        Assert.That(notice, Is.Not.Null);
+        Assert.That(notice.PrimaryButton.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlNormal), "The first button is primary.");
+        Assert.That(notice.PrimaryButton.GetComponentInChildren<ThemedText>().Background, Is.EqualTo(UiColour.ControlNormal));
+        Assert.That(notice.SecondaryButton.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlSecondary));
+        TMP_Text message = dialog.transform.Find("Box/Message").GetComponent<TMP_Text>();
+        Assert.That(message.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal));
+        Assert.That(message.alignment, Is.EqualTo(TextAlignmentOptions.Top));
+
+        GameObject fieldComponent = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}FieldControl.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(fieldComponent)), Is.EqualTo($"{Components}Field.prefab"), "A variant of the field.");
+        TMP_InputField field = fieldComponent.GetComponent<TMP_InputField>();
+        Assert.That(fieldComponent.GetComponent<ThemedGraphic>(), Is.Null, "Its face is its colour block's.");
+        Assert.That(field.transition, Is.EqualTo(Selectable.Transition.ColorTint));
+        Assert.That(((Image)field.targetGraphic).color, Is.EqualTo(Color.white));
+        Assert.That(fieldComponent.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlNormal));
+        Assert.That(fieldComponent.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(field.textComponent.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextOnControl));
+        Assert.That(field.placeholder.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Placeholder));
+        Assert.That(field.textComponent.alignment, Is.EqualTo(TextAlignmentOptions.Left));
+        Assert.That(field.shouldActivateOnSelect, Is.False, "Arrows move over it; Submit or a click starts the typing.");
+        Assert.That(field.restoreOriginalTextOnEscape, Is.False);
+
+        GameObject invite = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}InviteBlock.prefab");
+        InviteBlockView block = invite.GetComponent<InviteBlockView>();
+        Assert.That(block.AddressCapacity, Is.EqualTo(HostAddresses.MaxShown));
+        for (int i = 0; i < block.AddressCapacity; i++)
+        {
+            Assert.That(((RectTransform)block.CopyButton(i).transform).anchorMin, Is.EqualTo(Vector2.one), "Copy keeps to the block's right edge at any width.");
+        }
+
+        Assert.That(((RectTransform)invite.transform.Find("Header/Port")).anchorMin, Is.EqualTo(Vector2.one));
+        foreach ((string where, PartyPageView page) in All<PartyPageView>())
+        {
+            Assert.That(ComesFrom(page.Invite.gameObject, $"{Components}InviteBlock.prefab"), Is.True, $"{where}'s invite block.");
+        }
+
+        int screens = 0;
+        foreach ((string where, PlayTogetherView together) in All<PlayTogetherView>())
+        {
+            screens++;
+            Assert.That(ComesFrom(together.Field.gameObject, $"{Components}FieldControl.prefab"), Is.True, $"{where}'s field.");
+            Assert.That(ComesFrom(together.Dialog.gameObject, $"{Components}DialogNotice.prefab"), Is.True, $"{where}'s dialog.");
+            Assert.That(ComesFrom(together.Notice.gameObject, $"{Components}NoticeLine.prefab"), Is.True, $"{where}'s notice line.");
+            Assert.That(ComesFrom(together.Invite.gameObject, $"{Components}InviteBlock.prefab"), Is.True, $"{where}'s invite block.");
+        }
+
+        Assert.That(screens, Is.EqualTo(2), "The prefab and the main menu's screen.");
+        foreach ((string where, MainMenuController menu) in All<MainMenuController>())
+        {
+            Assert.That(ComesFrom(new SerializedObject(menu).FindProperty("dialog").objectReferenceValue, $"{Components}DialogNotice.prefab"), Is.True, $"{where}'s dialog.");
+        }
+
+        UnityEngine.SceneManagement.Scene main = EditorSceneManager.OpenScene("Assets/Scenes/Main.unity", OpenSceneMode.Additive);
+        try
+        {
+            LoadingLine loading = null;
+            foreach (GameObject root in main.GetRootGameObjects())
+            {
+                if (loading == null)
+                {
+                    loading = root.GetComponentInChildren<LoadingLine>(true);
+                }
+            }
+
+            Assert.That(loading, Is.Not.Null, "Main holds the loading line.");
+            TMP_Text line = (TMP_Text)new SerializedObject(loading).FindProperty("line").objectReferenceValue;
+            ThemedText themed = line.GetComponent<ThemedText>();
+            Assert.That(themed.Theme, Is.EqualTo(theme));
+            Assert.That(themed.Colour, Is.EqualTo(UiColour.Text));
+            Assert.That(themed.Background, Is.EqualTo(UiColour.Outline));
+            Assert.That(line.raycastTarget, Is.False);
+            Assert.That(loading.GetComponent<UiPixelScale>(), Is.Not.Null, "Its canvas keeps the UI scale.");
+        }
+        finally
+        {
+            EditorSceneManager.CloseScene(main, true);
+        }
+    }
+
+    /// <summary>
+    /// The Saved games screen's parts (Docs/UiRevamp.md, Phase 10):
+    /// <list type="bullet">
+    /// <item><c>SessionCard</c>, a variant of the panel with its view: a frame in Border and, hidden, one in Accent; the
+    /// place in Text and the copy's tag and the times in TextMuted, read on SurfaceRaised, taking no pointer; and its
+    /// actions, hidden and blind to the pointer until the card is selected, Play and Host primary buttons and Delete a
+    /// secondary one, each 48 x 16 UI px;</item>
+    /// <item>the screen, in its prefab and in the main menu, makes its cards from the session card, its list a scroll
+    /// list, its notice a notice line and its confirmation a dialog;</item>
+    /// <item>the main menu's Saved games is a large button and Play together's Host another saved game a button.</item>
+    /// </list>
+    /// </summary>
+    [Test]
+    public void TheSessionCardAndSavedGames_AreBuiltFromTheirBases()
+    {
+        GameObject cardPrefab = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}SessionCard.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(cardPrefab)), Is.EqualTo($"{Components}Panel.prefab"), "A variant of the panel.");
+        SessionCardView card = cardPrefab.GetComponent<SessionCardView>();
+        Assert.That(card, Is.Not.Null);
+        Assert.That(cardPrefab.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(card.SelectedFrame.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(card.SelectedFrame.enabled, Is.False, "The Accent frame shows only while the card is selected.");
+        Assert.That(card.PlaceText.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(card.TagText.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        Assert.That(card.DetailsText.GetComponent<ThemedText>().Colour, Is.EqualTo(UiColour.TextMuted));
+        foreach (TMP_Text text in new[] { card.PlaceText, card.TagText, card.DetailsText })
+        {
+            Assert.That(text.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.SurfaceRaised), $"{text.name} is read on the screen's raised panel.");
+            Assert.That(text.raycastTarget, Is.False, $"{text.name} leaves the click to the card.");
+        }
+
+        Assert.That(card.Actions.alpha, Is.Zero);
+        Assert.That(card.Actions.blocksRaycasts, Is.False);
+        Assert.That(ComesFrom(card.PlayButton.gameObject, $"{Components}Button.prefab") && ComesFrom(card.HostButton.gameObject, $"{Components}Button.prefab"), Is.True);
+        Assert.That(ComesFrom(card.DeleteButton.gameObject, $"{Components}ButtonSecondary.prefab"), Is.True);
+        foreach (Button button in new[] { card.PlayButton, card.HostButton, card.DeleteButton })
+        {
+            Assert.That(((RectTransform)button.transform).sizeDelta, Is.EqualTo(new Vector2(48f, 16f)), button.name);
+        }
+
+        int screens = 0;
+        foreach ((string where, SavedGamesView saved) in All<SavedGamesView>())
+        {
+            screens++;
+            SerializedObject serialized = new(saved);
+            Assert.That(AssetDatabase.GetAssetPath(serialized.FindProperty("cardPrefab").objectReferenceValue), Is.EqualTo($"{Components}SessionCard.prefab"), $"{where}'s cards.");
+            Assert.That(ComesFrom(saved.Scroll.gameObject, $"{Components}ScrollList.prefab"), Is.True, $"{where}'s list.");
+            Assert.That(ComesFrom(saved.Notice.gameObject, $"{Components}NoticeLine.prefab"), Is.True, $"{where}'s notice line.");
+            Assert.That(ComesFrom(serialized.FindProperty("confirmPanel").objectReferenceValue, $"{Components}Dialog.prefab"), Is.True, $"{where}'s confirmation.");
+            Assert.That(ComesFrom(saved.ConfirmYesButton.gameObject, $"{Components}ButtonDanger.prefab"), Is.True, $"{where}'s Delete is a danger button.");
+        }
+
+        Assert.That(screens, Is.EqualTo(2), "The prefab and the main menu's screen.");
+        foreach ((string where, MainMenuController menu) in All<MainMenuController>())
+        {
+            Assert.That(ComesFrom(new SerializedObject(menu).FindProperty("savedGamesButton").objectReferenceValue, $"{Components}ButtonLarge.prefab"), Is.True, $"{where}'s Saved games.");
+        }
+
+        foreach ((string where, PlayTogetherView together) in All<PlayTogetherView>())
+        {
+            Assert.That(ComesFrom(together.HostSavedButton.gameObject, $"{Components}Button.prefab"), Is.True, $"{where}'s Host another saved game.");
+        }
+    }
+
+    /// <summary>
+    /// The main menu's first run and title (Docs/UiRevamp.md, Phase 11): the title view, under the panel and above the
+    /// background, draws the title sprite in its own colours (Icon) and takes no pointer; the panel is a raised panel
+    /// whose logo draws the logo sprite in Accent, taking no pointer, where the name was; the version is outlined over the
+    /// view; and the Welcome panel, in its prefab and in the main menu, is a raised panel holding a row and two toggle
+    /// rows, their Reset columns gone, a description line and a primary Continue.
+    /// </summary>
+    [Test]
+    public void TheTitleViewTheLogoAndWelcome_AreBuiltFromTheirBases()
+    {
+        int menus = 0;
+        foreach ((string where, MainMenuController menu) in All<MainMenuController>())
+        {
+            menus++;
+            Transform canvas = menu.transform;
+            TitleView view = canvas.GetComponentInChildren<TitleView>(true);
+            Assert.That(view, Is.Not.Null, $"{where} has a title view.");
+            Assert.That(AssetDatabase.GetAssetPath(view.Picture.sprite), Is.EqualTo(TitleViewRecipe.ViewPath));
+            Assert.That(view.Picture.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Icon));
+            Assert.That(view.Picture.raycastTarget, Is.False);
+            Assert.That(view.transform.GetSiblingIndex(), Is.EqualTo(canvas.Find("Background").GetSiblingIndex() + 1), "Over the background, under the panel.");
+            Transform panel = canvas.Find("Menu");
+            Assert.That(ComesFrom(panel.gameObject, $"{Components}PanelRaised.prefab"), Is.True, $"{where}'s panel is raised.");
+            Image logo = panel.Find("Logo").GetComponent<Image>();
+            Assert.That(AssetDatabase.GetAssetPath(logo.sprite), Is.EqualTo(TitleViewRecipe.LogoPath));
+            Assert.That(logo.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+            Assert.That(logo.raycastTarget, Is.False);
+            Assert.That(panel.Find("Name"), Is.Null, "The logo replaced the name.");
+            Assert.That(canvas.Find("Version").GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
+        }
+
+        Assert.That(menus, Is.EqualTo(1));
+        int panels = 0;
+        foreach ((string where, WelcomeView welcome) in All<WelcomeView>())
+        {
+            panels++;
+            Assert.That(ComesFrom(welcome.Panel.gameObject, $"{Components}PanelRaised.prefab"), Is.True, $"{where}'s panel.");
+            Assert.That(ComesFrom(welcome.UiSizeRow.gameObject, $"{Components}Row.prefab"), Is.True);
+            Assert.That(ComesFrom(welcome.ReduceFlashingRow.gameObject, $"{Components}RowToggle.prefab"), Is.True);
+            Assert.That(ComesFrom(welcome.ReduceMotionRow.gameObject, $"{Components}RowToggle.prefab"), Is.True);
+            foreach (KeyBindingRowView row in new[] { welcome.UiSizeRow, welcome.ReduceFlashingRow, welcome.ReduceMotionRow })
+            {
+                Assert.That(row.transform.Find("ResetSlot").gameObject.activeSelf, Is.False, $"{where}'s {row.name} has no Reset column.");
+            }
+
+            Assert.That(ComesFrom(welcome.Description.gameObject, $"{Components}DescriptionLine.prefab"), Is.True);
+            Assert.That(welcome.ContinueButton.GetComponent<ThemedSelectable>().Normal, Is.EqualTo(UiColour.ControlNormal));
+        }
+
+        Assert.That(panels, Is.EqualTo(2), "The prefab and the main menu's.");
+    }
+
+    /// <summary>
+    /// The ability slot's states (Docs/UiRevamp.md, Phase 1) are skin pieces in their roles, hidden until shown and
+    /// never taking the pointer: its frame (Border, Accent while casting), the corner brackets 1 UI px outside it in
+    /// Accent, and the hatch, tiled in ControlDisabled inside the frame and under the name, so the name stays readable;
+    /// since Phase 3 its key sits in its top left corner and its cooldown seconds in its top right. The message line is
+    /// a variant of the notice line in Text outlined in Outline, and the HUD's ability bar shows its
+    /// failures on one, hidden until a failure, above the status row.
+    /// </summary>
+    [Test]
+    public void TheSlotStatesAndTheMessageLine_AreSkinnedAndThemed()
+    {
+        AbilitySlotView slot = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}SlotAbility.prefab").GetComponent<AbilitySlotView>();
+        Assert.That(slot.Border.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.SlotFrame))));
+        Assert.That(slot.Border.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Border));
+        Assert.That(slot.KeyText.rectTransform.anchorMin, Is.EqualTo(new Vector2(0f, 1f)), "The key in the top left corner (Docs/UiRevamp.md, Phase 3).");
+        Assert.That(slot.KeyText.alignment, Is.EqualTo(TextAlignmentOptions.TopLeft));
+        Assert.That(slot.CooldownText.rectTransform.anchorMin, Is.EqualTo(new Vector2(1f, 1f)), "The cooldown seconds in the top right corner.");
+        Assert.That(slot.CooldownText.alignment, Is.EqualTo(TextAlignmentOptions.TopRight));
+
+        Image queued = slot.Queued;
+        Assert.That(queued.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.SlotCorners))));
+        Assert.That(queued.type, Is.EqualTo(Image.Type.Sliced));
+        Assert.That(queued.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Accent));
+        Assert.That(queued.rectTransform.offsetMin, Is.EqualTo(new Vector2(-1f, -1f)), "Just outside the slot.");
+        Assert.That(queued.rectTransform.offsetMax, Is.EqualTo(new Vector2(1f, 1f)));
+
+        Image hatch = slot.Hatch;
+        Assert.That(hatch.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Hatch))));
+        Assert.That(hatch.type, Is.EqualTo(Image.Type.Tiled));
+        Assert.That(hatch.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.ControlDisabled));
+        Assert.That(hatch.transform.GetSiblingIndex(), Is.LessThan(slot.NameText.transform.GetSiblingIndex()), "Under the name.");
+        foreach (Image state in new[] { queued, hatch })
+        {
+            Assert.That(state.enabled, Is.False, $"{state.name} hides until shown.");
+            Assert.That(state.raycastTarget, Is.False, $"{state.name} never takes the pointer.");
+        }
+
+        GameObject line = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}MessageLine.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(line)), Is.EqualTo($"{Components}NoticeLine.prefab"), "A variant of the notice line.");
+        ThemedText text = line.GetComponent<ThemedText>();
+        Assert.That(text.Colour, Is.EqualTo(UiColour.Text));
+        Assert.That(text.Background, Is.EqualTo(UiColour.Outline));
+
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        TMP_Text message = hud.GetComponentInChildren<AbilityBarView>(true).MessageText;
+        Assert.That(message, Is.Not.Null);
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(message.gameObject)), Is.EqualTo($"{Components}MessageLine.prefab"));
+        Assert.That(message.gameObject.activeSelf, Is.False, "Hidden until a failure.");
+        RectTransform statusRow = (RectTransform)hud.GetComponentInChildren<StatusBarView>(true).transform;
+        Assert.That(message.rectTransform.anchoredPosition.y, Is.GreaterThanOrEqualTo(statusRow.anchoredPosition.y + statusRow.sizeDelta.y), "Above the status row.");
+    }
+
+    /// <summary>
+    /// The command bar (Docs/UiRevamp.md, Phase 2): its health bar a <c>Bar</c> whose fill is HealthPlayer over a part
+    /// just lost in HealthLost, both read against the track, with the skin's tick in HealthTrack as a hidden template,
+    /// its text outlined; the weapon slot in the ability row, after the gap; the buffs' group of six <c>StatusIcon</c>s
+    /// left of the abilities and the debuffs' of six <c>StatusIconDebuff</c>s right of them, each a 3 x 2 grid filling
+    /// from the abilities outwards, bottom row first; and the debuff icon a variant of the status icon framed in Danger
+    /// with the skin's notch in its top right corner.
+    /// </summary>
+    [Test]
+    public void TheCommandBar_IsBuiltFromItsComponents()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        HealthBarView bar = hud.GetComponent<PlayerHudView>().HealthBar;
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(bar.gameObject)), Is.EqualTo($"{Components}Bar.prefab"));
+        Assert.That(bar.Fill.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthPlayer));
+        Assert.That(bar.Lost.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthLost));
+        Assert.That(bar.Lost.transform.GetSiblingIndex(), Is.LessThan(bar.Fill.transform.GetSiblingIndex()), "The loss sits under the fill.");
+        Assert.That(bar.Lost.enabled, Is.False);
+        Assert.That(bar.Fill.GetComponent<ThemedGraphic>().Track, Is.Not.Null);
+        Assert.That(bar.Lost.GetComponent<ThemedGraphic>().Track, Is.Not.Null);
+        Image tick = (Image)new SerializedObject(bar).FindProperty("tickTemplate").objectReferenceValue;
+        Assert.That(tick.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.BarTick))));
+        Assert.That(tick.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(tick.gameObject.activeSelf, Is.False, "A template.");
+        Assert.That(bar.Text.GetComponent<ThemedText>().Background, Is.EqualTo(UiColour.Outline));
+        PixelTextScale smaller = bar.Text.GetComponent<PixelTextScale>();
+        Assert.That(smaller, Is.Not.Null, "The health text draws smaller than the zoom (Docs/UiRevamp.md, Phase 3).");
+        Assert.That(smaller.TargetScale, Is.EqualTo(0.75f));
+        Assert.That(((RectTransform)bar.transform).sizeDelta, Is.EqualTo(new Vector2(242f, 13f)), "13 tall, so the 9 px outlined text centres in its 11 px inside (Docs/UiRevamp.md, Phase 3).");
+
+        AbilityBarView abilities = hud.GetComponentInChildren<AbilityBarView>(true);
+        Transform weapon = hud.GetComponent<PlayerHudView>().WeaponSlot.transform;
+        Assert.That(weapon.parent, Is.EqualTo(abilities.transform), "The weapon slot is in the ability row.");
+        Assert.That(weapon.GetSiblingIndex(), Is.EqualTo(abilities.transform.Find("Spacer").GetSiblingIndex() + 1), "After the gap, before its two abilities.");
+        Assert.That(((RectTransform)abilities.transform).sizeDelta.x, Is.EqualTo(242f));
+
+        StatusBarView statuses = hud.GetComponentInChildren<StatusBarView>(true);
+        foreach ((StatusKind kind, string prefab, GridLayoutGroup.Corner corner) in new[] { (StatusKind.Buff, "StatusIcon", GridLayoutGroup.Corner.LowerRight), (StatusKind.Debuff, "StatusIconDebuff", GridLayoutGroup.Corner.LowerLeft) })
+        {
+            Assert.That(statuses.GroupCapacity(kind), Is.EqualTo(6));
+            GridLayoutGroup grid = statuses.Icon(kind, 0).transform.parent.GetComponent<GridLayoutGroup>();
+            Assert.That(grid.startCorner, Is.EqualTo(corner), $"The {kind}s fill from the abilities outwards.");
+            Assert.That(grid.startAxis, Is.EqualTo(GridLayoutGroup.Axis.Horizontal), "Bottom row first.");
+            Assert.That(grid.constraintCount, Is.EqualTo(3));
+            for (int i = 0; i < 6; i++)
+            {
+                Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(statuses.Icon(kind, i).gameObject)), Is.EqualTo($"{Components}{prefab}.prefab"));
+            }
+        }
+
+        GameObject debuff = AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}StatusIconDebuff.prefab");
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(debuff)), Is.EqualTo($"{Components}StatusIcon.prefab"), "A variant of the status icon.");
+        Assert.That(debuff.transform.Find("Frame").GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Danger));
+        Image notch = debuff.transform.Find("Notch").GetComponent<Image>();
+        Assert.That(notch.sprite, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Sprite>(UiSkinRecipe.PathOf(UiSkinPiece.Notch))));
+        Assert.That(notch.GetComponent<ThemedGraphic>().Role, Is.EqualTo(UiColour.Danger));
+        Assert.That(notch.raycastTarget, Is.False);
+        Assert.That(notch.rectTransform.anchorMin, Is.EqualTo(Vector2.one), "In the top right corner.");
+    }
+
+    /// <summary>
+    /// The HUD's notice line (Docs/UiRevamp.md, Phase 3): a <c>Panel</c> at the top centre, 8 UI px below the top edge,
+    /// hidden until a notice shows and never taking the pointer, holding a wrapping <c>NoticeLine</c> in Accent read
+    /// against the panel's Surface, centred, ending in an ellipsis past what fits, that <see cref="NoticeView"/> sizes,
+    /// up to the notice band's 240 x 24 UI px and two lines; drawn before the tooltip.
+    /// </summary>
+    [Test]
+    public void TheNoticeLine_IsAPanelHoldingAWrappingNoticeLine_AtTheTopCentre()
+    {
+        GameObject hud = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/PlayerHudCanvas.prefab");
+        NoticeView notice = hud.GetComponentInChildren<NoticeView>(true);
+        Assert.That(notice, Is.Not.Null);
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(notice.gameObject)), Is.EqualTo($"{Components}Panel.prefab"));
+        Assert.That(notice.gameObject.activeSelf, Is.False, "Hidden until a notice shows.");
+        Assert.That(notice.GetComponent<Image>().raycastTarget, Is.False, "The world under it still takes clicks.");
+        RectTransform panel = (RectTransform)notice.transform;
+        Assert.That(panel.anchorMin, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(panel.anchorMax, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(panel.pivot, Is.EqualTo(new Vector2(0.5f, 1f)));
+        Assert.That(panel.anchoredPosition, Is.EqualTo(new Vector2(0f, -8f)), "8 UI px below the top edge.");
+        Assert.That(notice.MaxWidth, Is.EqualTo(240f));
+        Assert.That(notice.MaxHeight, Is.EqualTo(24f));
+        Assert.That(notice.MaxLines, Is.EqualTo(2));
+        Assert.That(notice.transform.GetSiblingIndex(), Is.LessThan(hud.GetComponentInChildren<HudTooltip>(true).transform.GetSiblingIndex()), "The tooltip draws over it.");
+
+        TMP_Text text = notice.Label;
+        Assert.That(text.transform.parent, Is.EqualTo(notice.transform));
+        Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(text.gameObject)), Is.EqualTo($"{Components}NoticeLine.prefab"));
+        Assert.That(text.textWrappingMode, Is.EqualTo(TextWrappingModes.Normal), "The notice line wraps.");
+        Assert.That(text.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis), "A notice past two lines ends in an ellipsis rather than leaving the band.");
+        Assert.That(text.horizontalAlignment, Is.EqualTo(HorizontalAlignmentOptions.Center));
+        Assert.That(text.raycastTarget, Is.False);
+        ThemedText themed = text.GetComponent<ThemedText>();
+        Assert.That(themed.Colour, Is.EqualTo(UiColour.Accent));
+        Assert.That(themed.Background, Is.EqualTo(UiColour.Surface), "Read against the panel.");
+        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>($"{Components}NoticeLine.prefab").GetComponent<TMP_Text>().textWrappingMode, Is.EqualTo(TextWrappingModes.Normal), "The component wraps.");
     }
 
     /// <summary>
@@ -408,6 +1002,25 @@ public class UiContentTests
                 yield return (where, component);
             }
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="target"/> is, or is an instance of, a part of the prefab at <paramref name="path"/>,
+    /// through any nesting.
+    /// </summary>
+    private static bool ComesFrom(Object target, string path)
+    {
+        while (target != null)
+        {
+            if (AssetDatabase.GetAssetPath(target) == path)
+            {
+                return true;
+            }
+
+            target = PrefabUtility.GetCorrespondingObjectFromSource(target);
+        }
+
+        return false;
     }
 
     /// <summary>

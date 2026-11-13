@@ -4,12 +4,15 @@ using System.Text;
 /// <summary>
 /// The host's rule for letting a client in: the client must run the host's build version and the party must have
 /// room. The payload a client sends is its build version, then its player id (Docs/WorldStreaming.md: Player
-/// identity), on a line of its own. Refusals reach the client as Netcode disconnect reasons, tagged so the client can
-/// tell them apart from transport messages.
+/// identity), on a line of its own. A refusal names its kind and what the client needs to say why
+/// (Docs/UiRevamp.md, Phase 9): the host's version for another build, the most players for a full party. Refusals
+/// reach the client as Netcode disconnect reasons, tagged so the client can tell them apart from transport messages.
 /// </summary>
 public static class JoinApproval
 {
     private const string RefusalTag = "TopDownRPG.Refused:";
+    private const string OtherBuildKind = "build:";
+    private const string FullKind = "full:";
     private const char Separator = '\n';
 
     /// <summary>
@@ -35,23 +38,58 @@ public static class JoinApproval
 
     /// <summary>
     /// Returns null when a client with <paramref name="payload"/> may join a session that already holds
-    /// <paramref name="playerCount"/> players (the host included), otherwise the reason it is refused.
+    /// <paramref name="playerCount"/> players (the host included), otherwise the refusal: another build's
+    /// (<see cref="OtherBuild"/>) before a full party's (<see cref="Full"/>).
     /// </summary>
     public static string Evaluate(byte[] payload, string hostVersion, int playerCount, int maxPlayers)
     {
         ReadPayload(payload, out string clientVersion, out _);
         if (clientVersion != hostVersion)
         {
-            string shown = clientVersion.Length > 0 ? clientVersion : "an unknown version";
-            return $"the host runs version {hostVersion} and this game runs {shown}.";
+            return OtherBuild(hostVersion);
         }
 
         if (playerCount >= maxPlayers)
         {
-            return $"the game is full ({maxPlayers} players).";
+            return Full(maxPlayers);
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The refusal of a client running another build than the host's <paramref name="hostVersion"/>.
+    /// </summary>
+    public static string OtherBuild(string hostVersion)
+    {
+        return OtherBuildKind + Clean(hostVersion);
+    }
+
+    /// <summary>
+    /// The refusal of a client joining a party that already holds <paramref name="maxPlayers"/>.
+    /// </summary>
+    public static string Full(int maxPlayers)
+    {
+        return FullKind + maxPlayers.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Whether <paramref name="refusal"/> refused another build, with the host's version.
+    /// </summary>
+    public static bool IsOtherBuild(string refusal, out string hostVersion)
+    {
+        hostVersion = refusal != null && refusal.StartsWith(OtherBuildKind, StringComparison.Ordinal) ? refusal.Substring(OtherBuildKind.Length) : null;
+        return hostVersion != null;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="refusal"/> refused a full party, with how many players it holds at most.
+    /// </summary>
+    public static bool IsFull(string refusal, out int maxPlayers)
+    {
+        maxPlayers = 0;
+        return refusal != null && refusal.StartsWith(FullKind, StringComparison.Ordinal)
+            && int.TryParse(refusal.Substring(FullKind.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out maxPlayers);
     }
 
     /// <summary>

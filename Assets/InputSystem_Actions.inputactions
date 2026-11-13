@@ -95,6 +95,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Chat",
+                    "type": "Button",
+                    "id": "bb917f65-0f13-421b-8dbb-2284ca6fb380",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -205,6 +214,17 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Ability6",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "73ccaa7d-693e-4da1-9166-8dc941562bd6",
+                    "path": "<Keyboard>/enter",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "Chat",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: SandboxInterior
   m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
   worldId: 3e445269de5de9148a0213aed5a691a5
+  displayName: Sandbox interior
   rootScene: {fileID: 11400000, guid: 9effd07c8e450214c999702f89f50da4, type: 2}
   origin: {x: 4096, y: 0}
   sizeInChunks: {x: 1, y: 1}
@@ -21,6 +22,7 @@ MonoBehaviour:
     scene: {fileID: 11400000, guid: 93dd6137328212e458b19712c8762237, type: 2}
   entries:
   - name: start
+    displayName: Doorway
     position: {x: 32, y: 32}
     waystone: 0
   maxSearchCells: 4096

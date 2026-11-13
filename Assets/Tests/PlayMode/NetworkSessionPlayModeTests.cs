@@ -137,9 +137,9 @@ public class NetworkSessionPlayModeTests
     /// <summary>
     /// A joined client keeps a copy of its own place in the host's session (Docs/KnownGaps.md, Phase 5), named by the
     /// session id the host tells it, holding its player's world, place and weapon and no world's state, and saying the
-    /// host is still there; when the host is gone, the client returns to the menu, which says so and offers Continue,
-    /// and Continue carries on alone, offline, from where the player stood, holding its weapon, as a session of its own
-    /// saved beside the copy.
+    /// host is still there; when the host is gone, the client returns to the menu, whose dialog says so (Docs/UiRevamp.md,
+    /// Phase 9) and offers Continue alone, which carries on alone, offline, from where the player stood, holding its
+    /// weapon, as a session of its own saved beside the copy.
     /// </summary>
     [UnityTest]
     public IEnumerator AClientWhoseHostIsGone_CarriesOnAlone_FromItsCopy()
@@ -162,7 +162,7 @@ public class NetworkSessionPlayModeTests
         Assert.That(entered.Players, Has.Count.EqualTo(1), "the copy holds its own player alone");
         Assert.That(entered.Players[0].PlayerId, Is.EqualTo(session.LocalPlayerId));
         Assert.That(entered.Worlds, Is.Empty, "no world's state, which is the host's");
-        Assert.That(SceneBootTestHelper.ResolveFromMain<GameSave>().HasSave, Is.False, "while the host may be there, the copy is no save to continue");
+        Assert.That(SceneBootTestHelper.ResolveFromMain<GameSave>().HasSave, Is.True, "the copy plays on its own, its host there or not (Docs/UiRevamp.md, Phase 10)");
 
         LocalPlayer local = SceneBootTestHelper.ResolveFromGameplay<LocalPlayerTracker>().Current;
         Assert.That(local.Weapon.EquipFromCatalog(2), Is.True);
@@ -181,10 +181,12 @@ public class NetworkSessionPlayModeTests
         Assert.That(left.Players[0].Position, Is.EqualTo(stood), "where the player stood as the host went");
         Assert.That(left.Players[0].Weapon, Is.EqualTo(weaponId));
         MainMenuController menu = null;
-        yield return SceneBootTestHelper.WaitUntil(() => (menu = Object.FindAnyObjectByType<MainMenuController>()) != null && menu.ContinueButton.interactable, "the menu to offer Continue");
-        Assert.That(menu.Status, Is.EqualTo(MainMenuController.HostGoneStatus), "the menu says the host is gone");
+        yield return SceneBootTestHelper.WaitUntil(() => (menu = Object.FindAnyObjectByType<MainMenuController>()) != null && menu.Dialog.IsShown, "the menu's host-gone dialog");
+        Assert.That(menu.Dialog.Message, Is.EqualTo(DialogNoticeView.BySentence(MainMenuController.HostGoneMessage)), "the menu says the host is gone");
+        Assert.That(menu.ContinueButton.gameObject.activeSelf, Is.True, "the copy is a save Continue loads");
+        Assert.That(menu.Dialog.PrimaryButton.gameObject.activeSelf && menu.Dialog.SecondaryButton.gameObject.activeSelf, Is.True, "Continue alone and Back");
 
-        menu.ContinueGame();
+        menu.Dialog.PrimaryButton.onClick.Invoke();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
         Assert.That(gameFlow.IsInGame, Is.True);
         Assert.That(session.IsActive, Is.False, "the game goes on offline");
@@ -248,8 +250,9 @@ public class NetworkSessionPlayModeTests
 
     /// <summary>
     /// When the host leaves while a client is still joining (its player not placed yet), the client stays
-    /// non-authoritative, returns to the menu once the join ends, without saving, and is authoritative again for an
-    /// offline game that saves as usual.
+    /// non-authoritative, returns to the menu once the join ends, without saving, where a dialog says the connection was
+    /// lost while joining the host's address (Docs/UiRevamp.md, Phase 9), and is authoritative again for an offline game
+    /// that saves as usual.
     /// </summary>
     [UnityTest]
     public IEnumerator HostLeavingWhileAClientJoins_ReturnsTheClientToTheMenu_WithoutSaving()
@@ -284,6 +287,11 @@ public class NetworkSessionPlayModeTests
         Assert.That(session.IsActive, Is.False);
         Assert.That(saveStore.WriteCount, Is.Zero, "A client that lost its host before its player stood in a world saves nothing, no copy either.");
         Assert.That(session.IsAuthoritative, Is.True, "Back in the menu, an offline game decides its own state again.");
+        MainMenuController menu = null;
+        yield return SceneBootTestHelper.WaitUntil(() => (menu = Object.FindAnyObjectByType<MainMenuController>()) != null && menu.Dialog.IsShown, "the menu's lost-while-joining dialog");
+        Assert.That(menu.Dialog.Message, Is.EqualTo(string.Format(MainMenuController.LostWhileJoiningFormat, $"127.0.0.1:{session.Settings.Port}")));
+        menu.Dialog.SecondaryButton.onClick.Invoke();
+        Assert.That(menu.Dialog.IsShown, Is.False, "Back closes the dialog.");
 
         Object.FindAnyObjectByType<MainMenuController>().StartNewGame();
         yield return SceneBootTestHelper.WaitForTransition(gameFlow);
@@ -330,18 +338,19 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.BootIntoMainMenu();
 
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
-        remoteHost = InProcessHost.Start(session, null, null, null, null, "the game is full (4 players).");
-        Awaitable<bool> join = session.JoinAsync("127.0.0.1", 10f, CancellationToken.None);
+        remoteHost = InProcessHost.Start(session, null, null, null, null, JoinApproval.Full(4));
+        Awaitable<bool> join = session.JoinAsync("127.0.0.1", session.Settings.Port, 10f, CancellationToken.None);
         yield return SceneBootTestHelper.WaitUntil(() => join.GetAwaiter().IsCompleted, "the refused join to end");
 
         Assert.That(join.GetAwaiter().GetResult(), Is.False);
-        Assert.That(session.JoinRefusal, Is.EqualTo("the game is full (4 players)."));
+        Assert.That(session.JoinRefusal, Is.EqualTo(JoinApproval.Full(4)));
+        Assert.That(session.JoinedAddress, Is.EqualTo($"127.0.0.1:{session.Settings.Port}"));
         Assert.That(remoteHost.Manager.ConnectedClientsIds.Count, Is.EqualTo(1), "Only the host itself is connected.");
         yield return SceneBootTestHelper.WaitUntil(() => !session.IsActive, "the refused client to shut down");
     }
 
     /// <summary>
-    /// The host disconnects a client whose join payload carries another game version, with a refusal naming that
+    /// The host disconnects a client whose join payload carries another game version, with a refusal naming the host's
     /// version.
     /// </summary>
     [UnityTest]
@@ -361,7 +370,8 @@ public class NetworkSessionPlayModeTests
             yield return SceneBootTestHelper.WaitUntil(() => !outdated.IsListening, "the host to refuse the outdated client");
 
             Assert.That(JoinApproval.TryDecodeRefusal(outdated.DisconnectReason, out string refusal), Is.True, outdated.DisconnectReason);
-            Assert.That(refusal, Does.Contain(Application.version + "-other"));
+            Assert.That(JoinApproval.IsOtherBuild(refusal, out string hostVersion), Is.True, refusal);
+            Assert.That(hostVersion, Is.EqualTo(Application.version));
             Assert.That(session.NetworkManager.ConnectedClientsIds.Count, Is.EqualTo(1), "Only the host itself is connected.");
         }
         finally
@@ -423,7 +433,7 @@ public class NetworkSessionPlayModeTests
         yield return SceneBootTestHelper.BootIntoMainMenu();
 
         NetworkSession session = SceneBootTestHelper.ResolveFromMain<NetworkSession>();
-        Awaitable<bool> join = session.JoinAsync("127.0.0.1", 1f, CancellationToken.None);
+        Awaitable<bool> join = session.JoinAsync("127.0.0.1", session.Settings.Port, 1f, CancellationToken.None);
         yield return SceneBootTestHelper.WaitUntil(() => join.GetAwaiter().IsCompleted, "the join attempt to time out");
 
         Assert.That(join.GetAwaiter().GetResult(), Is.False);

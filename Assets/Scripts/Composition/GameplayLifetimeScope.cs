@@ -17,6 +17,7 @@ public class GameplayLifetimeScope : LifetimeScope
     [SerializeField] private GameplaySettings settings;
     [SerializeField] private CombatSettings combatSettings;
     [SerializeField] private HitFeedbackSettings hitFeedbackSettings;
+    [SerializeField] private HudSettings hudSettings;
     [SerializeField] private PropFadeSettings propFadeSettings;
     [SerializeField] private WorldStreamingSettings worldStreamingSettings;
     [SerializeField] private DayNightSettings dayNightSettings;
@@ -64,6 +65,12 @@ public class GameplayLifetimeScope : LifetimeScope
             return;
         }
 
+        if (hudSettings == null)
+        {
+            Debug.LogError($"{name} has no {nameof(HudSettings)} assigned; the HUD cannot be set up.", this);
+            return;
+        }
+
         builder.RegisterInstance(playerPrefab.ControlSettings);
         builder.Register<PlayerRegistry>(Lifetime.Singleton).As<IPlayerRegistry>().AsSelf();
         builder.Register<LocalPlayerTracker>(Lifetime.Singleton);
@@ -81,9 +88,15 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterComponent(damagePopupLayer);
         builder.RegisterInstance(settings);
         builder.RegisterInstance(combatSettings);
+        builder.RegisterInstance(hudSettings);
         builder.RegisterComponentInHierarchy<PlayerHudView>();
         builder.RegisterComponentInHierarchy<AbilityBarView>();
         builder.RegisterComponentInHierarchy<StatusBarView>();
+        builder.RegisterComponentInHierarchy<NoticeView>();
+        builder.RegisterComponentInHierarchy<PartyFramesView>();
+        builder.RegisterComponentInHierarchy<ChatView>();
+        builder.Register<ChatLog>(Lifetime.Singleton);
+        builder.Register<LocalChatSender>(Lifetime.Singleton).As<IChatSender>();
 
         builder.Register<CombatEvents>(Lifetime.Singleton);
         builder.Register<DamageService>(Lifetime.Singleton);
@@ -123,9 +136,23 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.RegisterEntryPoint<PlayerHudPresenter>();
         builder.RegisterEntryPoint<AbilityBarPresenter>();
         builder.RegisterEntryPoint<StatusBarPresenter>();
+        builder.RegisterEntryPoint<NoticePresenter>().AsSelf();
+        builder.RegisterEntryPoint<PartyFramesPresenter>().AsSelf();
+        builder.RegisterEntryPoint<ChatPresenter>().AsSelf();
+        builder.RegisterEntryPoint<ChatPartyLines>().AsSelf();
         builder.RegisterComponentInHierarchy<OptionsMenuView>();
         builder.RegisterEntryPoint<OptionsMenuController>().AsSelf();
+        builder.RegisterComponentInHierarchy<CharacterScreenView>();
+        builder.Register<ICharacterPreview>(resolver => resolver.Resolve<CharacterScreenView>().Stage, Lifetime.Singleton);
+        builder.RegisterEntryPoint<CharacterScreenController>().AsSelf();
+        builder.RegisterEntryPoint<VitalsStripPresenter>().AsSelf();
         builder.RegisterComponentInHierarchy<GameMenuView>();
+        builder.RegisterComponentInHierarchy<PartyPageView>();
+        builder.RegisterComponentInHierarchy<ControlsPageView>();
+        builder.Register<SystemClipboard>(Lifetime.Singleton).As<IClipboard>();
+        builder.Register<GameExit>(Lifetime.Singleton).As<IGameExit>();
+        builder.RegisterEntryPoint<PartyPagePresenter>().AsSelf();
+        builder.RegisterEntryPoint<ControlsPagePresenter>().AsSelf();
         builder.RegisterEntryPoint<GameMenuController>().AsSelf();
 
         if (pointerFeedbackLayer == null)
@@ -147,13 +174,12 @@ public class GameplayLifetimeScope : LifetimeScope
         builder.Register<WalkablePlaces>(Lifetime.Singleton);
         builder.Register<WaystoneNotices>(Lifetime.Singleton);
         builder.RegisterEntryPoint<WaystoneDiscovery>();
-        builder.RegisterEntryPoint<WaystonePopupPresenter>();
         builder.Register<KnownWaystones>(Lifetime.Singleton);
         builder.RegisterEntryPoint<WaystoneMarkers>().AsSelf();
         builder.Register<WorldExits>(Lifetime.Singleton);
         builder.Register<LocalTripAuthority>(Lifetime.Singleton);
         builder.Register<NetworkTripAuthority>(Lifetime.Singleton).As<ITripAuthority>().AsSelf();
-        builder.RegisterEntryPoint<GameSaveRecorder>().AsSelf();
+        builder.RegisterEntryPoint<GameSaveRecorder>().As<IGameSaving>().AsSelf();
         builder.RegisterEntryPoint<HostSessionSync>().AsSelf();
         builder.RegisterInstance(new NavigationPagePool());
         builder.Register<SharedTerrainArrays>(Lifetime.Singleton);

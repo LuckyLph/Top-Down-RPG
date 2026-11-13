@@ -33,6 +33,14 @@ public sealed class BenchmarkSaveFolder : ISaveFolder
     }
 
     /// <summary>
+    /// Forgets the file <paramref name="name"/> the run wrote, keeping no copy; false when the run never opened it.
+    /// </summary>
+    public bool Delete(string name)
+    {
+        return files.Remove(name);
+    }
+
+    /// <summary>
     /// Nothing to put away: the run has no earlier build's save file. Always succeeds.
     /// </summary>
     public bool RetireLegacy(out string moved)

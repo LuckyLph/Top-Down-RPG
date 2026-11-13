@@ -856,6 +856,41 @@ public class PlayerOrdersTests
     }
 
     /// <summary>
+    /// <see cref="PlayerOrders.BufferedCastChanged"/> gives the slot of each cast buffered and -1 each time the buffer
+    /// clears: replaced by a newer press, dropped by the stop key, expired after the window, or fired when the running
+    /// cast ends (Docs/UiRevamp.md, Phase 1).
+    /// </summary>
+    [Test]
+    public void BufferedCastChanged_GivesTheBufferedSlot_AndMinusOneWhenTheBufferClears()
+    {
+        List<int> changes = new();
+        orders.BufferedCastChanged += changes.Add;
+        caster.Set(0, Ability(castTime: 1f));
+        caster.Set(1, Ability(bufferable: true));
+        caster.Set(2, Ability(castTime: 0.5f, bufferable: true));
+        Tick(Press(0, Vector2.right));
+
+        Tick(Press(1, Vector2.right));
+        Tick(Press(2, Vector2.right));
+        Assert.That(changes, Is.EqualTo(new[] { 1, -1, 2 }), "A newer press replaces the buffered cast.");
+
+        Tick(new PlayerCommand(Vector2.zero, default, false, false, stopPressed: true));
+        Assert.That(changes, Is.EqualTo(new[] { 1, -1, 2, -1 }), "The stop key drops it.");
+
+        Tick(Press(1, Vector2.right));
+        time = 0.5f;
+        Tick(default);
+        Assert.That(changes, Is.EqualTo(new[] { 1, -1, 2, -1, 1, -1 }), "It expires after the window.");
+
+        time = 0.7f;
+        Tick(Press(2, Vector2.right));
+        time = 1f;
+        Tick(default);
+        Assert.That(changes, Is.EqualTo(new[] { 1, -1, 2, -1, 1, -1, 2, -1 }), "It clears as it fires.");
+        Assert.That(orders.CastingSlot, Is.EqualTo(2));
+    }
+
+    /// <summary>
     /// A buffered unit-targeted cast whose target died while it waited fails with
     /// <see cref="CastOutcome.NoTarget"/> instead of firing, and the player ends idle.
     /// </summary>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
@@ -410,7 +411,7 @@ public class CombatComponentTests
         Camera camera = CreateCamera();
         DamagePopupLayer layer = CreatePopupLayer();
         CombatEvents combatEvents = new();
-        DamagePopupPresenter presenter = new(combatEvents, layer, camera, TestCombat.Settings);
+        DamagePopupPresenter presenter = new(combatEvents, layer, camera, TestCombat.Settings, null, null, null);
         DamageReport report = new(null, 3, DamageType.Physical, DamageFlags.None, null, Vector3.zero);
 
         presenter.Start();
@@ -421,6 +422,115 @@ public class CombatComponentTests
         combatEvents.Publish(report);
         Assert.That(CountActivePopups(layer), Is.EqualTo(1));
         Assert.That(layer.ActiveCount, Is.EqualTo(1));
+    }
+
+    /// <summary>
+    /// The popups of allies (Docs/UiRevamp.md, Phase 3): a hit, a heal or a blocked status that involves another player
+    /// but not the local one shows as the local settings ask: like the others, at the allies' popup size, or not at
+    /// all. The local player's own (dealt or taken, a heal it gave an ally included) and those no player is part of
+    /// always show at their own size.
+    /// </summary>
+    [Test]
+    public void DamagePopupPresenter_ShowsAlliesPopups_AsTheSettingsAsk()
+    {
+        root = new GameObject("PresenterRoot");
+        Camera camera = CreateCamera();
+        DamagePopupLayer layer = CreatePopupLayer();
+        CombatEvents combatEvents = new();
+        UserSettings preferences = new(new MemorySaveStore());
+        LocalPlayerTracker localPlayer = new();
+        PlayerRegistry players = new();
+        GameObject localObject = Unit("Local");
+        localObject.AddComponent<PlayerController>();
+        LocalPlayer local = new(localObject.GetComponent<PlayerController>());
+        GameObject ally = Unit("Ally");
+        GameObject mob = Unit("Mob");
+        players.Add(local.Handle);
+        players.Add(new PlayerHandle(ally.transform, ally.GetComponent<Health>()));
+        localPlayer.Assign(local);
+        DamagePopupPresenter presenter = new(combatEvents, layer, camera, TestCombat.Settings, preferences, localPlayer, players);
+        presenter.Start();
+        StatusEffectDefinition stun = ScriptableObject.CreateInstance<StatusEffectDefinition>();
+
+        void PublishAll()
+        {
+            combatEvents.Publish(new DamageReport(mob.GetComponent<Health>(), 11, DamageType.Physical, DamageFlags.None, ally, Vector3.zero));
+            combatEvents.Publish(new DamageReport(ally.GetComponent<Health>(), 12, DamageType.Physical, DamageFlags.None, mob, Vector3.zero));
+            combatEvents.Publish(new HealReport(ally.GetComponent<Health>(), 13, ally, Vector3.zero));
+            combatEvents.PublishBlocked(new StatusReport(ally.GetComponent<Health>(), stun, mob, Vector3.zero));
+            combatEvents.Publish(new DamageReport(mob.GetComponent<Health>(), 21, DamageType.Physical, DamageFlags.None, localObject, Vector3.zero));
+            combatEvents.Publish(new DamageReport(local.Handle.Health, 22, DamageType.Physical, DamageFlags.None, mob, Vector3.zero));
+            combatEvents.Publish(new HealReport(ally.GetComponent<Health>(), 23, localObject, Vector3.zero));
+            combatEvents.Publish(new DamageReport(mob.GetComponent<Health>(), 31, DamageType.Physical, DamageFlags.None, null, Vector3.zero));
+        }
+
+        try
+        {
+            PublishAll();
+            Assert.That(Shown(layer).Count, Is.EqualTo(8), "Shown: every popup.");
+            Assert.That(Shown(layer).TrueForAll(popup => popup.Value == UiTextSize.Heading), Is.True, "Shown: each at its own size.");
+
+            preferences.SetAllyPopups(AllyPopups.Smaller);
+            Clear(layer);
+            PublishAll();
+            Dictionary<string, UiTextSize> smaller = new();
+            Shown(layer).ForEach(popup => smaller[popup.Key] = popup.Value);
+            Assert.That(smaller.Count, Is.EqualTo(8), "Smaller: every popup still shows.");
+            Assert.That(smaller["11"], Is.EqualTo(TestCombat.Settings.AllyPopupSize), "The ally's hit is smaller.");
+            Assert.That(smaller["12"], Is.EqualTo(TestCombat.Settings.AllyPopupSize), "The hit the ally took is smaller.");
+            Assert.That(smaller["+13"], Is.EqualTo(TestCombat.Settings.AllyPopupSize), "The ally's heal is smaller.");
+            Assert.That(smaller["21"], Is.EqualTo(UiTextSize.Heading), "The local player's hit keeps its size.");
+            Assert.That(smaller["22"], Is.EqualTo(UiTextSize.Heading), "The hit on the local player keeps its size.");
+            Assert.That(smaller["+23"], Is.EqualTo(UiTextSize.Heading), "The local player's heal on an ally keeps its size.");
+            Assert.That(smaller["31"], Is.EqualTo(UiTextSize.Heading), "A hit no player is part of keeps its size.");
+            Assert.That(Shown(layer).Exists(popup => popup.Key == TestCombat.Settings.ImmuneText && popup.Value == TestCombat.Settings.AllyPopupSize), Is.True, "The block on the ally is smaller.");
+
+            preferences.SetAllyPopups(AllyPopups.Hidden);
+            Clear(layer);
+            PublishAll();
+            List<string> hidden = Shown(layer).ConvertAll(popup => popup.Key);
+            Assert.That(hidden, Is.EquivalentTo(new[] { "21", "22", "+23", "31" }), "Hidden: only the local player's popups and those no player is part of.");
+        }
+        finally
+        {
+            presenter.Dispose();
+            Object.DestroyImmediate(stun);
+            Object.DestroyImmediate(layer.gameObject);
+        }
+    }
+
+    /// <summary>
+    /// A unit under the root: a <see cref="Health"/> and a <see cref="DamageReceiver"/>.
+    /// </summary>
+    private GameObject Unit(string name)
+    {
+        GameObject unit = new(name);
+        unit.transform.SetParent(root.transform);
+        unit.AddComponent<Health>();
+        unit.AddComponent<DamageReceiver>();
+        return unit;
+    }
+
+    /// <summary>
+    /// The text and shown size of each active popup on <paramref name="layer"/>.
+    /// </summary>
+    private static List<KeyValuePair<string, UiTextSize>> Shown(DamagePopupLayer layer)
+    {
+        List<KeyValuePair<string, UiTextSize>> shown = new();
+        foreach (FloatingDamageText popup in layer.GetComponentsInChildren<FloatingDamageText>(false))
+        {
+            shown.Add(new KeyValuePair<string, UiTextSize>(popup.GetComponent<TMP_Text>().text, popup.GetComponent<ThemedText>().ShownSize));
+        }
+
+        return shown;
+    }
+
+    /// <summary>
+    /// Releases every active popup on <paramref name="layer"/>.
+    /// </summary>
+    private static void Clear(DamagePopupLayer layer)
+    {
+        layer.Tick(1000f);
     }
 
     /// <summary>
@@ -452,7 +562,9 @@ public class CombatComponentTests
         RectTransform templateRect = template.GetComponent<RectTransform>();
         templateRect.anchorMin = new Vector2(0.5f, 0.5f);
         templateRect.anchorMax = new Vector2(0.5f, 0.5f);
-        layer.Configure(template.AddComponent<FloatingDamageText>());
+        FloatingDamageText popup = template.AddComponent<FloatingDamageText>();
+        template.GetComponent<ThemedText>().Configure(TestThemes.Shared, UiColour.Text, UiColour.Outline, UiTextSize.Heading);
+        layer.Configure(popup);
         return layer;
     }
 

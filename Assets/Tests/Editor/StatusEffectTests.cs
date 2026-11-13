@@ -504,7 +504,7 @@ public class StatusEffectTests
         StatusReport? report = null;
         services.Events.StatusBlocked += published => report = published;
         StatusEffectDefinition blocked = null;
-        golem.Statuses.Blocked += definition => blocked = definition;
+        golem.Statuses.Blocked += (definition, _) => blocked = definition;
 
         Assert.That(services.Statuses.Apply(golem, stun, null), Is.EqualTo(StatusApplyOutcome.Immune));
 
@@ -726,7 +726,7 @@ public class StatusEffectTests
         DamagePopupLayer layer = canvasObject.AddComponent<DamagePopupLayer>();
         layer.Configure(popupPrefab);
         CombatEvents events = new();
-        DamagePopupPresenter presenter = new(events, layer, camera, TestCombat.Settings);
+        DamagePopupPresenter presenter = new(events, layer, camera, TestCombat.Settings, null, null, null);
         presenter.Start();
 
         events.PublishBlocked(new StatusReport(null, Definition("Stun", StatusKind.Debuff, 1f), null, Vector3.zero));

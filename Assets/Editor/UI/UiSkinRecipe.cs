@@ -19,15 +19,29 @@ public enum UiSkinPiece
     MarkerHover,
     Pip,
     Check,
+    SlotCorners,
+    Hatch,
+    BarTick,
+    Notch,
+    Badge,
+    BadgeLarge,
+    GripMove,
+    GripResize,
 }
 
 /// <summary>
 /// An editor-only recipe for the UI skin (Docs/DesignSystem.md, Foundations: Art), made like the prop and terrain
 /// recipes: greyscale sprites that images and sprite renderers tint by colour role, at one pixel per UI px (or per art
-/// px in the world). The panels, frames and bars are 9-sliced with corners cut along a diagonal: a panel's fill, the
-/// 1 px frame around it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
-/// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, and a check mark, a toggle's
-/// mark while it is on. The markers are drawn around a ground ellipse twice as wide as tall, each a different
+/// px in the world). The panels, frames and bars are 9-sliced, their corners cut along a diagonal by
+/// <see cref="CornerCut"/> px, none since Docs/UiRevamp.md's Phase 3, so square: a panel's fill, the 1 px frame around
+/// it, a raised panel with a darker lip under its face, a slot frame with a dark line inside it, a
+/// bar's frame (the track its fill sits in) and its fill, a pip, a small mark shown whole, a check mark, a toggle's
+/// mark while it is on, a slot's corner brackets, shown around a slot whose cast waits, and a hatch of diagonal lines,
+/// tiled over a slot that cannot be cast (Docs/UiRevamp.md, Decisions: Slot states), a bar's tick, a short line down from
+/// the top of a health bar every so many HP, and a debuff's notch, a right triangle in an icon's top right corner
+/// (Docs/UiRevamp.md, Phase 2), a player slot's badge, a disc outlined in black, small over a player in the world and
+/// large in a party frame (Phase 5), and a window's two grips, a block of dots at its header's right end that moves it
+/// and three diagonal strokes in its bottom right corner that resize it (Phase 12). The markers are drawn around a ground ellipse twice as wide as tall, each a different
 /// shape so colour is never the only cue: four chevrons pointing in for a move, the ring crossed by four ticks for an
 /// attack move, and four brackets on the ring's diagonals under a hovered enemy, each line outlined in translucent
 /// black. <see cref="Generate(UiSkinPiece)"/> draws a piece without touching an asset, the same settings always giving
@@ -41,7 +55,7 @@ public sealed class UiSkinRecipe : ScriptableObject
 
     [Header("Frames")]
     [Tooltip("How many px each corner of a panel, frame and bar is cut by along a diagonal; 0 keeps them square.")]
-    [SerializeField, Range(0, 3)] private int cornerCut = 1;
+    [SerializeField, Range(0, 3)] private int cornerCut;
     [Tooltip("How many px of a raised panel's bottom are its lip, under its face.")]
     [SerializeField, Range(0, 4)] private int lipHeight = 2;
     [Tooltip("The grey of a raised panel's lip, so its tint shows darker there by as much.")]
@@ -60,6 +74,38 @@ public sealed class UiSkinRecipe : ScriptableObject
     [SerializeField, Range(0f, 1f)] private float markerOutline = 0.5f;
     [Tooltip("The share of the ring each hover bracket keeps, around its diagonal.")]
     [SerializeField, Range(0.1f, 1f)] private float bracketShare = 0.75f;
+
+    [Header("Slot states")]
+    [Tooltip("The length in px of each arm of a slot's corner brackets, the corner pixel included.")]
+    [SerializeField, Range(2, 8)] private int cornerArm = 5;
+    [Tooltip("The thickness in px of a slot's corner brackets.")]
+    [SerializeField, Range(1, 2)] private int cornerLine = 1;
+    [Tooltip("The px between the hatch's diagonal lines, which are 1 px wide: the size of the tile it repeats.")]
+    [SerializeField, Range(2, 8)] private int hatchSpacing = 4;
+
+    [Header("Health and statuses")]
+    [Tooltip("The length in px of a health bar's tick, a 1 px line down from the top of its fill.")]
+    [SerializeField, Range(1, 8)] private int tickLength = 3;
+    [Tooltip("The legs in px of a debuff's notch, the right triangle in its top right corner.")]
+    [SerializeField, Range(2, 10)] private int notchSize = 5;
+
+    [Header("Player slots")]
+    [Tooltip("The diameter in px of a player slot's badge beside its world bar, inside its outline.")]
+    [SerializeField, Range(3, 9)] private int badgeSize = 5;
+    [Tooltip("The diameter in px of a player slot's badge in a party frame, inside its outline.")]
+    [SerializeField, Range(8, 24)] private int badgeLargeSize = 16;
+    [Tooltip("The opacity of the 1 px black outline around a badge.")]
+    [SerializeField, Range(0f, 1f)] private float badgeOutline = 1f;
+
+    [Header("Windows")]
+    [Tooltip("The side in px of each of the six dots, three across and two down, of a window's move grip.")]
+    [SerializeField, Range(1, 3)] private int gripDot = 2;
+    [Tooltip("The px between the dots of a window's move grip.")]
+    [SerializeField, Range(1, 3)] private int gripGap = 1;
+    [Tooltip("The side in px of a window's resize grip, the square its strokes fill from its bottom right corner.")]
+    [SerializeField, Range(3, 12)] private int resizeGripSize = 7;
+    [Tooltip("The px between the resize grip's diagonal strokes, counted along its edges.")]
+    [SerializeField, Range(2, 6)] private int resizeGripSpacing = 3;
 
     public int CornerCut => cornerCut;
     public int LipHeight => lipHeight;
@@ -112,6 +158,22 @@ public sealed class UiSkinRecipe : ScriptableObject
                 return Pip();
             case UiSkinPiece.Check:
                 return Check();
+            case UiSkinPiece.SlotCorners:
+                return Corners();
+            case UiSkinPiece.Hatch:
+                return Hatch();
+            case UiSkinPiece.BarTick:
+                return Tick();
+            case UiSkinPiece.Notch:
+                return Notch();
+            case UiSkinPiece.Badge:
+                return Badge(piece, badgeSize);
+            case UiSkinPiece.BadgeLarge:
+                return Badge(piece, badgeLargeSize);
+            case UiSkinPiece.GripMove:
+                return GripMove();
+            case UiSkinPiece.GripResize:
+                return GripResize();
             default:
                 return Marker(piece);
         }
@@ -201,7 +263,7 @@ public sealed class UiSkinRecipe : ScriptableObject
     }
 
     /// <summary>
-    /// A small mark shown whole rather than sliced (a status over a unit): 5 px with the panel's cut corners.
+    /// A small mark shown whole rather than sliced (a status over a unit): 5 px with the panel's corners.
     /// </summary>
     private SkinSprite Pip()
     {
@@ -232,6 +294,145 @@ public sealed class UiSkinRecipe : ScriptableObject
         }
 
         return new SkinSprite(UiSkinPiece.Check, width, height, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A slot's corner brackets, 9-sliced so they keep to the corners of whatever they frame: an L of
+    /// <see cref="cornerArm"/> px arms, <see cref="cornerLine"/> px thick, in each corner, and nothing between them.
+    /// </summary>
+    private SkinSprite Corners()
+    {
+        int size = 2 * cornerArm + 1;
+        bool[] drawn = new bool[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int fromX = Math.Min(x, size - 1 - x);
+                int fromY = Math.Min(y, size - 1 - y);
+                bool inCorner = fromX < cornerArm && fromY < cornerArm;
+                drawn[y * size + x] = inCorner && (fromX < cornerLine || fromY < cornerLine);
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.SlotCorners, size, size, Paint(drawn, Grey(1f)), new Vector4(cornerArm, cornerArm, cornerArm, cornerArm));
+    }
+
+    /// <summary>
+    /// A hatch tile, shown tiled rather than sliced: a 1 px diagonal rising to the right across a square of
+    /// <see cref="hatchSpacing"/> px, so the tiles join into lines that far apart.
+    /// </summary>
+    private SkinSprite Hatch()
+    {
+        int size = hatchSpacing;
+        bool[] drawn = new bool[size * size];
+        for (int i = 0; i < size; i++)
+        {
+            drawn[i * size + i] = true;
+        }
+
+        return new SkinSprite(UiSkinPiece.Hatch, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A health bar's tick, shown whole: a 1 px line <see cref="tickLength"/> px long.
+    /// </summary>
+    private SkinSprite Tick()
+    {
+        bool[] drawn = new bool[tickLength];
+        Array.Fill(drawn, true);
+        return new SkinSprite(UiSkinPiece.BarTick, 1, tickLength, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A debuff's notch, shown whole: a right triangle with <see cref="notchSize"/> px legs along the top and right
+    /// edges, its hypotenuse a 1-1 diagonal, to sit in an icon's top right corner.
+    /// </summary>
+    private SkinSprite Notch()
+    {
+        int size = notchSize;
+        bool[] drawn = new bool[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                drawn[y * size + x] = x >= size - 1 - y;
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.Notch, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A player slot's badge, shown whole: a disc <paramref name="diameter"/> px across (the pixels whose centres lie
+    /// within half of it of its centre) in white, with a 1 px outline around it in black at <see cref="badgeOutline"/>,
+    /// so the sprite is 2 px wider and taller than the disc.
+    /// </summary>
+    private SkinSprite Badge(UiSkinPiece piece, int diameter)
+    {
+        int size = diameter + 2;
+        bool[] disc = new bool[size * size];
+        double radius = diameter * 0.5;
+        for (int y = 0; y < diameter; y++)
+        {
+            for (int x = 0; x < diameter; x++)
+            {
+                disc[(y + 1) * size + x + 1] = Sq(x + 0.5 - radius) + Sq(y + 0.5 - radius) <= radius * radius;
+            }
+        }
+
+        Color32[] pixels = new Color32[disc.Length];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int i = y * size + x;
+                pixels[i] = disc[i] ? Grey(1f) : Touches(disc, size, size, x, y) ? Black(badgeOutline) : Clear;
+            }
+        }
+
+        return new SkinSprite(piece, size, size, pixels, Vector4.zero);
+    }
+
+    /// <summary>
+    /// A window's move grip, shown whole: six <see cref="gripDot"/> px square dots, three across and two down,
+    /// <see cref="gripGap"/> px apart.
+    /// </summary>
+    private SkinSprite GripMove()
+    {
+        int width = 3 * gripDot + 2 * gripGap;
+        int height = 2 * gripDot + gripGap;
+        bool[] drawn = new bool[width * height];
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                drawn[y * width + x] = x % (gripDot + gripGap) < gripDot && y % (gripDot + gripGap) < gripDot;
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.GripMove, width, height, Paint(drawn, Grey(1f)), Vector4.zero);
+    }
+
+    /// <summary>
+    /// A window's resize grip, shown whole in its bottom right corner: 1 px diagonal strokes across the half of a
+    /// square of <see cref="resizeGripSize"/> px below its diagonal, the first the corner pixel itself and each next one
+    /// <see cref="resizeGripSpacing"/> px further along the edges.
+    /// </summary>
+    private SkinSprite GripResize()
+    {
+        int size = resizeGripSize;
+        bool[] drawn = new bool[size * size];
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                int along = size - 1 - x + y;
+                drawn[y * size + x] = along < size && along % resizeGripSpacing == 0;
+            }
+        }
+
+        return new SkinSprite(UiSkinPiece.GripResize, size, size, Paint(drawn, Grey(1f)), Vector4.zero);
     }
 
     /// <summary>

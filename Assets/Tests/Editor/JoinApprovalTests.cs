@@ -2,7 +2,8 @@ using NUnit.Framework;
 
 /// <summary>
 /// Tests for <see cref="JoinApproval"/>: the join payload carrying the version and the player id, the host's version
-/// and party size check on joining clients, and encoding its refusal into a disconnect reason.
+/// and party size check on joining clients, its refusals' kinds (another build with the host's version, a full party
+/// with its size), and encoding a refusal into a disconnect reason.
 /// </summary>
 public class JoinApprovalTests
 {
@@ -47,7 +48,7 @@ public class JoinApprovalTests
     public void TheVersionIsReadFromAPayloadWithAPlayerId()
     {
         Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", string.Empty), "1.2", 1, 4), Is.Null);
-        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", "1.2"), "1.3", 1, 4), Does.Contain("runs 1.2"));
+        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", "1.2"), "1.3", 1, 4), Is.EqualTo(JoinApproval.OtherBuild("1.3")));
     }
 
     /// <summary>
@@ -60,37 +61,40 @@ public class JoinApprovalTests
     }
 
     /// <summary>
-    /// Joining a full party is refused with a reason that says it is full and names the player limit.
+    /// Joining a full party is refused as full, naming the player limit, and as nothing else.
     /// </summary>
     [Test]
     public void FullParty_IsRefused()
     {
         string refusal = JoinApproval.Evaluate(JoinApproval.CreatePayload("1.2", "player"), "1.2", 4, 4);
 
-        Assert.That(refusal, Does.Contain("full"));
-        Assert.That(refusal, Does.Contain("4 players"));
+        Assert.That(JoinApproval.IsFull(refusal, out int maxPlayers), Is.True);
+        Assert.That(maxPlayers, Is.EqualTo(4));
+        Assert.That(JoinApproval.IsOtherBuild(refusal, out _), Is.False);
     }
 
     /// <summary>
-    /// A client on another version is refused with a reason naming both the client's and the host's version.
+    /// A client on another version is refused as another build, naming the host's version (the client knows its own),
+    /// and as nothing else.
     /// </summary>
     [Test]
-    public void OtherVersion_IsRefusedNamingBothVersions()
+    public void OtherVersion_IsRefusedNamingTheHostsVersion()
     {
         string refusal = JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1", "player"), "1.2", 1, 4);
 
-        Assert.That(refusal, Does.Contain("1.1"));
-        Assert.That(refusal, Does.Contain("1.2"));
+        Assert.That(JoinApproval.IsOtherBuild(refusal, out string hostVersion), Is.True);
+        Assert.That(hostVersion, Is.EqualTo("1.2"));
+        Assert.That(JoinApproval.IsFull(refusal, out _), Is.False);
     }
 
     /// <summary>
-    /// A null or empty connection payload is refused as an unknown version.
+    /// A null or empty connection payload is refused as another build.
     /// </summary>
     [TestCase(null)]
     [TestCase(new byte[0])]
     public void MissingPayload_IsRefusedAsAnUnknownVersion(byte[] payload)
     {
-        Assert.That(JoinApproval.Evaluate(payload, "1.2", 1, 4), Does.Contain("unknown version"));
+        Assert.That(JoinApproval.Evaluate(payload, "1.2", 1, 4), Is.EqualTo(JoinApproval.OtherBuild("1.2")));
     }
 
     /// <summary>
@@ -99,19 +103,33 @@ public class JoinApprovalTests
     [Test]
     public void VersionIsCheckedBeforeRoom()
     {
-        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1", "player"), "1.2", 4, 4), Does.Contain("1.1"));
+        Assert.That(JoinApproval.Evaluate(JoinApproval.CreatePayload("1.1", "player"), "1.2", 4, 4), Is.EqualTo(JoinApproval.OtherBuild("1.2")));
     }
 
     /// <summary>
-    /// An encoded refusal decodes back to the same reason text.
+    /// An encoded refusal decodes back to the same refusal, which keeps its kind.
     /// </summary>
     [Test]
     public void Refusal_RoundTripsThroughADisconnectReason()
     {
-        string encoded = JoinApproval.EncodeRefusal("the game is full (4 players).");
+        string encoded = JoinApproval.EncodeRefusal(JoinApproval.Full(4));
 
         Assert.That(JoinApproval.TryDecodeRefusal(encoded, out string reason), Is.True);
-        Assert.That(reason, Is.EqualTo("the game is full (4 players)."));
+        Assert.That(reason, Is.EqualTo(JoinApproval.Full(4)));
+        Assert.That(JoinApproval.IsFull(reason, out int maxPlayers) && maxPlayers == 4, Is.True);
+    }
+
+    /// <summary>
+    /// A refusal of a kind this build does not know, or none, is neither full nor another build.
+    /// </summary>
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("the game is full (4 players).")]
+    [TestCase("full:many")]
+    public void OtherRefusals_AreNeitherFullNorAnotherBuild(string refusal)
+    {
+        Assert.That(JoinApproval.IsFull(refusal, out _), Is.False);
+        Assert.That(JoinApproval.IsOtherBuild(refusal, out _), Is.False);
     }
 
     /// <summary>

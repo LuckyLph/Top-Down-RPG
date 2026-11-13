@@ -15,7 +15,8 @@ using VContainer;
 /// drawn in the outfit composed for it, and the adventurer's own set again after a reset; and a client joining after the
 /// host put on a cape sees its copy wear it. And its weapon's gear (Phase 7): a client's greatsword shows on its back on
 /// the host's copy, from the weapon the copy already shows, and the sword's own set again after a switch back; and a
-/// client joining after the host equipped the longbow sees its copy carry it.
+/// client joining after the host equipped the longbow sees its copy carry it. A pick on the host's Character screen
+/// (Docs/UiRevamp.md, Phase 7) reaches the client's copy the same way.
 /// </summary>
 public class NetworkLooksPlayModeTests
 {
@@ -179,6 +180,52 @@ public class NetworkLooksPlayModeTests
     }
 
     /// <summary>
+    /// The host opens the Character screen from the in-game menu (Docs/UiRevamp.md, Phase 7): a red tunic picked in the
+    /// swatch picker and a cape picked on its row reach the client's copy of the host's player, and the screen's preview
+    /// wears the very outfit the host's own player wears, composed once.
+    /// </summary>
+    [UnityTest]
+    public IEnumerator APickOnTheCharacterScreen_ReachesTheClientsCopy()
+    {
+        yield return Host();
+        yield return Join();
+        IObjectResolver gameplay = Object.FindAnyObjectByType<GameplayLifetimeScope>().Container;
+        PlayerController hostOwned = gameplay.Resolve<LocalPlayerTracker>().Current.Controller;
+        PlayerController clientCopy = InProcessClient.FindCopyOwnedBy(client.Players, NetworkManager.ServerClientId);
+        PlayerLook copyLook = clientCopy.GetComponent<PlayerLook>();
+        CharacterVisuals hostVisuals = hostOwned.GetComponentInChildren<CharacterVisuals>();
+        CharacterColours colours = copyLook.Colours;
+        int tunic = colours.IndexOf("Tunic");
+        CharacterColourPicks red = colours.Pick(default, tunic, "Red");
+        GameMenuController menu = gameplay.Resolve<GameMenuController>();
+        CharacterScreenController screen = gameplay.Resolve<CharacterScreenController>();
+        CharacterScreenView view = gameplay.Resolve<CharacterScreenView>();
+        GameMenuView menuView = gameplay.Resolve<GameMenuView>();
+        menu.Open();
+        menuView.CharacterButton.onClick.Invoke();
+        Assert.That(screen.IsOpen, Is.True);
+        Assert.That(menuView.IsShown, Is.False, "The screen opens in the menu's place.");
+
+        screen.GetRow(Row(screen, "Top")).GetChip(0).Button.onClick.Invoke();
+        Assert.That(screen.IsPickerOpen, Is.True);
+        view.Picker.GetChip(colours.IndexOfSwatch(tunic, "Red")).Button.onClick.Invoke();
+        Assert.That(SceneBootTestHelper.ResolveFromMain<UserSettings>().CharacterColour("Tunic"), Is.EqualTo("Red"));
+        yield return SceneBootTestHelper.WaitUntil(() => copyLook.ShownColours.Equals(red), "the client's copy to draw the host's red tunic");
+
+        screen.GetRow(Row(screen, "Cape")).ValueButton.onClick.Invoke();
+        int cape = copyLook.Parts.Get(CharacterSlot.Cape).IndexOf("Cape");
+        yield return SceneBootTestHelper.WaitUntil(() => copyLook.ShownParts.Get(CharacterSlot.Cape) == cape, "the client's copy to wear the host's cape");
+        CharacterVisuals stageVisuals = view.Stage.Visuals;
+        yield return SceneBootTestHelper.WaitUntil(
+            () => hostVisuals.AnimationSet.Carries(CharacterDye.Cape) && stageVisuals.AnimationSet == hostVisuals.AnimationSet,
+            "the preview and the host's player to wear one composed outfit");
+
+        screen.Close();
+        Assert.That(menuView.IsShown, Is.True, "Back on the menu.");
+        menu.Close();
+    }
+
+    /// <summary>
     /// The host puts on a cape before the client joins: the client's copy of the host's player wears it, in a composed
     /// outfit, from its spawn on.
     /// </summary>
@@ -265,6 +312,23 @@ public class NetworkLooksPlayModeTests
     {
         CharacterLookCatalog looks = player.GetComponent<PlayerLook>().Catalog;
         return looks.Get(looks.IndexOf(lookName)).AnimationSet;
+    }
+
+    /// <summary>
+    /// The index of <paramref name="screen"/>'s row labelled <paramref name="label"/>.
+    /// </summary>
+    private static int Row(CharacterScreenController screen, string label)
+    {
+        for (int i = 0; i < screen.RowCount; i++)
+        {
+            if (screen.GetGroup(i).Label == label)
+            {
+                return i;
+            }
+        }
+
+        Assert.Fail($"The Character screen has no {label} row.");
+        return -1;
     }
 
     /// <summary>

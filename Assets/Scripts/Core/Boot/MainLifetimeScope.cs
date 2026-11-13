@@ -41,7 +41,11 @@ public class MainLifetimeScope : LifetimeScope
 
         builder.Register<SceneLoader>(Lifetime.Singleton);
         builder.Register<GameFlow>(Lifetime.Singleton)
-            .WithParameter<LifetimeScope>(this);
+            .WithParameter<LifetimeScope>(this)
+            .As<IGameFlow>()
+            .AsSelf();
+        builder.RegisterEntryPoint<LoadingMessage>().AsSelf();
+        builder.Register<MenuNotice>(Lifetime.Singleton);
 
         if (eventSystem == null)
         {
@@ -57,6 +61,7 @@ public class MainLifetimeScope : LifetimeScope
             .WithParameter(eventSystem)
             .As<IPlayerInput>()
             .As<IMenuInput>()
+            .As<IChatInput>()
             .AsSelf();
         builder.RegisterEntryPoint<GameplayInputGate>().AsSelf();
         builder.Register<TimeFreeze>(Lifetime.Singleton);
@@ -101,10 +106,13 @@ public class MainLifetimeScope : LifetimeScope
                 .As<IPlayerIdSource>()
                 .As<INetworkClock>()
                 .As<IHostLink>()
+                .As<ISessionConnection>()
                 .AsSelf()
                 .WithParameter(networkManagerPrefab)
                 .WithParameter(networkSettings);
             builder.RegisterEntryPoint<NetworkSessionLifecycle>();
+            builder.Register<INetworkInterfaceSource, SystemNetworkInterfaces>(Lifetime.Singleton);
+            builder.Register<HostAddresses>(Lifetime.Singleton).WithParameter(networkSettings.Port);
         }
 
         builder.RegisterEntryPoint<BootFlow>();

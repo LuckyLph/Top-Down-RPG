@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Overworld
   m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
   worldId: 0d18aa60fbd5d154d8c334bdf8890f02
+  displayName: Overworld
   rootScene: {fileID: 11400000, guid: dd2f9cc722815d74eb9905c118815f3b, type: 2}
   origin: {x: 8192, y: 0}
   sizeInChunks: {x: 5, y: 4}
@@ -59,60 +60,79 @@ MonoBehaviour:
     scene: {fileID: 11400000, guid: 9cdf2c892725359458680f9af18d2864, type: 2}
   entries:
   - name: clearing
+    displayName: Clearing
     position: {x: 73.5, y: 124.5}
     waystone: 1
   - name: villageForest
+    displayName: Village forest
     position: {x: 192.5, y: 122.5}
     waystone: 1
   - name: lakeside
+    displayName: Lakeside
     position: {x: 73.5, y: 48.5}
     waystone: 1
   - name: snowfield
+    displayName: Snowfield
     position: {x: 74.5, y: 164.5}
     waystone: 1
   - name: coast
+    displayName: Coast
     position: {x: 182.5, y: 186.5}
     waystone: 1
   - name: lavaFields
+    displayName: Lava fields
     position: {x: 166.5, y: 48.5}
     waystone: 1
   - name: clearingSouth
+    displayName: Clearing, south road
     position: {x: 82, y: 106.5}
     waystone: 0
   - name: clearingWest
+    displayName: Clearing, west road
     position: {x: 60.5, y: 122.5}
     waystone: 0
   - name: clearingEast
+    displayName: Clearing, east road
     position: {x: 110.5, y: 122.5}
     waystone: 0
   - name: clearingNorth
+    displayName: Clearing, north road
     position: {x: 96, y: 141.5}
     waystone: 0
   - name: villageForestWest
+    displayName: Village forest, west road
     position: {x: 151.5, y: 122.5}
     waystone: 0
   - name: lakesideWest
+    displayName: Lakeside, west road
     position: {x: 60.5, y: 46.5}
     waystone: 0
   - name: lakesideEast
+    displayName: Lakeside, east road
     position: {x: 123.5, y: 46.5}
     waystone: 0
   - name: snowfieldEast
+    displayName: Snowfield, east road
     position: {x: 121.5, y: 163.5}
     waystone: 0
   - name: snowfieldWest
+    displayName: Snowfield, west road
     position: {x: 61.5, y: 163.5}
     waystone: 0
   - name: coastEast
+    displayName: Coast, east road
     position: {x: 233.5, y: 188.5}
     waystone: 0
   - name: coastWest
+    displayName: Coast, west road
     position: {x: 166.5, y: 188.5}
     waystone: 0
   - name: lavaFieldsWest
+    displayName: Lava fields, west road
     position: {x: 154.5, y: 46.5}
     waystone: 0
   - name: lavaFieldsEast
+    displayName: Lava fields, east road
     position: {x: 218.5, y: 46.5}
     waystone: 0
   maxSearchCells: 4096

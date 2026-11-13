@@ -302,6 +302,77 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4638647857266860316, guid: f315c49cf3a67144bbfc526bc573a795, type: 3}
   m_PrefabInstance: {fileID: 83049995}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &724831226
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1598283672}
+    m_Modifications:
+    - target: {fileID: 1549932417654947792, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_Name
+      value: AllyHoverMarker
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5824449593549553035, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+      propertyPath: m_Enabled
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+--- !u!212 &724831227 stripped
+SpriteRenderer:
+  m_CorrespondingSourceObject: {fileID: 5824449593549553035, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+  m_PrefabInstance: {fileID: 724831226}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &724831228 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3113889422268040708, guid: 2beb828ccffb05d46869a92bc3ed9b95, type: 3}
+  m_PrefabInstance: {fileID: 724831226}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &772853683
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -446,6 +517,7 @@ MonoBehaviour:
   settings: {fileID: 11400000, guid: 1b67014f06f5f6645825b52856b87320, type: 2}
   combatSettings: {fileID: 11400000, guid: 418926d2b15a1a544b4edc782443c711, type: 2}
   hitFeedbackSettings: {fileID: 11400000, guid: ddad85f53f064964b94a22caa963862b, type: 2}
+  hudSettings: {fileID: 11400000, guid: beba169a828a3e949b8792c291446d75, type: 2}
   propFadeSettings: {fileID: 11400000, guid: 2c60b55aeca7f3248b75ca06bc393e0f, type: 2}
   worldStreamingSettings: {fileID: 11400000, guid: 23be795292e99c94d9d6a57acb34670d, type: 2}
   dayNightSettings: {fileID: 11400000, guid: 7cda3134405a00f43a0923b86835c4fc, type: 2}
@@ -497,6 +569,7 @@ MonoBehaviour:
   attackMarkerPrefab: {fileID: 2369131513693450997, guid: 51fcad1ce6212e4438c3d12f243a340d, type: 3}
   prewarmCount: 4
   hoverRing: {fileID: 83049996}
+  allyHoverRing: {fileID: 724831227}
   attackCursor: {fileID: 2800000, guid: 8543f142f46a6304dbe01298cb64e01a, type: 3}
   attackCursorHotspot: {x: 16, y: 16}
 --- !u!4 &1598283672
@@ -513,6 +586,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 83049997}
+  - {fileID: 724831228}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &8726797449520402203

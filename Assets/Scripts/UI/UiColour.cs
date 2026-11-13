@@ -29,4 +29,10 @@ public enum UiColour
     Border,
     Outline,
     ControlSecondary,
+    HealthPlayer,
+    HealthLost,
+    Player1,
+    Player2,
+    Player3,
+    Player4,
 }

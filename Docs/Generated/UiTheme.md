@@ -25,12 +25,18 @@ Written by `Tools/TopDownRPG/Design/Write Design Tables` from the project's asse
 | Danger | `#FF4D40` | 100% |
 | Positive | `#73FF8C` | 100% |
 | Health | `#D92121` | 100% |
-| HealthTrack | `#141414` | 85% |
+| HealthTrack | `#141414` | 100% |
 | Icon | `#FFFFFF` | 100% |
 | IconMissing | `#FFFFFF` | 25% |
-| Border | `#9A9EB3` | 100% |
+| Border | `#000000` | 100% |
 | Outline | `#000000` | 100% |
 | ControlSecondary | `#9E9E96` | 100% |
+| HealthPlayer | `#4CC25A` | 100% |
+| HealthLost | `#D6D6D6` | 100% |
+| Player1 | `#4FA3FF` | 100% |
+| Player2 | `#C084FC` | 100% |
+| Player3 | `#2DD4BF` | 100% |
+| Player4 | `#FB923C` | 100% |
 
 ## Text sizes
 
@@ -50,7 +56,6 @@ Each pair of text role and background role a themed text uses, at the smallest s
 |---|---|---|---|---|
 | Text | Surface | Caption | 10.16:1 | 4.50:1 |
 | Text | SurfaceRaised | Body | 17.91:1 | 4.50:1 |
-| Text | Health | Body | 5.01:1 | 4.50:1 |
 | Text | Outline | Caption | 21.00:1 | 4.50:1 |
 | TextOnControl | ControlNormal | Body | 12.17:1 | 4.50:1 |
 | TextOnControl | ControlHighlighted | Body | 17.33:1 | 4.50:1 |
@@ -58,9 +63,25 @@ Each pair of text role and background role a themed text uses, at the smallest s
 | TextOnControl | ControlDisabled | Body | 3.41:1 | 3.00:1 |
 | TextOnControl | Danger | Body | 5.27:1 | 4.50:1 |
 | TextOnControl | ControlSecondary | Body | 6.42:1 | 4.50:1 |
+| TextOnControl | Player1 | Body | 6.61:1 | 4.50:1 |
+| TextMuted | Surface | Body | 5.56:1 | 4.50:1 |
 | TextMuted | SurfaceRaised | Body | 9.80:1 | 4.50:1 |
-| Placeholder | ControlNormal | Heading | 4.91:1 | 4.50:1 |
-| Placeholder | ControlHighlighted | Heading | 7.00:1 | 4.50:1 |
-| Placeholder | Accent (selected) | Heading | 5.12:1 | 4.50:1 |
+| TextMuted | Outline | Body | 11.49:1 | 4.50:1 |
+| Placeholder | ControlNormal | Body | 4.91:1 | 4.50:1 |
+| Placeholder | ControlHighlighted | Body | 7.00:1 | 4.50:1 |
+| Placeholder | Accent (selected) | Body | 5.12:1 | 4.50:1 |
+| Accent | Surface | Body | 7.44:1 | 4.50:1 |
 | Accent | SurfaceEmpty | Caption | 5.24:1 | 4.50:1 |
-| Accent | SurfaceRaised | Body | 13.11:1 | 4.50:1 |
+| Accent | SurfaceRaised | Caption | 13.11:1 | 4.50:1 |
+| Danger | SurfaceRaised | Body | 5.44:1 | 4.50:1 |
+
+## Fills on tracks
+
+Each pair of a bar's fill role and the role of the track it is read against. A bar is a large shape that carries meaning, so it needs 3:1. A translucent track counts over white and over black, the lower ratio.
+
+| Fill | Track | Contrast | Needs |
+|---|---|---|---|
+| Accent | HealthTrack | 13.48:1 | 3.00:1 |
+| Health | HealthTrack | 3.67:1 | 3.00:1 |
+| HealthPlayer | HealthTrack | 8.04:1 | 3.00:1 |
+| HealthLost | HealthTrack | 12.67:1 | 3.00:1 |

@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// Shows the <see cref="HudTooltip"/> for the <see cref="ITooltipSource"/> on its object (an ability slot, a status icon)
+/// Shows the <see cref="HudTooltip"/> for the <see cref="ITooltipSource"/> on its object (an ability slot, the weapon slot, a status icon)
 /// while the pointer is over it or it is selected, and hides it when neither holds, the source has nothing to show or
 /// the object is disabled (Docs/DesignSystem.md, Components: Tooltip). Pointer events need a raycast target on the
 /// object, which also keeps the click from reaching the world. Local to this machine.
@@ -12,6 +12,8 @@ using UnityEngine.EventSystems;
 public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, ISelectHandler, IDeselectHandler
 {
     [SerializeField, Tooltip("The tooltip this object shows, on its canvas.")] private HudTooltip tooltip;
+    [SerializeField, Tooltip("A rect the tooltip shows above too, so it never covers it: the command bar, for its slots and status icons. Empty for none.")]
+    private RectTransform clearOf;
 
     private ITooltipSource source;
     private bool pointerOver;
@@ -99,17 +101,18 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
     }
 
     /// <summary>
-    /// Sets the tooltip in code, for tests that build the trigger without a prefab.
+    /// Sets the tooltip and the rect it keeps clear in code, for tests that build the trigger without a prefab.
     /// </summary>
-    internal void Configure(HudTooltip shownTooltip)
+    internal void Configure(HudTooltip shownTooltip, RectTransform keptClear = null)
     {
         tooltip = shownTooltip;
+        clearOf = keptClear;
         ResolveSource();
     }
 
     /// <summary>
-    /// Shows the source's title and description over this object while it is pointed at or selected and has something
-    /// to show; hides the tooltip otherwise, when this object shows it.
+    /// Shows the source's title, numbers and description over this object while it is pointed at or selected and has
+    /// something to show; hides the tooltip otherwise, when this object shows it.
     /// </summary>
     private void Refresh()
     {
@@ -119,9 +122,9 @@ public class TooltipTrigger : MonoBehaviour, IPointerEnterHandler, IPointerExitH
         }
 
         RectTransform target = (RectTransform)transform;
-        if ((pointerOver || selected) && source != null && source.TryGetTooltip(out string title, out string description))
+        if ((pointerOver || selected) && source != null && source.TryGetTooltip(out string title, out string details, out string description))
         {
-            tooltip.Show(target, title, description);
+            tooltip.Show(target, clearOf, title, details, description);
         }
         else
         {

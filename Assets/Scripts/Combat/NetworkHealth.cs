@@ -6,9 +6,9 @@ using VContainer;
 /// Replicates a unit's <see cref="Health"/> from the server: a server-written variable carries the current HP for
 /// late joiners, and RPCs replay each hit (immune ones included), heal and restore on clients through
 /// <see cref="DamageService"/> so their popups, hit feedback and death reactions run, then correct HP to the server's
-/// value. A hit names its source unit when it is a spawned network object, so a client's hit feedback knows whether its
-/// own player landed it, and carries the point it came from as the host resolved it (Docs/KnownGaps.md, Phase 4), so
-/// every machine turns its feedback the same way.
+/// value. A hit, an immune hit and a heal name their source unit when it is a spawned network object, so a client's hit
+/// feedback and popups know whether its own player landed it (Docs/UiRevamp.md, Phase 3), and a hit carries the point
+/// it came from as the host resolved it (Docs/KnownGaps.md, Phase 4), so every machine turns its feedback the same way.
 /// </summary>
 [DisallowMultipleComponent]
 [RequireComponent(typeof(Health))]
@@ -92,20 +92,23 @@ public class NetworkHealth : NetworkBehaviour
     }
 
     /// <summary>
-    /// Server: sends an immune hit to clients as a zero-damage hit without a source so they show the immune popup.
+    /// Server: sends an immune hit to clients as a zero-damage hit, naming its source unit when it is spawned, so they
+    /// show the immune popup.
     /// </summary>
-    private void HandleServerImmuneHit(DamageType type, DamageFlags flags)
+    private void HandleServerImmuneHit(DamageType type, DamageFlags flags, GameObject sourceObject)
     {
-        HitRpc(0, type, flags, health.CurrentHealth, default, false, Vector2.zero, false);
+        bool hasSource = TryGetSourceObject(sourceObject, out NetworkObject source);
+        HitRpc(0, type, flags, health.CurrentHealth, hasSource ? new NetworkObjectReference(source) : default, hasSource, Vector2.zero, false);
     }
 
     /// <summary>
-    /// Server: stores the new HP and sends the heal to clients.
+    /// Server: stores the new HP and sends the heal to clients, naming its source unit when it is spawned.
     /// </summary>
-    private void HandleServerHealed(Health _, int amount)
+    private void HandleServerHealed(Health _, int amount, GameObject sourceObject)
     {
         current.Value = health.CurrentHealth;
-        HealedRpc(amount, health.CurrentHealth);
+        bool hasSource = TryGetSourceObject(sourceObject, out NetworkObject source);
+        HealedRpc(amount, health.CurrentHealth, hasSource ? new NetworkObjectReference(source) : default, hasSource);
     }
 
     /// <summary>
@@ -127,8 +130,7 @@ public class NetworkHealth : NetworkBehaviour
     {
         if (damageService != null)
         {
-            GameObject sourceObject = hasSource && source.TryGet(out NetworkObject sourceNetworkObject, NetworkManager) ? sourceNetworkObject.gameObject : null;
-            damageService.ApplyReplicatedHit(receiver, amount, type, flags, sourceObject, hasOrigin ? origin : (Vector2?)null);
+            damageService.ApplyReplicatedHit(receiver, amount, type, flags, SourceObject(source, hasSource), hasOrigin ? origin : (Vector2?)null);
         }
 
         if (health.CurrentHealth != healthAfter)
@@ -138,10 +140,19 @@ public class NetworkHealth : NetworkBehaviour
     }
 
     /// <summary>
+    /// This client's copy of the unit <paramref name="source"/> names, or null without one or for a unit this client
+    /// does not have.
+    /// </summary>
+    private GameObject SourceObject(NetworkObjectReference source, bool hasSource)
+    {
+        return hasSource && source.TryGet(out NetworkObject sourceNetworkObject, NetworkManager) ? sourceNetworkObject.gameObject : null;
+    }
+
+    /// <summary>
     /// The spawned network object of the unit <paramref name="source"/> belongs to (its <see cref="DamageReceiver"/>'s),
     /// if any.
     /// </summary>
-    private static bool TryGetSourceObject(GameObject source, out NetworkObject networkObject)
+    internal static bool TryGetSourceObject(GameObject source, out NetworkObject networkObject)
     {
         DamageReceiver unit = CombatFactions.UnitOf(source);
         networkObject = null;
@@ -149,15 +160,16 @@ public class NetworkHealth : NetworkBehaviour
     }
 
     /// <summary>
-    /// Clients: replays the server's heal through <see cref="DamageService.ApplyReplicatedHeal"/>, then syncs HP to
-    /// <paramref name="healthAfter"/> if it still differs.
+    /// Clients: replays the server's heal through <see cref="DamageService.ApplyReplicatedHeal"/> with this client's copy
+    /// of its source when it names one this client has, then syncs HP to <paramref name="healthAfter"/> if it still
+    /// differs.
     /// </summary>
     [Rpc(SendTo.NotServer, InvokePermission = RpcInvokePermission.Server)]
-    private void HealedRpc(int amount, int healthAfter)
+    private void HealedRpc(int amount, int healthAfter, NetworkObjectReference source, bool hasSource)
     {
         if (damageService != null)
         {
-            damageService.ApplyReplicatedHeal(receiver, amount);
+            damageService.ApplyReplicatedHeal(receiver, amount, SourceObject(source, hasSource));
         }
 
         if (health.CurrentHealth != healthAfter)

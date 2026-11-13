@@ -11,7 +11,8 @@ using UnityEngine.UI;
 /// Tests for the UI theme (Docs/DesignSystem.md, Phase 4): <see cref="UiTheme"/> and the themed components on themes
 /// from <see cref="UiTheme.Create"/>, the contrast rules of <see cref="UiThemeUsage"/>, then the project's theme: every
 /// role and size, its Galmuri fonts and their outlined presets, Caption readable at every display, and every pair of
-/// roles a themed text uses, and the gameplay popup colours, meeting their contrast.
+/// roles a themed text uses, every bar fill on its track (Docs/UiRevamp.md, Phase 1), and the gameplay popup colours,
+/// meeting their contrast.
 /// </summary>
 public class UiThemeTests
 {
@@ -128,6 +129,37 @@ public class UiThemeTests
     }
 
     /// <summary>
+    /// A bar's fill is measured as drawn over its track, a translucent track laid over white and over black and the
+    /// lower ratio counting; each pair of fill and track roles is measured once, against 3:1 (Docs/UiRevamp.md,
+    /// Decisions: Bar contrast).
+    /// </summary>
+    [Test]
+    public void MeasureFills_DrawsEachFillOverItsTrack_AgainstThreeToOne()
+    {
+        Color red = new(0.85f, 0.13f, 0.13f);
+        Color translucent = new(0.08f, 0.08f, 0.08f, 0.85f);
+        Color overWhite = new(0.08f * 0.85f + 0.15f, 0.08f * 0.85f + 0.15f, 0.08f * 0.85f + 0.15f);
+        Assert.That(UiThemeUsage.FillRatio(red, translucent), Is.EqualTo(DesignMath.ContrastRatio(red, overWhite)).Within(1e-4), "Over white, the lower ratio.");
+        Assert.That(UiThemeUsage.FillRatio(red, Color.black), Is.EqualTo(DesignMath.ContrastRatio(red, Color.black)).Within(1e-6));
+
+        UiTheme theme = Track(TestThemes.Create());
+        Image track = Track(new GameObject("Track", typeof(RectTransform), typeof(Image))).GetComponent<Image>();
+        ThemedGraphic themedTrack = track.gameObject.AddComponent<ThemedGraphic>();
+        themedTrack.Configure(theme, UiColour.HealthTrack);
+        Image fill = Track(new GameObject("Fill", typeof(RectTransform), typeof(Image))).GetComponent<Image>();
+        ThemedGraphic themedFill = fill.gameObject.AddComponent<ThemedGraphic>();
+        themedFill.Configure(theme, UiColour.Health, themedTrack);
+
+        List<UiThemeUsage.FillPairContrast> measured = UiThemeUsage.MeasureFills(theme, new[] { new UiThemeUsage.FillUse(themedFill, "a"), new UiThemeUsage.FillUse(themedFill, "b") });
+
+        Assert.That(measured.Count, Is.EqualTo(1), "Each pair once.");
+        Assert.That(measured[0].Fill, Is.EqualTo(UiColour.Health));
+        Assert.That(measured[0].Track, Is.EqualTo(UiColour.HealthTrack));
+        Assert.That(measured[0].Threshold, Is.EqualTo(3.0));
+        Assert.That(measured[0].Ratio, Is.EqualTo(UiThemeUsage.FillRatio(theme.Colour(UiColour.Health), theme.Colour(UiColour.HealthTrack))).Within(1e-9));
+    }
+
+    /// <summary>
     /// A themed text takes its size's font, UI px and its role's colour, the outlined material when read against
     /// Outline, and changes size until reset.
     /// </summary>
@@ -203,6 +235,70 @@ public class UiThemeTests
         }
 
         Assert.That(checkedGlyphs, Is.EqualTo(7));
+    }
+
+    /// <summary>
+    /// <see cref="PixelTextScale"/> (Docs/UiRevamp.md, Phase 3) scales its text so each font pixel covers the whole
+    /// number of display pixels nearest three quarters of the zoom's, at least two: 2/3 at x3, 3/4 at x4, 4/5 at x5, 5/6
+    /// at x6, 6/8 at x8, unchanged at x2 and x1. A text so scaled snaps its glyphs to whole display pixels of its
+    /// canvas, which its own whole UI px would not land on.
+    /// </summary>
+    [Test]
+    public void PixelTextScale_KeepsFontPixelsOnWholeDisplayPixels()
+    {
+        Assert.That(PixelTextScale.ScaleFor(1, 0.75f), Is.EqualTo(1f));
+        Assert.That(PixelTextScale.ScaleFor(2, 0.75f), Is.EqualTo(1f));
+        Assert.That(PixelTextScale.ScaleFor(3, 0.75f), Is.EqualTo(2f / 3f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(4, 0.75f), Is.EqualTo(0.75f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(5, 0.75f), Is.EqualTo(0.8f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(6, 0.75f), Is.EqualTo(5f / 6f).Within(1e-5f));
+        Assert.That(PixelTextScale.ScaleFor(8, 0.75f), Is.EqualTo(0.75f).Within(1e-5f));
+
+        const int zoom = 3;
+        UiTheme theme = Track(TestThemes.Create());
+        GameObject canvasObject = Track(new GameObject("Canvas", typeof(RectTransform), typeof(Canvas)));
+        Canvas canvas = canvasObject.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.WorldSpace;
+        RectTransform canvasRect = (RectTransform)canvasObject.transform;
+        canvasRect.sizeDelta = new Vector2(101f, 51f);
+        canvas.scaleFactor = zoom;
+        TextMeshProUGUI text = new GameObject("Text", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+        text.rectTransform.SetParent(canvasRect, false);
+        text.rectTransform.sizeDelta = new Vector2(61f, 21f);
+        text.rectTransform.anchoredPosition = new Vector2(0.3f, 0.7f);
+        text.alignment = TextAlignmentOptions.Center;
+        ThemedText themed = text.gameObject.AddComponent<ThemedText>();
+        themed.Configure(theme, UiColour.Text, UiColour.Outline, UiTextSize.Body);
+        PixelTextScale pixels = text.gameObject.AddComponent<PixelTextScale>();
+        pixels.Apply(zoom);
+        Assert.That(text.transform.localScale.x, Is.EqualTo(2f / 3f).Within(1e-5f));
+        text.text = "72 / 100";
+        text.ForceMeshUpdate(true, true);
+        TMP_TextInfo info = text.textInfo;
+        Vector3[] before = (Vector3[])info.meshInfo[0].vertices.Clone();
+
+        themed.SnapToPixels(info);
+
+        Vector2 corner = canvasRect.rect.min;
+        int checkedGlyphs = 0;
+        for (int i = 0; i < info.characterCount; i++)
+        {
+            TMP_CharacterInfo character = info.characterInfo[i];
+            if (!character.isVisible)
+            {
+                continue;
+            }
+
+            Vector3 offset = info.meshInfo[0].vertices[character.vertexIndex] - before[character.vertexIndex];
+            Vector3 origin = canvasRect.InverseTransformPoint(text.transform.TransformPoint(new Vector3(character.origin, character.baseLine, 0f) + offset));
+            float across = (origin.x - corner.x) * zoom;
+            float up = (origin.y - corner.y) * zoom;
+            Assert.That(across, Is.EqualTo(Mathf.Round(across)).Within(1e-3f), $"Glyph {i} across, in display pixels");
+            Assert.That(up, Is.EqualTo(Mathf.Round(up)).Within(1e-3f), $"Glyph {i} up, in display pixels");
+            checkedGlyphs++;
+        }
+
+        Assert.That(checkedGlyphs, Is.EqualTo(6));
     }
 
     /// <summary>
@@ -378,20 +474,81 @@ public class UiThemeTests
     }
 
     /// <summary>
-    /// The popup colours on the gameplay assets (each damage type, heal, immune and the waystone notice) read against
-    /// the Outline role at the contrast of text under Title.
+    /// The four player slots' colours (Docs/UiRevamp.md, Phase 5) are opaque and different, and the number a party
+    /// frame's badge shows on each, in TextOnControl, reads at 4.5:1 or more on all four, not only on Player1, the one
+    /// the prefab names.
+    /// </summary>
+    [Test]
+    public void ThePlayerSlotColours_AreDistinct_AndCarryTheirNumbers()
+    {
+        UiTheme theme = ProjectTheme();
+        HashSet<Color> colours = new();
+        for (int slot = 1; slot <= PlayerSlots.Count; slot++)
+        {
+            Color colour = theme.Colour(PlayerSlots.Role(slot));
+            Assert.That(colour.a, Is.EqualTo(1f), $"Player {slot} is opaque.");
+            Assert.That(colours.Add(colour), Is.True, $"Player {slot} has a colour of its own.");
+            Assert.That(UiThemeUsage.Ratio(theme.Colour(UiColour.TextOnControl), colour), Is.GreaterThanOrEqualTo(4.5), $"The number on Player {slot}'s badge.");
+        }
+    }
+
+    /// <summary>
+    /// The colours the chat's lines take in rich text (Docs/UiRevamp.md, Phase 12), which no themed text names: each
+    /// player slot's, for a sender's name, and TextMuted, for the party's lines and timestamps, read at 4.5:1 or more
+    /// against the Outline the lines are drawn with over the world.
+    /// </summary>
+    [Test]
+    public void TheChatsColours_ReadOnTheirOutline()
+    {
+        UiTheme theme = ProjectTheme();
+        Color outline = theme.Colour(UiColour.Outline);
+        for (int slot = 1; slot <= PlayerSlots.Count; slot++)
+        {
+            Assert.That(UiThemeUsage.Ratio(theme.Colour(PlayerSlots.Role(slot)), outline), Is.GreaterThanOrEqualTo(UiThemeUsage.NormalTextContrast), $"Player {slot}'s name.");
+        }
+
+        Assert.That(UiThemeUsage.Ratio(theme.Colour(UiColour.TextMuted), outline), Is.GreaterThanOrEqualTo(UiThemeUsage.NormalTextContrast), "A party line.");
+    }
+
+    /// <summary>
+    /// Every bar fill of the project meets 3:1 on its track in the project's theme (the pairs UiTheme.md lists): the
+    /// world bar's Health on an opaque HealthTrack (Docs/UiRevamp.md, Phase 1), the command bar's HealthPlayer and
+    /// its part just lost in HealthLost (Phase 2), and the players' cast bars in Accent (Phase 4).
+    /// </summary>
+    [Test]
+    public void EveryFillOnItsTrack_MeetsThreeToOne()
+    {
+        List<UiThemeUsage.FillUse> uses = UiThemeUsage.CollectFills();
+        List<UiThemeUsage.FillPairContrast> pairs = UiThemeUsage.MeasureFills(ProjectTheme(), uses);
+
+        Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/Bar.prefab")), Is.True, "The HUD's bar.");
+        Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/WorldBar.prefab")), Is.True, "The world bar.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.Health && pair.Track == UiColour.HealthTrack), Is.True, "The mobs' world bar.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.HealthPlayer && pair.Track == UiColour.HealthTrack), Is.True, "The command bar's health.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.HealthLost && pair.Track == UiColour.HealthTrack), Is.True, "Its part just lost.");
+        Assert.That(uses.Exists(use => use.Where.StartsWith("Assets/Prefabs/UI/Components/WorldBarPlayer.prefab")), Is.True, "The players' world bar.");
+        Assert.That(pairs.Exists(pair => pair.Fill == UiColour.Accent && pair.Track == UiColour.HealthTrack), Is.True, "The players' cast bars.");
+        Assert.That(ProjectTheme().Colour(UiColour.HealthTrack).a, Is.EqualTo(1f), "The track is opaque.");
+        foreach (UiThemeUsage.FillPairContrast pair in pairs)
+        {
+            Assert.That(pair.Ratio, Is.GreaterThanOrEqualTo(pair.Threshold), $"{pair.Fill} on {pair.Track}");
+        }
+    }
+
+    /// <summary>
+    /// The popup colours on the combat settings (each damage type, heal and immune) read against the Outline role at
+    /// the contrast of text under Title; the waystone notice left the popups for the notice line, whose colours are
+    /// theme roles (Docs/UiRevamp.md, Phase 3).
     /// </summary>
     [Test]
     public void GameplayPopupColours_MeetTheirContrastOnTheOutline()
     {
         Color outline = ProjectTheme().Colour(UiColour.Outline);
         CombatSettings combat = AssetDatabase.LoadAssetAtPath<CombatSettings>(DesignContent.CombatSettingsPath);
-        GameplaySettings gameplay = AssetDatabase.LoadAssetAtPath<GameplaySettings>("Assets/Data/GameplaySettings.asset");
         Dictionary<string, Color> colours = new()
         {
             ["Heal"] = combat.HealColor,
             ["Immune"] = combat.ImmuneColor,
-            ["Waystone discovered"] = gameplay.WaystoneDiscoveredColor,
         };
         foreach (DamageType type in (DamageType[])System.Enum.GetValues(typeof(DamageType)))
         {

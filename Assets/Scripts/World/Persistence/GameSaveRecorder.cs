@@ -14,9 +14,11 @@ using VContainer.Unity;
 /// stands, the entry of the trip it is on until it gets there, or, for a dead player, the waystone it will respawn at, so
 /// leaving or quitting while dead neither skips the respawn nor brings it back beside its killer; and the id of the
 /// catalog weapon it holds (<see cref="WeaponCatalog.IdOf"/>), as this machine sees it. A player that leaves has its
-/// place and weapon recorded as it goes, for its next join.
+/// place and weapon recorded as it goes, for its next join. As <see cref="IGameSaving"/> it also saves when the in-game
+/// menu's Save game button asks (Docs/UiRevamp.md, Phase 6), and says whether the last write of this machine's save
+/// failed (<see cref="GameSave.LastWriteFailed"/>), a joined client's copy of its place included.
 /// </summary>
-public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
+public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable, IGameSaving
 {
     private readonly GameSave gameSave;
     private readonly SessionSave sessionSave;
@@ -64,7 +66,9 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     /// <summary>
     /// Whether this machine saves now: it decides game state, a world session runs and that session is no throwaway.
     /// </summary>
-    private bool IsSaving => authority.IsAuthoritative && gameFlow.CurrentWorld != null && !sessionSave.IsThrowaway;
+    public bool CanSave => authority.IsAuthoritative && gameFlow.CurrentWorld != null && !sessionSave.IsThrowaway;
+
+    public bool LastWriteFailed => gameSave.LastWriteFailed;
 
     /// <summary>
     /// Follows the players leaving, their worlds, the session's end and the application quitting, and the worlds of the
@@ -96,7 +100,7 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     /// </summary>
     public void Tick()
     {
-        if (!IsSaving)
+        if (!CanSave)
         {
             saveRequested = false;
             return;
@@ -115,7 +119,7 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
     /// </summary>
     public bool Save()
     {
-        if (!IsSaving)
+        if (!CanSave)
         {
             return false;
         }
@@ -264,7 +268,7 @@ public sealed class GameSaveRecorder : IStartable, ITickable, IDisposable
         }
 
         lastWorlds[player] = world;
-        if (IsSaving)
+        if (CanSave)
         {
             saveRequested = true;
         }

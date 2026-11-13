@@ -32,3 +32,4 @@ MonoBehaviour:
   immuneColor: {r: 0.75, g: 0.75, b: 0.75, a: 1}
   immuneText: Immune
   periodicPopupSize: 0
+  allyPopupSize: 0

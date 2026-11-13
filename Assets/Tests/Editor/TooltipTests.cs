@@ -10,7 +10,9 @@ using UnityEngine.UI;
 /// prefabs under a canvas of their own: a slot or a status icon shows its name and description while the pointer is
 /// over it or it is selected and hides it when neither holds, an empty slot shows nothing, the tooltip follows what
 /// its source shows and stays inside its canvas, a shown status icon takes the click, and the HUD prefab wires every
-/// slot and status icon to its one tooltip.
+/// slot, the weapon slot and every status icon to its one tooltip. Since Docs/UiRevamp.md's Phase 1 an ability's
+/// tooltip gives its cooldown, cast time and range and the weapon slot's its damage, type and range, read from their
+/// definitions (<see cref="TooltipDetails"/>), and a tooltip with no room above its target shows below it.
 /// </summary>
 public class TooltipTests
 {
@@ -66,6 +68,7 @@ public class TooltipTests
 
         Assert.That(tooltip.IsShown, Is.True);
         Assert.That(tooltip.Title, Is.EqualTo("Test Bolt"));
+        Assert.That(tooltip.Details, Is.EqualTo("Cooldown 1 s · Instant\nRange 3"));
         Assert.That(tooltip.Description, Is.EqualTo("Fires a test bolt."));
         Assert.That(tooltip.Target, Is.EqualTo(slot.transform));
         trigger.OnPointerExit(null);
@@ -86,6 +89,7 @@ public class TooltipTests
         trigger.OnSelect(null);
         Assert.That(tooltip.IsShown, Is.True);
         Assert.That(tooltip.Title, Is.EqualTo("Test Burn"));
+        Assert.That(tooltip.Details, Is.Null, "A status has no numbers, so the line hides.");
         Assert.That(tooltip.Description, Is.EqualTo("Burns."));
 
         trigger.OnPointerEnter(null);
@@ -94,6 +98,118 @@ public class TooltipTests
 
         trigger.OnDeselect(null);
         Assert.That(tooltip.IsShown, Is.False);
+    }
+
+    /// <summary>
+    /// An ability's numbers are its cooldown and cast time ("Instant" for none), then its range on a second line when
+    /// it is aimed at a point, a unit or along a line of some length; a weapon's are its damage and type, then its range
+    /// for a bow, or melee.
+    /// </summary>
+    [Test]
+    public void TheNumbers_ComeFromTheDefinitions()
+    {
+        Assert.That(TooltipDetails.For(Track(AbilityDefinition.Create("Bolt", cooldown: 2f, castTime: 0.25f, range: 6f))), Is.EqualTo("Cooldown 2 s · Cast 0.25 s\nRange 6"));
+        Assert.That(TooltipDetails.For(Track(AbilityDefinition.Create("Mend", cooldown: 6f, castTime: 0.5f, targeting: AbilityTargeting.Unit, range: 4f))), Is.EqualTo("Cooldown 6 s · Cast 0.5 s\nRange 4"));
+        Assert.That(TooltipDetails.For(Track(AbilityDefinition.Create("Leap", cooldown: 4f, targeting: AbilityTargeting.Point, range: 5f))), Is.EqualTo("Cooldown 4 s · Instant\nRange 5"));
+        Assert.That(TooltipDetails.For(Track(AbilityDefinition.Create("Whirl", cooldown: 1.5f, castTime: 0.3f, targeting: AbilityTargeting.None))), Is.EqualTo("Cooldown 1.5 s · Cast 0.3 s"));
+        Assert.That(TooltipDetails.For(Track(AbilityDefinition.Create("Roll", cooldown: 5f, castTime: 0.15f, range: 0f))), Is.EqualTo("Cooldown 5 s · Cast 0.15 s"));
+        Assert.That(TooltipDetails.For((AbilityDefinition)null), Is.Null);
+        Assert.That(TooltipDetails.For(Track(PlayerWeapon.Create("Sword", 20, 0.35f, 0.65f, new Vector2[4]))), Is.EqualTo("20 Physical · Melee"));
+        PlayerWeapon bow = Track(PlayerWeapon.Create("Bow", 24, 0.8f, 0.55f, new Vector2[4], range: 5f, type: DamageType.Frost, projectile: new ProjectileSpec(18f, 6.5f, 0.1f, 0.5f, true, null)));
+        Assert.That(TooltipDetails.For(bow), Is.EqualTo("24 Frost · Range 5"));
+        Assert.That(TooltipDetails.For((PlayerWeapon)null), Is.Null);
+    }
+
+    /// <summary>
+    /// The weapon slot shows its weapon's name and numbers, without a description, while the pointer is over it, and
+    /// nothing without a weapon.
+    /// </summary>
+    [Test]
+    public void TheWeaponSlot_ShowsItsWeaponsNumbers()
+    {
+        GameObject slotObject = Track(new GameObject("WeaponSlot", typeof(RectTransform), typeof(Image)));
+        slotObject.transform.SetParent(canvas.transform, false);
+        Image icon = new GameObject("Icon", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
+        icon.transform.SetParent(slotObject.transform, false);
+        WeaponSlotView slot = slotObject.AddComponent<WeaponSlotView>();
+        slot.ConfigureReferences(icon, TestThemes.Shared);
+        TooltipTrigger trigger = slotObject.AddComponent<TooltipTrigger>();
+        trigger.Configure(tooltip);
+        Lifecycle(trigger, "OnEnable");
+        slot.SetWeapon(Track(PlayerWeapon.Create("Test Sword", 20, 0.35f, 0.65f, new Vector2[4])));
+
+        trigger.OnPointerEnter(null);
+        Assert.That(tooltip.IsShown, Is.True);
+        Assert.That(tooltip.Title, Is.EqualTo("Test Sword"));
+        Assert.That(tooltip.Details, Is.EqualTo("20 Physical · Melee"));
+        Assert.That(tooltip.Description, Is.Null, "A weapon has no description, so the line hides.");
+
+        slot.SetWeapon(null);
+        Assert.That(tooltip.IsShown, Is.False, "The tooltip follows the slot, which has nothing to show without a weapon.");
+        Assert.That(icon.color, Is.EqualTo(TestThemes.Shared.Colour(UiColour.IconMissing)));
+    }
+
+    /// <summary>
+    /// A tooltip whose target sits at the top of its canvas, as the weapon slot does, shows below it instead of
+    /// covering it, on whole UI px.
+    /// </summary>
+    [Test]
+    public void TheTooltip_ShowsBelowATargetWithNoRoomAbove()
+    {
+        AbilitySlotView slot = Spawn("SlotAbility").GetComponent<AbilitySlotView>();
+        RectTransform slotRect = (RectTransform)slot.transform;
+        RectTransform canvasRect = (RectTransform)canvas.transform;
+        slotRect.anchorMin = new Vector2(1f, 1f);
+        slotRect.anchorMax = new Vector2(1f, 1f);
+        slotRect.pivot = new Vector2(1f, 1f);
+        slotRect.anchoredPosition = new Vector2(-10f, -10f);
+        TooltipTrigger trigger = Trigger(slot);
+        slot.SetAbility(Track(AbilityDefinition.Create("Test Whirl", description: "Spins around and around, hitting everything close by.")));
+        Canvas.ForceUpdateCanvases();
+
+        trigger.OnPointerEnter(null);
+
+        RectTransform box = (RectTransform)tooltip.transform;
+        Rect inCanvas = Bounds(box, canvasRect);
+        Rect target = Bounds(slotRect, canvasRect);
+        Assert.That(inCanvas.yMax, Is.LessThanOrEqualTo(target.yMin + 0.001f), "Below the slot.");
+        Assert.That(inCanvas.yMin, Is.GreaterThanOrEqualTo(canvasRect.rect.yMin - 0.001f), "Inside the canvas.");
+        Assert.That(box.anchoredPosition, Is.EqualTo(new Vector2(Mathf.Round(box.anchoredPosition.x), Mathf.Round(box.anchoredPosition.y))), "On whole UI px.");
+    }
+
+    /// <summary>
+    /// A trigger that keeps a rect clear (the command bar, Docs/UiRevamp.md's Phase 2) shows its tooltip above that rect
+    /// too, still centred over its own object.
+    /// </summary>
+    [Test]
+    public void TheTooltip_ShowsAboveTheRectItsTriggerKeepsClear()
+    {
+        RectTransform canvasRect = (RectTransform)canvas.transform;
+        RectTransform cluster = Track(new GameObject("CommandBar", typeof(RectTransform))).GetComponent<RectTransform>();
+        cluster.SetParent(canvasRect, false);
+        cluster.anchorMin = new Vector2(0.5f, 0f);
+        cluster.anchorMax = new Vector2(0.5f, 0f);
+        cluster.pivot = new Vector2(0.5f, 0f);
+        cluster.anchoredPosition = new Vector2(0f, 8f);
+        cluster.sizeDelta = new Vector2(378f, 60f);
+        AbilitySlotView slot = Spawn("SlotAbility").GetComponent<AbilitySlotView>();
+        RectTransform slotRect = (RectTransform)slot.transform;
+        slotRect.SetParent(cluster, false);
+        slotRect.anchorMin = new Vector2(0.5f, 0f);
+        slotRect.anchorMax = new Vector2(0.5f, 0f);
+        slotRect.anchoredPosition = new Vector2(-60f, 16f);
+        TooltipTrigger trigger = slot.GetComponent<TooltipTrigger>();
+        trigger.Configure(tooltip, cluster);
+        slot.SetAbility(Track(AbilityDefinition.Create("Test Bolt", description: "Fires a test bolt.")));
+        Canvas.ForceUpdateCanvases();
+
+        trigger.OnPointerEnter(null);
+
+        Rect box = Bounds((RectTransform)tooltip.transform, canvasRect);
+        Rect kept = Bounds(cluster, canvasRect);
+        Rect target = Bounds(slotRect, canvasRect);
+        Assert.That(box.yMin, Is.GreaterThanOrEqualTo(kept.yMax), "Above the command bar.");
+        Assert.That(box.center.x, Is.EqualTo(target.center.x).Within(1f), "Centred over its slot.");
     }
 
     /// <summary>
@@ -188,8 +304,8 @@ public class TooltipTests
     }
 
     /// <summary>
-    /// The HUD prefab holds one hidden tooltip, drawn over everything else on it, and every ability slot and status
-    /// icon shows it.
+    /// The HUD prefab holds one hidden tooltip with its numbers line, drawn over everything else on it, and every
+    /// ability slot, the weapon slot and every status icon shows it.
     /// </summary>
     [Test]
     public void TheHudPrefab_WiresEverySlotAndStatusIcon_ToItsTooltip()
@@ -199,13 +315,20 @@ public class TooltipTests
         Assert.That(tooltips.Length, Is.EqualTo(1));
         Assert.That(tooltips[0].gameObject.activeSelf, Is.False, "Hidden until shown.");
         Assert.That(tooltips[0].transform.GetSiblingIndex(), Is.EqualTo(hud.transform.childCount - 1), "Drawn last, over the HUD.");
+        Assert.That(new SerializedObject(tooltips[0]).FindProperty("detailsText").objectReferenceValue, Is.Not.Null, "The tooltip has its numbers line.");
         foreach (Graphic graphic in tooltips[0].GetComponentsInChildren<Graphic>(true))
         {
             Assert.That(graphic.raycastTarget, Is.False, $"{graphic.name} never takes the pointer from what it describes.");
         }
 
         TooltipTrigger[] triggers = hud.GetComponentsInChildren<TooltipTrigger>(true);
-        Assert.That(triggers.Length, Is.EqualTo(AbilitySlots.Count + hud.GetComponentInChildren<StatusBarView>(true).Capacity));
+        Assert.That(triggers.Length, Is.EqualTo(AbilitySlots.Count + 1 + hud.GetComponentInChildren<StatusBarView>(true).Capacity));
+        Assert.That(hud.GetComponent<PlayerHudView>().WeaponSlot.GetComponent<TooltipTrigger>(), Is.Not.Null, "The weapon slot shows the tooltip.");
+        Transform commandBar = hud.transform.Find("CommandBar");
+        foreach (TooltipTrigger trigger in triggers)
+        {
+            Assert.That(new SerializedObject(trigger).FindProperty("clearOf").objectReferenceValue, Is.EqualTo(commandBar), $"{trigger.name}'s tooltip keeps the command bar in view.");
+        }
         foreach (TooltipTrigger trigger in triggers)
         {
             Assert.That(trigger.Tooltip, Is.EqualTo(tooltips[0]), $"{trigger.name} shows the HUD's tooltip.");

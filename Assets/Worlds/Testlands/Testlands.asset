@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Testlands
   m_EditorClassIdentifier: TopDownRPG.Core::WorldDefinition
   worldId: 45fbe595d915793439142f5a715ea480
+  displayName: Testlands
   rootScene: {fileID: 11400000, guid: 476cd5e2a3bddf44099c8e9f0b89210a, type: 2}
   origin: {x: 6144, y: 0}
   sizeInChunks: {x: 2, y: 2}
@@ -27,12 +28,15 @@ MonoBehaviour:
     scene: {fileID: 11400000, guid: 5879a398dffd0c943bcc95cbf8035f46, type: 2}
   entries:
   - name: start
+    displayName: Start
     position: {x: 24.5, y: 40.5}
     waystone: 1
   - name: fromSandbox
+    displayName: Sandbox road
     position: {x: 117.5, y: 40}
     waystone: 0
   - name: north
+    displayName: North stone
     position: {x: 30.5, y: 90.5}
     waystone: 1
   maxSearchCells: 4096

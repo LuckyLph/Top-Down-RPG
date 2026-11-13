@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 39acd648dfc58004cab34f5068fa4dce, type: 3}
   m_Name: Recipe_UiSkin
   m_EditorClassIdentifier: TopDownRPG.Editor::UiSkinRecipe
-  cornerCut: 1
+  cornerCut: 0
   lipHeight: 2
   lipGrey: 0.6
   slotShadow: 0.4
@@ -21,3 +21,11 @@ MonoBehaviour:
   markerArm: 5
   markerOutline: 0.5
   bracketShare: 0.75
+  cornerArm: 5
+  cornerLine: 1
+  hatchSpacing: 4
+  tickLength: 3
+  notchSize: 5
+  badgeSize: 5
+  badgeLargeSize: 16
+  badgeOutline: 1

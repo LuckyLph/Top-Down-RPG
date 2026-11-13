@@ -30,7 +30,7 @@ public class CharacterPrefabTests
     private const string LooksPath = "Assets/Data/Characters/CharacterLooks.asset";
     private const string ColoursPath = "Assets/Data/Characters/CharacterColours.asset";
     private const string PartsPath = "Assets/Sprites/Characters/Adventurer/Parts/Adventurer_Parts.asset";
-    private const string OptionsMenuPath = "Assets/Prefabs/UI/OptionsMenu.prefab";
+    private const string CharacterScreenPath = "Assets/Prefabs/UI/CharacterScreen.prefab";
     private const string LitMaterialPath = "Assets/Materials/SpritePixelLit.mat";
     private const string ChillPath = "Assets/Data/StatusEffects/Status_Chill.asset";
     private const string SwordPath = "Assets/Data/Weapons/Sword.asset";
@@ -90,7 +90,7 @@ public class CharacterPrefabTests
 
     /// <summary>
     /// The player's colours (Docs/PlayerCharacter.md, Phase 5) are the project's colours, drawn by a palette beside its
-    /// body's renderer, which draws with the lit sprite material, and the options menu offers the same colours; the
+    /// body's renderer, which draws with the lit sprite material, and the Character screen offers the same colours; the
     /// adventurer's set names the dyes its sheets carry, while the Bandit's, drawn in Aseprite, names none.
     /// </summary>
     [Test]
@@ -108,7 +108,7 @@ public class CharacterPrefabTests
         Assert.That(serialized.FindProperty("colours").objectReferenceValue, Is.EqualTo(colours));
         Assert.That(serialized.FindProperty("palette").objectReferenceValue, Is.EqualTo(palette));
         Assert.That(visuals.GetComponent<SpriteRenderer>().sharedMaterial, Is.EqualTo(AssetDatabase.LoadAssetAtPath<Material>(LitMaterialPath)));
-        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(OptionsMenuPath).GetComponentInChildren<OptionsMenuView>(true).Colours, Is.EqualTo(colours));
+        Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(CharacterScreenPath).GetComponentInChildren<CharacterScreenView>(true).Colours, Is.EqualTo(colours));
         Assert.That(looks.Get(0).AnimationSet.Dyes, Is.Not.Zero, "The adventurer carries palette maps.");
         Assert.That(looks.Get(looks.IndexOf("Bandit")).AnimationSet.Dyes, Is.Zero, "The Bandit keeps its own colours.");
     }

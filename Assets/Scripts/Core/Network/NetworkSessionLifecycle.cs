@@ -5,21 +5,26 @@ using VContainer.Unity;
 /// <summary>
 /// Ties the network session to the game flow: shuts the session down whenever a transition ends in the menu, and
 /// returns to the menu when the connection is lost outside the idle menu, waiting for a running transition to finish
-/// first.
+/// first. A joined client that loses its host leaves the menu a <see cref="MenuNotice"/> (Docs/UiRevamp.md, Phase 9):
+/// lost while joining when its player did not stand in a world yet (the joined game's own transition still running),
+/// else the host gone, each naming the host's address.
 /// </summary>
 public sealed class NetworkSessionLifecycle : IStartable, IDisposable
 {
-    private readonly NetworkSession session;
-    private readonly GameFlow gameFlow;
+    private readonly ISessionConnection session;
+    private readonly IGameFlow gameFlow;
+    private readonly MenuNotice notice;
     private bool returnToMenuPending;
 
     /// <summary>
-    /// Creates the lifecycle for <paramref name="session"/>, driven by <paramref name="gameFlow"/>.
+    /// Creates the lifecycle for <paramref name="session"/>, driven by <paramref name="gameFlow"/>, leaving
+    /// <paramref name="notice"/> for the menu.
     /// </summary>
-    public NetworkSessionLifecycle(NetworkSession session, GameFlow gameFlow)
+    public NetworkSessionLifecycle(ISessionConnection session, IGameFlow gameFlow, MenuNotice notice)
     {
         this.session = session;
         this.gameFlow = gameFlow;
+        this.notice = notice;
     }
 
     /// <summary>
@@ -55,8 +60,8 @@ public sealed class NetworkSessionLifecycle : IStartable, IDisposable
     }
 
     /// <summary>
-    /// In the idle menu (a join that has not started its game) just ends the session; anywhere else warns
-    /// and returns to the menu, now or once the running transition finishes.
+    /// In the idle menu (a join that has not started its game) just ends the session; anywhere else leaves a joined
+    /// client's menu its notice, warns and returns to the menu, now or once the running transition finishes.
     /// </summary>
     private void HandleConnectionLost()
     {
@@ -64,6 +69,12 @@ public sealed class NetworkSessionLifecycle : IStartable, IDisposable
         {
             session.Shutdown();
             return;
+        }
+
+        if (session.IsFollowingHost)
+        {
+            bool joining = !gameFlow.IsInGame || (gameFlow.IsTransitioning && !gameFlow.IsTravelling);
+            notice.Leave(joining ? MenuNoticeKind.LostWhileJoining : MenuNoticeKind.HostGone, session.JoinedAddress);
         }
 
         Debug.LogWarning("Lost the connection to the session; returning to the main menu.");

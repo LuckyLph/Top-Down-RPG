@@ -417,7 +417,7 @@ public class MobPlayModeBehaviorTests
 
         yield return null;
 
-        Assert.That(healthText.text, Is.EqualTo($"HP {playerHealth.CurrentHealth}"));
+        Assert.That(healthText.text, Is.EqualTo($"{playerHealth.CurrentHealth} / {playerHealth.MaxHealth}"));
         float initialExpectedFill = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
         Assert.That(healthFill.fillAmount, Is.EqualTo(initialExpectedFill).Within(0.001f));
         Assert.That(weaponIcon.sprite, Is.EqualTo(weaponController.CurrentWeapon.HudIcon), "HUD should show the equipped weapon icon.");
@@ -426,7 +426,7 @@ public class MobPlayModeBehaviorTests
         int initialPlayerHealth = playerHealth.CurrentHealth;
         playerHealth.ApplyDamage(1);
         yield return null;
-        Assert.That(healthText.text, Is.EqualTo($"HP {playerHealth.CurrentHealth}"));
+        Assert.That(healthText.text, Is.EqualTo($"{playerHealth.CurrentHealth} / {playerHealth.MaxHealth}"));
         Assert.That(playerHealth.CurrentHealth, Is.EqualTo(initialPlayerHealth - 1));
         float expectedFillAfterDamage = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
         Assert.That(healthFill.fillAmount, Is.EqualTo(expectedFillAfterDamage).Within(0.001f));

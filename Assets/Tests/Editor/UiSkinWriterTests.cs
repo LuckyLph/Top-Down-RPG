@@ -7,10 +7,11 @@ using UnityEngine;
 
 /// <summary>
 /// Tests for <see cref="UiSkinRecipe"/> and <see cref="UiSkinWriter"/> (Docs/DesignSystem.md, Phase 5): every piece is
-/// greyscale, sized to slice around its corners with the border the writer sets, panels and bars have their corners
-/// cut and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
-/// shows while on (Phase 6) is two arms meeting at the bottom; and the project's sprites are what its recipe draws,
-/// imported at 32 pixels per unit with point filtering and their borders.
+/// greyscale, sized to slice around its corners with the border the writer sets, panels and frames have square corners
+/// (Docs/UiRevamp.md, Phase 3), or cut ones at a recipe's cut, and a raised panel its darker lip; the three markers are different shapes on one canvas; the check mark a toggle
+/// shows while on (Phase 6) is two arms meeting at the bottom; a slot's corner brackets and the hatch tile
+/// (Docs/UiRevamp.md, Phase 1) and a bar's tick and a debuff's notch (Phase 2) are what they say; and the project's sprites are what its recipe draws, imported at 32
+/// pixels per unit with point filtering and their borders.
 /// </summary>
 public class UiSkinWriterTests
 {
@@ -63,21 +64,33 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
-    /// A panel's corner pixel is cut while the pixels beside it are filled, its frame is 1 px wide, and a raised
-    /// panel's lip is darker than its face, inside the border its bottom slices at.
+    /// By default a panel's and a frame's corners are square (Docs/UiRevamp.md, Phase 3): the corner pixel is filled,
+    /// so the 1 px frame closes; with a cut of 1 the corner pixel goes while the pixels beside it stay. The frame is 1 px
+    /// wide, and a raised panel's lip is darker than its face, inside the border its bottom slices at.
     /// </summary>
     [Test]
-    public void Panels_HaveCutCorners_AndARaisedPanelALip()
+    public void Panels_HaveSquareCorners_OrCutOnes_AndARaisedPanelALip()
     {
+        Assert.That(recipe.CornerCut, Is.Zero);
         SkinSprite panel = recipe.Generate(UiSkinPiece.Panel);
-        Assert.That(At(panel, 0, 0).a, Is.Zero, "The corner is cut.");
-        Assert.That(At(panel, 1, 0).a, Is.EqualTo(255));
-        Assert.That(At(panel, 0, 1).a, Is.EqualTo(255));
+        Assert.That(At(panel, 0, 0).a, Is.EqualTo(255), "The corner is square.");
         Assert.That(At(panel, panel.Width / 2, panel.Height / 2).a, Is.EqualTo(255), "A panel is filled.");
 
         SkinSprite frame = recipe.Generate(UiSkinPiece.PanelFrame);
+        Assert.That(At(frame, 0, 0).a, Is.EqualTo(255), "The frame closes at its corner.");
         Assert.That(At(frame, 0, frame.Height / 2).a, Is.EqualTo(255), "The frame runs along the edge.");
         Assert.That(At(frame, 1, frame.Height / 2).a, Is.Zero, "1 px wide.");
+        Assert.That(At(recipe.Generate(UiSkinPiece.BarFrame), 0, 0).a, Is.EqualTo(255), "A bar's corner is square too.");
+
+        SerializedObject settings = new(recipe);
+        settings.FindProperty("cornerCut").intValue = 1;
+        settings.ApplyModifiedPropertiesWithoutUndo();
+        SkinSprite cut = recipe.Generate(UiSkinPiece.Panel);
+        Assert.That(At(cut, 0, 0).a, Is.Zero, "A cut corner.");
+        Assert.That(At(cut, 1, 0).a, Is.EqualTo(255));
+        Assert.That(At(cut, 0, 1).a, Is.EqualTo(255));
+        settings.FindProperty("cornerCut").intValue = 0;
+        settings.ApplyModifiedPropertiesWithoutUndo();
 
         SkinSprite raised = recipe.Generate(UiSkinPiece.PanelRaised);
         int middle = raised.Width / 2;
@@ -131,6 +144,134 @@ public class UiSkinWriterTests
     }
 
     /// <summary>
+    /// A slot's corner brackets (Docs/UiRevamp.md, Phase 1) are an L of 5 px arms, 1 px thick, in each corner with
+    /// nothing between them, sliced at the arm so they keep to the corners of any slot; the hatch is a 4 px tile with one
+    /// diagonal rising to the right, so the tiles join into lines 4 px apart.
+    /// </summary>
+    [Test]
+    public void TheCornersAndTheHatch_AreBracketsAndADiagonal()
+    {
+        SkinSprite corners = recipe.Generate(UiSkinPiece.SlotCorners);
+        Assert.That(corners.Width, Is.EqualTo(11));
+        Assert.That(corners.Height, Is.EqualTo(11));
+        Assert.That(corners.Border, Is.EqualTo(new Vector4(5f, 5f, 5f, 5f)));
+        string[] rows =
+        {
+            "#####.#####",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "...........",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "#.........#",
+            "#####.#####",
+        };
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < corners.Width; x++)
+            {
+                Assert.That(At(corners, x, corners.Height - 1 - row).a, Is.EqualTo(rows[row][x] == '#' ? 255 : 0), $"Corner pixel ({x}, {row}) from the top left.");
+            }
+        }
+
+        SkinSprite hatch = recipe.Generate(UiSkinPiece.Hatch);
+        Assert.That(hatch.Width, Is.EqualTo(4));
+        Assert.That(hatch.Height, Is.EqualTo(4));
+        for (int y = 0; y < hatch.Height; y++)
+        {
+            for (int x = 0; x < hatch.Width; x++)
+            {
+                Assert.That(At(hatch, x, y).a, Is.EqualTo(x == y ? 255 : 0), $"Hatch pixel ({x}, {y}) from the bottom left.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A bar's tick (Docs/UiRevamp.md, Phase 2) is a 1 x 3 px line, and a debuff's notch a 5 px right triangle filling
+    /// its top row and right column, its hypotenuse a 1-1 diagonal.
+    /// </summary>
+    [Test]
+    public void TheTickAndTheNotch_AreALineAndACornerTriangle()
+    {
+        SkinSprite tick = recipe.Generate(UiSkinPiece.BarTick);
+        Assert.That(tick.Width, Is.EqualTo(1));
+        Assert.That(tick.Height, Is.EqualTo(3));
+        Assert.That(tick.Pixels.All(p => p.a == 255), Is.True);
+
+        SkinSprite notch = recipe.Generate(UiSkinPiece.Notch);
+        string[] rows = { "#####", ".####", "..###", "...##", "....#" };
+        Assert.That(notch.Width, Is.EqualTo(5));
+        Assert.That(notch.Height, Is.EqualTo(5));
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < notch.Width; x++)
+            {
+                Assert.That(At(notch, x, notch.Height - 1 - row).a, Is.EqualTo(rows[row][x] == '#' ? 255 : 0), $"Notch pixel ({x}, {row}) from the top left.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// A window's grips (Docs/UiRevamp.md, Phase 12): the move grip six 2 px dots, three across and two down, 1 px
+    /// apart; the resize grip three diagonal strokes in the bottom right half of a 7 px square, 3 px apart along its
+    /// edges, the first the corner pixel.
+    /// </summary>
+    [Test]
+    public void TheGrips_AreDotsAndDiagonalStrokes()
+    {
+        AssertRows(recipe.Generate(UiSkinPiece.GripMove), "##.##.##", "##.##.##", "........", "##.##.##", "##.##.##");
+        AssertRows(recipe.Generate(UiSkinPiece.GripResize), "......#", ".....#.", "....#..", "...#..#", "..#..#.", ".#..#..", "#..#..#");
+    }
+
+    /// <summary>
+    /// A player slot's badges (Docs/UiRevamp.md, Phase 5) are discs outlined in opaque black: the small one 5 px across
+    /// in a 7 px sprite, its corners cut, and the large one 16 px across in an 18 px sprite, round and symmetric, white
+    /// inside, black around and clear beyond.
+    /// </summary>
+    [Test]
+    public void TheBadges_AreDiscsOutlinedInBlack()
+    {
+        SkinSprite badge = recipe.Generate(UiSkinPiece.Badge);
+        string[] rows = { ".ooooo.", "oo###oo", "o#####o", "o#####o", "o#####o", "oo###oo", ".ooooo." };
+        Assert.That(badge.Width, Is.EqualTo(7));
+        Assert.That(badge.Height, Is.EqualTo(7));
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < badge.Width; x++)
+            {
+                Color32 pixel = At(badge, x, badge.Height - 1 - row);
+                char expected = rows[row][x];
+                Assert.That(pixel.a, Is.EqualTo(expected == '.' ? 0 : 255), $"Badge pixel ({x}, {row}) from the top left.");
+                Assert.That(pixel.r, Is.EqualTo(expected == '#' ? 255 : 0), $"Badge pixel ({x}, {row}) is {(expected == '#' ? "white" : "black or clear")}.");
+            }
+        }
+
+        SkinSprite large = recipe.Generate(UiSkinPiece.BadgeLarge);
+        Assert.That(large.Width, Is.EqualTo(18));
+        Assert.That(large.Height, Is.EqualTo(18));
+        int white = 0;
+        for (int y = 0; y < large.Height; y++)
+        {
+            for (int x = 0; x < large.Width; x++)
+            {
+                Color32 pixel = At(large, x, y);
+                Assert.That(pixel, Is.EqualTo(At(large, large.Width - 1 - x, y)), $"Large badge pixel ({x}, {y}) mirrors across.");
+                Assert.That(pixel, Is.EqualTo(At(large, y, x)), $"Large badge pixel ({x}, {y}) mirrors along the diagonal.");
+                white += pixel.r == 255 ? 1 : 0;
+            }
+        }
+
+        Assert.That(At(large, 9, 9).r, Is.EqualTo(255), "White in the middle.");
+        Assert.That(At(large, 1, 9).r, Is.EqualTo(255), "Reaching the edge of its 16 px.");
+        Assert.That(At(large, 0, 9), Is.EqualTo(new Color32(0, 0, 0, 255)), "Outlined in black.");
+        Assert.That(At(large, 1, 1).a, Is.Zero, "Round: its corners clear.");
+        Assert.That(white, Is.InRange(190, 210), "About pi times 8 squared.");
+    }
+
+    /// <summary>
     /// The project's skin sprites hold exactly what its recipe draws, imported as single sprites at 32 pixels per unit
     /// with point filtering, a centred pivot and the piece's 9-slice border, so one sprite pixel is one UI px.
     /// </summary>
@@ -177,7 +318,26 @@ public class UiSkinWriterTests
     private static bool IsWhole(UiSkinPiece piece)
     {
         return piece == UiSkinPiece.MarkerMove || piece == UiSkinPiece.MarkerAttackMove || piece == UiSkinPiece.MarkerHover || piece == UiSkinPiece.Pip
-            || piece == UiSkinPiece.Check;
+            || piece == UiSkinPiece.Check || piece == UiSkinPiece.Hatch || piece == UiSkinPiece.BarTick || piece == UiSkinPiece.Notch
+            || piece == UiSkinPiece.Badge || piece == UiSkinPiece.BadgeLarge || piece == UiSkinPiece.GripMove || piece == UiSkinPiece.GripResize;
+    }
+
+    /// <summary>
+    /// Asserts <paramref name="sprite"/> is <paramref name="rows"/>, from the top, '#' opaque white and '.' clear.
+    /// </summary>
+    private static void AssertRows(SkinSprite sprite, params string[] rows)
+    {
+        Assert.That(sprite.Width, Is.EqualTo(rows[0].Length));
+        Assert.That(sprite.Height, Is.EqualTo(rows.Length));
+        for (int row = 0; row < rows.Length; row++)
+        {
+            for (int x = 0; x < sprite.Width; x++)
+            {
+                Color32 pixel = At(sprite, x, sprite.Height - 1 - row);
+                Assert.That(pixel.a, Is.EqualTo(rows[row][x] == '#' ? 255 : 0), $"{sprite.Piece} pixel ({x}, {row}) from the top left.");
+                Assert.That(pixel.r, Is.EqualTo(rows[row][x] == '#' ? 255 : pixel.r));
+            }
+        }
     }
 
     /// <summary>

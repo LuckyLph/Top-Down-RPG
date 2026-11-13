@@ -15,11 +15,11 @@ public class InputBindingsTests
     private const string ProjectActionsPath = "Assets/InputSystem_Actions.inputactions";
     private const string RebindableActionsPath = "Assets/Data/Input/RebindableActions.asset";
 
-    private static readonly string[] RebindableNames = { "MoveClick", "AttackMove", "Stop", "Ability1", "Ability2", "Ability3", "Ability4", "Ability5", "Ability6" };
+    private static readonly string[] RebindableNames = { "MoveClick", "AttackMove", "Stop", "Ability1", "Ability2", "Ability3", "Ability4", "Ability5", "Ability6", "Chat" };
 
     private static readonly string[] DefaultPaths =
     {
-        "<Mouse>/rightButton", "<Keyboard>/a", "<Keyboard>/s", "<Keyboard>/q", "<Keyboard>/w", "<Keyboard>/e", "<Keyboard>/r", "<Keyboard>/1", "<Keyboard>/2",
+        "<Mouse>/rightButton", "<Keyboard>/a", "<Keyboard>/s", "<Keyboard>/q", "<Keyboard>/w", "<Keyboard>/e", "<Keyboard>/r", "<Keyboard>/1", "<Keyboard>/2", "<Keyboard>/enter",
     };
 
     private InputActionAsset actions;
@@ -54,11 +54,12 @@ public class InputBindingsTests
     }
 
     /// <summary>
-    /// The project's rebindable list holds move, attack move, stop and the six abilities in menu order,
-    /// each with a label and a section, and the bindings expose one entry per action.
+    /// The project's rebindable list holds move, attack move, stop, the six abilities and the chat key (Docs/UiRevamp.md,
+    /// Phase 12) in menu order, each with a label, a section and a description (Phase 8), and the bindings expose one
+    /// entry per action with its description.
     /// </summary>
     [Test]
-    public void ProjectList_HasTheGameplayActionsInMenuOrder_WithLabelsAndSections()
+    public void ProjectList_HasTheGameplayActionsInMenuOrder_WithLabelsSectionsAndDescriptions()
     {
         Assert.That(list, Is.Not.Null);
         Assert.That(Enumerable.Range(0, list.Count).Select(i => list[i].Action.action.name), Is.EqualTo(RebindableNames));
@@ -66,10 +67,32 @@ public class InputBindingsTests
         {
             Assert.That(list[i].Label, Is.Not.Empty);
             Assert.That(list[i].Section, Is.Not.Empty);
+            Assert.That(list[i].Description, Is.Not.Empty, $"{list[i].Label} has a description.");
         }
 
         Create();
         Assert.That(bindings.Count, Is.EqualTo(RebindableNames.Length));
+        Assert.That(bindings.GetDescription(Action("Stop")), Is.EqualTo(list[2].Description));
+        Assert.That(bindings.GetDescription(Action("Point")), Is.Empty, "Not rebindable.");
+    }
+
+    /// <summary>
+    /// An action is on its default until it is given another input, and again once it is reset; an action that is not
+    /// rebindable always reads as on its default.
+    /// </summary>
+    [Test]
+    public void IsDefault_FollowsAssignmentsAndResets()
+    {
+        Create();
+        Assert.That(bindings.IsDefault(Action("Stop")), Is.True);
+
+        bindings.TryAssign(Action("Stop"), "<Keyboard>/f", out _);
+        Assert.That(bindings.IsDefault(Action("Stop")), Is.False);
+        Assert.That(bindings.IsDefault(Action("AttackMove")), Is.True);
+
+        bindings.Reset(Action("Stop"), out _);
+        Assert.That(bindings.IsDefault(Action("Stop")), Is.True);
+        Assert.That(bindings.IsDefault(Action("Point")), Is.True);
     }
 
     /// <summary>

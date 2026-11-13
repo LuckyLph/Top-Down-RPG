@@ -11,8 +11,8 @@ using UnityEditor;
 /// their motor, facing and swing requests. The weapon's attack hears of the orders the player gives (its cancel
 /// rules), ends on a stun, a cast, a teleport or death, and moves on after the swing; the motor stands still while an
 /// attack runs. Feeds the player's status crowd control into the orders and its slow, stun or root into the motor's
-/// speed scale. Remote copies only show replicated movement. Draws gizmos for the ability side of its orders: the target of a CastWhenInRange approach and a
-/// buffered cast.
+/// speed scale. Remote copies only show replicated movement. Passes on the orders' buffered cast changes for the HUD.
+/// Draws gizmos for the ability side of its orders: the target of a CastWhenInRange approach and a buffered cast.
 /// </summary>
 [RequireComponent(typeof(Rigidbody2D))]
 [RequireComponent(typeof(PlayerMotor2D))]
@@ -40,11 +40,35 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public event Action<Vector2> Teleported;
 
+    /// <summary>
+    /// Raised by the orders with the slot when a cast is buffered and with -1 when the buffer clears
+    /// (<see cref="PlayerOrders.BufferedCastChanged"/>), on the machine that runs this player's orders, for the HUD.
+    /// </summary>
+    public event Action<int> BufferedCastChanged
+    {
+        add
+        {
+            EnsureInitialized();
+            if (orders != null)
+            {
+                orders.BufferedCastChanged += value;
+            }
+        }
+        remove
+        {
+            if (orders != null)
+            {
+                orders.BufferedCastChanged -= value;
+            }
+        }
+    }
+
     public PlayerControlSettings ControlSettings => controlSettings;
     public Vector2 FacingDirection => Motor.FacingDirection;
     public Vector2 CurrentMove => Motor.CurrentMove;
     public bool SimulatesMovement => simulatesMovement;
     public PlayerOrderKind CurrentOrder => orders != null ? orders.Current : PlayerOrderKind.Idle;
+    public int BufferedSlot => orders != null ? orders.BufferedSlot : -1;
 
     internal PlayerOrders Orders => orders;
 

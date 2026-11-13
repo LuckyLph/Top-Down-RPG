@@ -7,8 +7,9 @@ using VContainer;
 /// The local machine's preferences, read once when created and written on every change: the key binding overrides, the
 /// name of the look the local player is drawn with (Docs/AsepriteCharacters.md, Phase 2), the swatch picked for each of
 /// its colour choices (Docs/PlayerCharacter.md, Phase 5), the option picked for each of its part slots (Phase 6), the
-/// UI size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), and this
-/// install's player id
+/// UI size step (Docs/DesignSystem.md, Phase 3), whether the player reduces flashing and motion (Phase 6), how
+/// allies' popups show (Docs/UiRevamp.md, Phase 3), whether the chat shows timestamps and where its window was moved
+/// (Phase 12), the hosts joined last (Phase 9), whether the first run is over (Phase 11), and this install's player id
 /// (Docs/WorldStreaming.md: Player identity), a GUID made the first time it is asked for and kept in the file. Unlike
 /// the game save they are written on every machine, clients included, and never replicated. The store is the
 /// <see cref="ISaveStore"/> registered under the <see cref="FileName"/> key. A file written by a newer build is never
@@ -17,6 +18,7 @@ using VContainer;
 public sealed class UserSettings
 {
     public const string FileName = "settings.json";
+    public const int MaxRecentHosts = 5;
 
     private readonly ISaveStore store;
     private string inputBindingOverrides = string.Empty;
@@ -27,6 +29,11 @@ public sealed class UserSettings
     private int uiSizeStep;
     private bool reduceFlashing;
     private bool reduceMotion;
+    private AllyPopups allyPopups;
+    private bool chatTimestamps;
+    private ChatWindowPlace chatWindow;
+    private readonly List<string> recentHosts = new();
+    private bool firstRunDone;
     private bool isReadOnly;
 
     /// <summary>
@@ -67,6 +74,21 @@ public sealed class UserSettings
     /// Raised when <see cref="SetReduceMotion"/> changes whether motion is reduced.
     /// </summary>
     public event Action ReduceMotionChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetAllyPopups"/> changes how allies' popups show.
+    /// </summary>
+    public event Action AllyPopupsChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetChatTimestamps"/> changes whether the chat shows timestamps.
+    /// </summary>
+    public event Action ChatTimestampsChanged;
+
+    /// <summary>
+    /// Raised when <see cref="SetChatWindow"/> moves or resizes the chat window, or puts it back.
+    /// </summary>
+    public event Action ChatWindowChanged;
 
     /// <summary>The key binding overrides as written by the Input System, or an empty string for the defaults.</summary>
     public string InputBindingOverrides => inputBindingOverrides;
@@ -180,6 +202,126 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// How this machine shows the popups of hits, ticks and heals that involve another player but not the local one
+    /// (Docs/UiRevamp.md, Phase 3). Shown by default.
+    /// </summary>
+    public AllyPopups AllyPopups => allyPopups;
+
+    /// <summary>
+    /// Keeps how allies' popups show, writes the file unless it came from a newer build, and raises
+    /// <see cref="AllyPopupsChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetAllyPopups(AllyPopups popups)
+    {
+        if (popups == allyPopups)
+        {
+            return false;
+        }
+
+        allyPopups = popups;
+        bool written = Write();
+        AllyPopupsChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Whether the chat shows the time each line arrived on this machine (Docs/UiRevamp.md, Phase 12). Off by default.
+    /// </summary>
+    public bool ChatTimestamps => chatTimestamps;
+
+    /// <summary>
+    /// Keeps whether the chat shows timestamps, writes the file unless it came from a newer build, and raises
+    /// <see cref="ChatTimestampsChanged"/> when it changed. Returns whether it was written.
+    /// </summary>
+    public bool SetChatTimestamps(bool shown)
+    {
+        if (shown == chatTimestamps)
+        {
+            return false;
+        }
+
+        chatTimestamps = shown;
+        bool written = Write();
+        ChatTimestampsChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Where the player moved the chat window and how large they made it (Docs/UiRevamp.md, Phase 12); the default
+    /// value while it stands in its default place.
+    /// </summary>
+    public ChatWindowPlace ChatWindow => chatWindow;
+
+    /// <summary>
+    /// Keeps <paramref name="place"/> as the chat window's place (one not moved puts it back in its default place),
+    /// writes the file unless it came from a newer build, and raises <see cref="ChatWindowChanged"/> when it changed.
+    /// Returns whether it was written.
+    /// </summary>
+    public bool SetChatWindow(ChatWindowPlace place)
+    {
+        ChatWindowPlace kept = place.IsMoved ? place : default;
+        if (kept.Equals(chatWindow))
+        {
+            return false;
+        }
+
+        chatWindow = kept;
+        bool written = Write();
+        ChatWindowChanged?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Whether the first run is over (Docs/UiRevamp.md, Phase 11): the Welcome was answered, or the file came from a
+    /// build before the flag and already held a choice the player made.
+    /// </summary>
+    public bool FirstRunDone => firstRunDone;
+
+    /// <summary>
+    /// Marks the first run over and writes the file, unless it already was or the file came from a newer build. Returns
+    /// whether it was written.
+    /// </summary>
+    public bool SetFirstRunDone()
+    {
+        if (firstRunDone)
+        {
+            return false;
+        }
+
+        firstRunDone = true;
+        return Write();
+    }
+
+    /// <summary>
+    /// The hosts this machine joined last, newest first, at most <see cref="MaxRecentHosts"/> (Docs/UiRevamp.md,
+    /// Phase 9): each as Play together shows it, the host alone on the default port, else <c>host:port</c>.
+    /// </summary>
+    public IReadOnlyList<string> RecentHosts => recentHosts;
+
+    /// <summary>
+    /// Puts <paramref name="host"/> first among the recent hosts, taking it from where it stood (whatever its case) and
+    /// dropping the oldest past <see cref="MaxRecentHosts"/>, and writes the file unless it came from a newer build.
+    /// Returns whether it was written; nothing changes for an empty host.
+    /// </summary>
+    public bool AddRecentHost(string host)
+    {
+        string kept = host?.Trim() ?? string.Empty;
+        if (kept.Length == 0)
+        {
+            return false;
+        }
+
+        recentHosts.RemoveAll(existing => string.Equals(existing, kept, StringComparison.OrdinalIgnoreCase));
+        recentHosts.Insert(0, kept);
+        if (recentHosts.Count > MaxRecentHosts)
+        {
+            recentHosts.RemoveRange(MaxRecentHosts, recentHosts.Count - MaxRecentHosts);
+        }
+
+        return Write();
+    }
+
+    /// <summary>
     /// Keeps <paramref name="overrides"/> and writes the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     public bool SetInputBindingOverrides(string overrides)
@@ -272,11 +414,125 @@ public sealed class UserSettings
     }
 
     /// <summary>
+    /// Forgets the look, every part and every colour picked, so the character is the catalog's first look in its own
+    /// parts and colours (the Character screen's Reset all, Docs/UiRevamp.md, Phase 7), in one write; raises
+    /// <see cref="CharacterLookChanged"/>, <see cref="CharacterPartsChanged"/> and <see cref="CharacterColoursChanged"/>
+    /// for those that changed. Returns whether it was written.
+    /// </summary>
+    public bool ResetCharacter()
+    {
+        bool look = characterLook.Length > 0;
+        bool parts = characterParts.Count > 0;
+        bool colours = characterColours.Count > 0;
+        if (!look && !parts && !colours)
+        {
+            return false;
+        }
+
+        characterLook = string.Empty;
+        characterParts.Clear();
+        characterColours.Clear();
+        bool written = Write();
+        if (look)
+        {
+            CharacterLookChanged?.Invoke();
+        }
+
+        if (parts)
+        {
+            CharacterPartsChanged?.Invoke();
+        }
+
+        if (colours)
+        {
+            CharacterColoursChanged?.Invoke();
+        }
+
+        return written;
+    }
+
+    /// <summary>
+    /// Puts the accessibility options back on their defaults (the options screen's Reset accessibility,
+    /// Docs/UiRevamp.md, Phase 8): the UI size at Normal, flashing and motion not reduced, in one write; raises
+    /// <see cref="UiSizeStepChanged"/>, <see cref="ReduceFlashingChanged"/> and <see cref="ReduceMotionChanged"/> for those
+    /// that changed. Returns whether it was written.
+    /// </summary>
+    public bool ResetAccessibility()
+    {
+        bool size = uiSizeStep != 0;
+        bool flashing = reduceFlashing;
+        bool motion = reduceMotion;
+        if (!size && !flashing && !motion)
+        {
+            return false;
+        }
+
+        uiSizeStep = 0;
+        reduceFlashing = false;
+        reduceMotion = false;
+        bool written = Write();
+        if (size)
+        {
+            UiSizeStepChanged?.Invoke();
+        }
+
+        if (flashing)
+        {
+            ReduceFlashingChanged?.Invoke();
+        }
+
+        if (motion)
+        {
+            ReduceMotionChanged?.Invoke();
+        }
+
+        return written;
+    }
+
+    /// <summary>
+    /// Puts the interface options back on their defaults (the options screen's Reset interface, Docs/UiRevamp.md,
+    /// Phase 8): allies' popups shown, no chat timestamps, the chat window in its place, in one write; raises
+    /// <see cref="AllyPopupsChanged"/>, <see cref="ChatTimestampsChanged"/> and <see cref="ChatWindowChanged"/> for those
+    /// that changed. Returns whether it was written.
+    /// </summary>
+    public bool ResetInterface()
+    {
+        bool popups = allyPopups != AllyPopups.Shown;
+        bool stamps = chatTimestamps;
+        bool window = chatWindow.IsMoved;
+        if (!popups && !stamps && !window)
+        {
+            return false;
+        }
+
+        allyPopups = AllyPopups.Shown;
+        chatTimestamps = false;
+        chatWindow = default;
+        bool written = Write();
+        if (popups)
+        {
+            AllyPopupsChanged?.Invoke();
+        }
+
+        if (stamps)
+        {
+            ChatTimestampsChanged?.Invoke();
+        }
+
+        if (window)
+        {
+            ChatWindowChanged?.Invoke();
+        }
+
+        return written;
+    }
+
+    /// <summary>
     /// Writes every setting to the file, unless it came from a newer build. Returns whether it was written.
     /// </summary>
     private bool Write()
     {
-        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion).ToJson());
+        return !isReadOnly && store.Write(new UserSettingsData(inputBindingOverrides, playerId, characterLook, characterColours, characterParts, uiSizeStep, reduceFlashing, reduceMotion, allyPopups, chatTimestamps, chatWindow, recentHosts, firstRunDone).ToJson());
     }
 
     /// <summary>
@@ -315,6 +571,10 @@ public sealed class UserSettings
         uiSizeStep = data.UiSizeStep;
         reduceFlashing = data.ReduceFlashing;
         reduceMotion = data.ReduceMotion;
+        allyPopups = data.AllyPopups;
+        chatTimestamps = data.ChatTimestamps;
+        chatWindow = data.ChatWindow;
+        firstRunDone = data.FirstRunDone || data.HoldsChoices;
         foreach (UserColourPick pick in data.CharacterColours)
         {
             if (pick.Choice.Length > 0 && pick.Swatch.Length > 0 && CharacterColour(pick.Choice).Length == 0)
@@ -328,6 +588,15 @@ public sealed class UserSettings
             if (pick.Slot.Length > 0 && pick.Part.Length > 0 && CharacterPart(pick.Slot).Length == 0)
             {
                 characterParts.Add(pick);
+            }
+        }
+
+        foreach (string host in data.RecentHosts)
+        {
+            string kept = host?.Trim() ?? string.Empty;
+            if (kept.Length > 0 && recentHosts.Count < MaxRecentHosts && !recentHosts.Exists(existing => string.Equals(existing, kept, StringComparison.OrdinalIgnoreCase)))
+            {
+                recentHosts.Add(kept);
             }
         }
     }

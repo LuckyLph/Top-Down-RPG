@@ -1,33 +1,40 @@
 using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using VContainer.Unity;
 
 /// <summary>
 /// Binds the <see cref="StatusBarView"/> to the local player's <see cref="StatusEffects"/> (rebinding when
-/// <see cref="LocalPlayerTracker"/> changes): one icon per active status, buffs then debuffs, with the stack count
-/// (independent instances counted together) rebuilt on <c>Changed</c>, and the elapsed fill of each icon (from its
-/// longest remaining instance) pushed every frame only when it moved.
+/// <see cref="LocalPlayerTracker"/> changes): one icon per active status in its kind's group, buffs left and debuffs
+/// right, in the order the statuses list them, with the stack count (independent instances counted together), rebuilt
+/// on <c>Changed</c>; when a kind has more statuses than its group has icons, the last icon shows "+n" for the rest
+/// (Docs/UiRevamp.md, Decisions: Statuses). The elapsed fill of each status icon (from its longest remaining instance)
+/// is pushed every frame only when it moved.
 /// </summary>
 public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
 {
     private const float FillStep = 0.005f;
+    private const string NameSeparator = ", ";
 
     private readonly LocalPlayerTracker localPlayer;
     private readonly StatusBarView view;
-    private readonly StatusEffectDefinition[] shownDefinitions;
-    private readonly float[] shownFill;
+    private readonly Group buffs;
+    private readonly Group debuffs;
+    private readonly List<StatusEffectDefinition> kindDefinitions = new();
+    private readonly StringBuilder names = new();
     private StatusEffects statuses;
-    private int shownCount;
 
     /// <summary>
-    /// Creates a presenter for <paramref name="view"/> that can show as many statuses as the view has icons.
+    /// Creates a presenter for <paramref name="view"/> that can show as many statuses of each kind as its group has
+    /// icons.
     /// </summary>
     public StatusBarPresenter(LocalPlayerTracker localPlayer, StatusBarView view)
     {
         this.localPlayer = localPlayer;
         this.view = view;
-        shownDefinitions = new StatusEffectDefinition[view.Capacity];
-        shownFill = new float[view.Capacity];
+        buffs = new Group(StatusKind.Buff, view.GroupCapacity(StatusKind.Buff));
+        debuffs = new Group(StatusKind.Debuff, view.GroupCapacity(StatusKind.Debuff));
     }
 
     /// <summary>
@@ -49,7 +56,7 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Refreshes the elapsed fill of every shown icon. Does nothing while no player is bound.
+    /// Refreshes the elapsed fill of every shown status icon. Does nothing while no player is bound.
     /// </summary>
     public void Tick()
     {
@@ -58,10 +65,8 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
             return;
         }
 
-        for (int i = 0; i < shownCount; i++)
-        {
-            RefreshFill(i);
-        }
+        RefreshFills(buffs);
+        RefreshFills(debuffs);
     }
 
     /// <summary>
@@ -74,7 +79,8 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
         statuses = player != null ? player.Controller.GetComponent<StatusEffects>() : null;
         if (statuses == null)
         {
-            shownCount = 0;
+            buffs.Shown = 0;
+            debuffs.Shown = 0;
             view.Clear();
             return;
         }
@@ -97,68 +103,107 @@ public sealed class StatusBarPresenter : IStartable, ITickable, IDisposable
     }
 
     /// <summary>
-    /// Lays the icons out again from the active statuses, buffs first then debuffs, and hides the unused icons.
+    /// Lays both groups out again from the active statuses.
     /// </summary>
     private void Rebuild()
     {
-        shownCount = 0;
-        AddKind(StatusKind.Buff);
-        AddKind(StatusKind.Debuff);
-        view.HideFrom(shownCount);
+        Fill(buffs);
+        Fill(debuffs);
     }
 
     /// <summary>
-    /// Appends an icon, with its stack count and fill, for each distinct active status of <paramref name="kind"/>
-    /// in the order <see cref="StatusEffects"/> lists them, until the view is full.
+    /// Shows the distinct active statuses of <paramref name="group"/>'s kind on its icons, in the order
+    /// <see cref="StatusEffects"/> lists them, with their stack counts; when they do not all fit, the last icon shows
+    /// "+n" for the rest and lists their names. Hides the unused icons.
     /// </summary>
-    private void AddKind(StatusKind kind)
+    private void Fill(Group group)
     {
-        for (int i = 0; i < statuses.Count && shownCount < shownDefinitions.Length; i++)
+        kindDefinitions.Clear();
+        for (int i = 0; i < statuses.Count; i++)
         {
             StatusEffectDefinition definition = statuses.GetSnapshot(i).Definition;
-            if (definition.Kind != kind || IsShown(definition))
+            if (definition.Kind == group.Kind && !kindDefinitions.Contains(definition))
             {
-                continue;
+                kindDefinitions.Add(definition);
+            }
+        }
+
+        int capacity = group.Definitions.Length;
+        bool overflows = kindDefinitions.Count > capacity;
+        int shown = overflows ? Mathf.Max(0, capacity - 1) : kindDefinitions.Count;
+        for (int i = 0; i < shown; i++)
+        {
+            StatusEffectDefinition definition = kindDefinitions[i];
+            group.Definitions[i] = definition;
+            group.Fill[i] = -1f;
+            view.Show(group.Kind, i, definition, statuses.GetStacks(definition));
+            RefreshFill(group, i);
+        }
+
+        group.Shown = shown;
+        if (overflows && capacity > 0)
+        {
+            names.Clear();
+            for (int i = shown; i < kindDefinitions.Count; i++)
+            {
+                names.Append(i > shown ? NameSeparator : string.Empty).Append(kindDefinitions[i].DisplayName);
             }
 
-            int index = shownCount++;
-            shownDefinitions[index] = definition;
-            shownFill[index] = -1f;
-            view.Show(index, definition, statuses.GetStacks(definition));
-            RefreshFill(index);
+            view.ShowMore(group.Kind, shown, kindDefinitions.Count - shown, names.ToString());
+            view.HideFrom(group.Kind, capacity);
+            return;
         }
+
+        view.HideFrom(group.Kind, shown);
     }
 
     /// <summary>
-    /// Whether <paramref name="definition"/> already has an icon in the current layout.
+    /// Pushes the elapsed fill of every status icon of <paramref name="group"/> that moved.
     /// </summary>
-    private bool IsShown(StatusEffectDefinition definition)
+    private void RefreshFills(Group group)
     {
-        for (int i = 0; i < shownCount; i++)
+        for (int i = 0; i < group.Shown; i++)
         {
-            if (shownDefinitions[i] == definition)
-            {
-                return true;
-            }
+            RefreshFill(group, i);
         }
-
-        return false;
     }
 
     /// <summary>
     /// Pushes icon <paramref name="index"/>'s elapsed fraction to the view when it has moved by at least
     /// <see cref="FillStep"/> since it was last shown.
     /// </summary>
-    private void RefreshFill(int index)
+    private void RefreshFill(Group group, int index)
     {
-        StatusEffectDefinition definition = shownDefinitions[index];
+        StatusEffectDefinition definition = group.Definitions[index];
         float fill = 1f - Mathf.Clamp01(statuses.GetRemaining(definition) / definition.Duration);
-        if (Mathf.Abs(fill - shownFill[index]) < FillStep)
+        if (Mathf.Abs(fill - group.Fill[index]) < FillStep)
         {
             return;
         }
 
-        shownFill[index] = fill;
-        view.SetElapsed(index, fill);
+        group.Fill[index] = fill;
+        view.SetElapsed(group.Kind, index, fill);
+    }
+
+    /// <summary>
+    /// What one kind's group shows: the status on each of its icons, the fill last pushed to each, and how many show a
+    /// status (a "+n" icon after them is not counted).
+    /// </summary>
+    private sealed class Group
+    {
+        /// <summary>
+        /// Creates the state of the group of <paramref name="kind"/> with <paramref name="capacity"/> icons.
+        /// </summary>
+        public Group(StatusKind kind, int capacity)
+        {
+            Kind = kind;
+            Definitions = new StatusEffectDefinition[capacity];
+            Fill = new float[capacity];
+        }
+
+        public StatusKind Kind { get; }
+        public StatusEffectDefinition[] Definitions { get; }
+        public float[] Fill { get; }
+        public int Shown { get; set; }
     }
 }

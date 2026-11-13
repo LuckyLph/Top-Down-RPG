@@ -104,8 +104,9 @@ public static class DesignTables
     }
 
     /// <summary>
-    /// The UI theme: each colour role, each text size with its font and body height at 1080p (zoom 3), and the contrast
-    /// of every pair of text and background roles a themed text uses against its threshold.
+    /// The UI theme: each colour role, each text size with its font and body height at 1080p (zoom 3), the contrast
+    /// of every pair of text and background roles a themed text uses against its threshold, and the contrast of every
+    /// bar fill on its track.
     /// </summary>
     private static DesignTable Theme(DesignContent content)
     {
@@ -141,6 +142,14 @@ public static class DesignTables
         foreach (UiThemeUsage.PairContrast pair in UiThemeUsage.Measure(theme, content.TextUses))
         {
             Row(text, pair.Text.ToString(), pair.Background, pair.Size.ToString(), Ratio(pair.Ratio), Ratio(pair.Threshold));
+        }
+
+        text.Append("\n## Fills on tracks\n\nEach pair of a bar's fill role and the role of the track it is read against. A bar is a large shape that carries meaning, so it needs 3:1. A translucent track counts over white and over black, the lower ratio.\n\n");
+        Row(text, "Fill", "Track", "Contrast", "Needs");
+        Rule(text, 4);
+        foreach (UiThemeUsage.FillPairContrast pair in UiThemeUsage.MeasureFills(theme, content.FillUses))
+        {
+            Row(text, pair.Fill.ToString(), pair.Track.ToString(), Ratio(pair.Ratio), Ratio(pair.Threshold));
         }
 
         return new DesignTable("UiTheme.md", text.ToString());

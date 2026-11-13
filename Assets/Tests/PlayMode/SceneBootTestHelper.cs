@@ -16,7 +16,8 @@ using UnityEditor.SceneManagement;
 /// the real additive scene composition instead of a single hand-loaded scene. Every boot pins the starting world: the
 /// Main scope gets a copy of the project's <see cref="GameScenes"/> starting at Testlands' <c>start</c> (or wherever a
 /// test names), destroyed with that scope, so no test starts, hosts or places a joining player in the project's own
-/// starting world by accident.
+/// starting world by accident. The user settings start past the first run (Docs/UiRevamp.md, Phase 11), so the main
+/// menu opens on its panel, unless a test gives settings of its own.
 /// </summary>
 public static class SceneBootTestHelper
 {
@@ -25,6 +26,7 @@ public static class SceneBootTestHelper
     public const string TestlandsRootPath = "Assets/Worlds/Testlands/World_Testlands.unity";
     public const string TestlandsStartEntry = "start";
     private const float TimeoutSeconds = 15f;
+    public const string FirstRunDoneSettings = "{\"version\":1,\"firstRunDone\":true}";
 
     /// <summary>
     /// Boots into a new game in Testlands, the hand-painted test world, at its default entry, backed by
@@ -65,14 +67,15 @@ public static class SceneBootTestHelper
     /// Clears any editor boot request and boots Main until it settles in the main menu, with the starting world pinned
     /// to the entry <paramref name="startingEntry"/> of the world whose root or chunk scene is
     /// <paramref name="startingWorldPath"/> (Testlands' <c>start</c> by default), or with the project's own starting
-    /// world when <paramref name="startingWorldPath"/> is null.
+    /// world when <paramref name="startingWorldPath"/> is null; the user settings are <paramref name="settings"/>, or
+    /// settings past the first run.
     /// </summary>
-    public static IEnumerator BootIntoMainMenu(ISaveFolder saves = null, string startingWorldPath = TestlandsRootPath, string startingEntry = TestlandsStartEntry)
+    public static IEnumerator BootIntoMainMenu(ISaveFolder saves = null, string startingWorldPath = TestlandsRootPath, string startingEntry = TestlandsStartEntry, ISaveStore settings = null)
     {
 #if UNITY_EDITOR
         EditorBootRequest.Clear();
 #endif
-        yield return LoadMainScene(saves, startingWorldPath, startingEntry);
+        yield return LoadMainScene(saves, startingWorldPath, startingEntry, settings);
         yield return WaitUntil(() => ResolveGameFlow() != null, "Main scene to build its LifetimeScope");
 
         GameFlow gameFlow = ResolveGameFlow();
@@ -153,19 +156,20 @@ public static class SceneBootTestHelper
 
     /// <summary>
     /// Loads Main alone with its scope given <paramref name="saves"/> (or a fresh in-memory folder) as the save
-    /// folder, an in-memory user settings store and, unless <paramref name="startingWorldPath"/> is null, a copy of the
+    /// folder, <paramref name="settings"/> (or an in-memory user settings store past the first run) and, unless <paramref name="startingWorldPath"/> is null, a copy of the
     /// project's <see cref="GameScenes"/> starting at that world's <paramref name="startingEntry"/>, registered after the
     /// asset the scope registers, so it is the one resolved, and destroyed with the scope; then waits for the scope to
     /// build.
     /// </summary>
-    private static IEnumerator LoadMainScene(ISaveFolder saves, string startingWorldPath, string startingEntry)
+    private static IEnumerator LoadMainScene(ISaveFolder saves, string startingWorldPath, string startingEntry, ISaveStore settings = null)
     {
         ISaveFolder folder = saves ?? new MemorySaveFolder();
+        ISaveStore settingsStore = settings ?? new MemorySaveStore { Contents = FirstRunDoneSettings };
         GameScenes scenes = startingWorldPath != null ? CopyScenesStartingAt(startingWorldPath, startingEntry) : null;
         using (LifetimeScope.Enqueue(builder =>
                {
                    builder.RegisterInstance<ISaveFolder>(folder);
-                   builder.RegisterInstance<ISaveStore>(new MemorySaveStore()).Keyed(UserSettings.FileName);
+                   builder.RegisterInstance(settingsStore).Keyed(UserSettings.FileName);
                    if (scenes != null && builder.Exists(typeof(GameScenes)))
                    {
                        builder.RegisterInstance(scenes);

@@ -3,114 +3,104 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Passive player HUD: a health fill with an "HP" readout and the equipped weapon's icon, in the
-/// <see cref="UiTheme"/>'s Icon role, or IconMissing when there is no weapon. <see cref="PlayerHudPresenter"/> decides
-/// what to show.
+/// Passive player HUD: the command bar's health bar (<see cref="HealthBarView"/>) and the weapon slot
+/// (<see cref="WeaponSlotView"/>) beside its two abilities. <see cref="PlayerHudPresenter"/> decides what to show.
 /// </summary>
 [DisallowMultipleComponent]
 public class PlayerHudView : MonoBehaviour
 {
-    private const string HealthTextFormat = "HP {0}";
-    private const string UnknownHealthText = "HP --";
+    [SerializeField] private HealthBarView healthBar;
+    [SerializeField] private WeaponSlotView weaponSlot;
 
-    [SerializeField] private Image healthFill;
-    [SerializeField] private TextMeshProUGUI healthText;
-    [SerializeField] private Image weaponIcon;
-    [SerializeField] private UiTheme theme;
-
-    private Color activeWeaponIconTint = Color.white;
-    private Color missingWeaponIconTint = Color.clear;
-
-    internal Image HealthFill => healthFill;
-    internal TextMeshProUGUI HealthText => healthText;
-    internal Image WeaponIcon => weaponIcon;
+    internal HealthBarView HealthBar => healthBar;
+    internal Image HealthFill => healthBar != null ? healthBar.Fill : null;
+    internal TextMeshProUGUI HealthText => healthBar != null ? healthBar.Text : null;
+    internal WeaponSlotView WeaponSlot => weaponSlot;
+    internal Image WeaponIcon => weaponSlot != null ? weaponSlot.Icon : null;
 
     /// <summary>
-    /// Reads the weapon icon's tints from the theme; logs an error without a theme.
+    /// Logs an error when the health bar or the weapon slot is missing.
     /// </summary>
     private void Awake()
     {
-        if (theme == null)
+        if (healthBar == null || weaponSlot == null)
         {
-            Debug.LogError($"{name} has no UI theme.", this);
+            Debug.LogError($"{name} is missing its health bar or weapon slot.", this);
         }
-
-        ReadTheme();
     }
 
     /// <summary>
-    /// Fills the bar to <paramref name="current"/> over <paramref name="max"/> and shows the current HP. Values are
-    /// clamped so the max is at least 1 and the current lies between 0 and the max.
+    /// Shows <paramref name="current"/> of <paramref name="max"/> HP with a tick every <paramref name="tickHealth"/>.
     /// </summary>
-    public void SetHealth(int current, int max)
+    public void SetHealth(int current, int max, int tickHealth)
     {
-        int clampedMax = Mathf.Max(1, max);
-        int clampedCurrent = Mathf.Clamp(current, 0, clampedMax);
-
-        if (healthFill != null)
+        if (healthBar != null)
         {
-            healthFill.fillAmount = (float)clampedCurrent / clampedMax;
-        }
-
-        if (healthText != null)
-        {
-            healthText.text = string.Format(HealthTextFormat, clampedCurrent);
+            healthBar.SetHealth(current, max, tickHealth);
         }
     }
 
     /// <summary>
-    /// Empties the bar and shows unknown HP, for when there is no local player.
+    /// Shows the bar's part from its fill up to <paramref name="fraction"/> as just lost.
+    /// </summary>
+    public void ShowLoss(float fraction)
+    {
+        if (healthBar != null)
+        {
+            healthBar.ShowLoss(fraction);
+        }
+    }
+
+    /// <summary>
+    /// Hides the part just lost.
+    /// </summary>
+    public void HideLoss()
+    {
+        if (healthBar != null)
+        {
+            healthBar.HideLoss();
+        }
+    }
+
+    /// <summary>
+    /// Shows the bar low, its frame Danger at <paramref name="strength"/>, or not.
+    /// </summary>
+    public void SetLow(bool low, float strength)
+    {
+        if (healthBar != null)
+        {
+            healthBar.SetLow(low, strength);
+        }
+    }
+
+    /// <summary>
+    /// Empties the bar and shows unknown health, for when there is no local player.
     /// </summary>
     public void ClearHealth()
     {
-        if (healthFill != null)
+        if (healthBar != null)
         {
-            healthFill.fillAmount = 0f;
-        }
-
-        if (healthText != null)
-        {
-            healthText.text = UnknownHealthText;
+            healthBar.Clear();
         }
     }
 
     /// <summary>
-    /// Shows <paramref name="icon"/> in the active tint, or an empty icon in the dimmed missing-weapon tint when it
-    /// is null.
+    /// Shows <paramref name="weapon"/> in the weapon slot, or the dimmed empty icon when it is null.
     /// </summary>
-    public void SetWeapon(Sprite icon)
+    public void SetWeapon(PlayerWeapon weapon)
     {
-        if (weaponIcon == null)
+        if (weaponSlot != null)
         {
-            return;
+            weaponSlot.SetWeapon(weapon);
         }
-
-        weaponIcon.sprite = icon;
-        weaponIcon.color = icon == null ? missingWeaponIconTint : activeWeaponIconTint;
     }
 
     /// <summary>
-    /// Assigns the health fill, health text, weapon icon and theme in code, for tests that build the HUD without a
-    /// prefab.
+    /// Assigns the health bar and weapon slot in code, for tests that build the HUD without a prefab.
     /// </summary>
-    internal void ConfigureReferences(Image fill, TextMeshProUGUI text, Image icon, UiTheme uiTheme)
+    internal void ConfigureReferences(HealthBarView bar, WeaponSlotView slot)
     {
-        healthFill = fill;
-        healthText = text;
-        weaponIcon = icon;
-        theme = uiTheme;
-        ReadTheme();
-    }
-
-    /// <summary>
-    /// Reads the active and missing weapon icon tints from the theme's Icon and IconMissing roles, when there is one.
-    /// </summary>
-    private void ReadTheme()
-    {
-        if (theme != null)
-        {
-            activeWeaponIconTint = theme.Colour(UiColour.Icon);
-            missingWeaponIconTint = theme.Colour(UiColour.IconMissing);
-        }
+        healthBar = bar;
+        weaponSlot = slot;
     }
 }

@@ -6,9 +6,9 @@ using UnityEditor;
 #endif
 
 /// <summary>
-/// One seamless world: its root scene, its place in the global layout of worlds, its size in chunks, the scene of
-/// every chunk it has, the entries it is entered at, and how far its navigation searches (Docs/KnownGaps.md, Phase 5),
-/// as an area grid's inspector sets its own. A world's cells are counted from its origin, so the chunk at (cx, cy) holds
+/// One seamless world: the name players see, its root scene, its place in the global layout of worlds, its size in
+/// chunks, the scene of every chunk it has, the entries it is entered at, and how far its navigation searches
+/// (Docs/KnownGaps.md, Phase 5), as an area grid's inspector sets its own. A world's cells are counted from its origin, so the chunk at (cx, cy) holds
 /// the cells from (cx, cy) * <see cref="ChunkCoords.Size"/> up to the next chunk.
 /// </summary>
 [CreateAssetMenu(menuName = "TopDownRPG/World/World Definition", fileName = "World")]
@@ -48,12 +48,15 @@ public class WorldDefinition : ScriptableObject
     }
 
     /// <summary>
-    /// A named place the world is entered at, in world units from its origin; a waystone is one players discover.
+    /// A named place the world is entered at, in world units from its origin, with the name players see; a waystone is
+    /// one players discover.
     /// </summary>
     [Serializable]
     public class Entry
     {
         [SerializeField] private string name;
+        [SerializeField, Tooltip("The name players see, unique within the world's entries (Docs/DesignSystem.md, content rule 5).")]
+        private string displayName;
         [SerializeField] private Vector2 position;
         [SerializeField] private bool waystone;
 
@@ -65,22 +68,27 @@ public class WorldDefinition : ScriptableObject
         }
 
         /// <summary>
-        /// Creates the entry <paramref name="entryName"/> at <paramref name="localPosition"/> from the world's origin.
+        /// Creates the entry <paramref name="entryName"/> at <paramref name="localPosition"/> from the world's origin,
+        /// shown to players as <paramref name="entryDisplayName"/>.
         /// </summary>
-        public Entry(string entryName, Vector2 localPosition, bool isWaystone)
+        public Entry(string entryName, Vector2 localPosition, bool isWaystone, string entryDisplayName = null)
         {
             name = entryName;
             position = localPosition;
             waystone = isWaystone;
+            displayName = entryDisplayName;
         }
 
         public string Name => name;
+        public string DisplayName => displayName ?? string.Empty;
         public Vector2 Position => position;
         public bool Waystone => waystone;
     }
 
     [Tooltip("Stable id of this world, its asset's GUID; set by the editor.")]
     [SerializeField] private string worldId;
+    [Tooltip("The name players see, without an article: the world-entered notice reads \"Entering the\" and this name. Unique among worlds (Docs/DesignSystem.md, content rule 5).")]
+    [SerializeField] private string displayName;
     [SerializeField] private SceneDefinition rootScene;
     [Tooltip("Where the world's cell (0, 0) lies, in world units. Worlds stay apart in one global layout (Docs/WorldStreaming.md).")]
     [SerializeField] private Vector2Int origin;
@@ -97,6 +105,7 @@ public class WorldDefinition : ScriptableObject
     [SerializeField, Min(1)] private int nearestCellSearchRadius = DefaultNearestCellSearchRadius;
 
     public string WorldId => worldId;
+    public string DisplayName => displayName ?? string.Empty;
     public SceneDefinition RootScene => rootScene;
     public Vector2Int Origin => origin;
     public Vector2Int SizeInChunks => sizeInChunks;
@@ -225,6 +234,7 @@ public class WorldDefinition : ScriptableObject
         world.name = worldName;
         world.hideFlags = HideFlags.DontSave;
         world.worldId = $"test-{worldName}";
+        world.displayName = worldName;
         world.rootScene = SceneDefinition.CreateTransient($"Test/World_{worldName}.unity");
         world.origin = worldOrigin;
         world.sizeInChunks = size;

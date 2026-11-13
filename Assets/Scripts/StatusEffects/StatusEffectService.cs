@@ -71,7 +71,7 @@ public sealed class StatusEffectService : ITickable
         StatusApplyOutcome outcome = statuses.Set.Apply(definition, source, dealt, target.StatusImmunities);
         if (outcome == StatusApplyOutcome.Immune)
         {
-            statuses.NotifyBlocked(definition);
+            statuses.NotifyBlocked(definition, source);
             PublishBlocked(target, definition, source);
             return outcome;
         }
@@ -112,13 +112,14 @@ public sealed class StatusEffectService : ITickable
     }
 
     /// <summary>
-    /// Publishes a block the host reported, regardless of authority. Used by clients for the Immune popup.
+    /// Publishes a block the host reported, regardless of authority, from this machine's copy of its
+    /// <paramref name="source"/> when it knows one. Used by clients for the Immune popup.
     /// </summary>
-    public void PublishReplicatedBlock(DamageReceiver target, StatusEffectDefinition definition)
+    public void PublishReplicatedBlock(DamageReceiver target, StatusEffectDefinition definition, GameObject source = null)
     {
         if (target != null && definition != null)
         {
-            PublishBlocked(target, definition, null);
+            PublishBlocked(target, definition, source);
         }
     }
 

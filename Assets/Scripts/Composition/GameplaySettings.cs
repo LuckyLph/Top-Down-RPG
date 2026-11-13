@@ -26,11 +26,8 @@ public class GameplaySettings : ScriptableObject
     [SerializeField, Min(0), Tooltip("A player discovers a waystone entry when its cell is at most this many cells from the entry's cell along each axis.")]
     private int waystoneReachCells = 2;
 
-    [SerializeField, Tooltip("Floating text shown over a player on its own screen as it discovers a waystone.")]
+    [SerializeField, Tooltip("The notice a player's own HUD shows on its notice line as it discovers a waystone.")]
     private string waystoneDiscoveredText = "Waystone discovered";
-
-    [SerializeField, Tooltip("Colour of the waystone discovery text.")]
-    private Color waystoneDiscoveredColor = new(0.55f, 0.9f, 1f, 1f);
 
     [Header("Saved places")]
     [SerializeField, Min(1), Tooltip("A saved place on ground a player can no longer stand on (its world was regenerated or repainted) moves to the nearest walkable cell at most this many cells away (Manhattan distance), or else to the player's nearest discovered waystone. Keep it within the load extents' smaller side (18 cells), the ground loaded around the place.")]
@@ -46,7 +43,6 @@ public class GameplaySettings : ScriptableObject
     public float RespawnDelaySeconds => respawnDelaySeconds;
     public int WaystoneReachCells => waystoneReachCells;
     public string WaystoneDiscoveredText => waystoneDiscoveredText;
-    public Color WaystoneDiscoveredColor => waystoneDiscoveredColor;
     public float EntrySlotSpacing => entrySlotSpacing;
     public float AutosaveIntervalSeconds => autosaveIntervalSeconds;
     public int SavedPlaceSearchCells => savedPlaceSearchCells;

@@ -66,7 +66,7 @@ The UI has no system yet. The table below is what it looked like on 2026-11-03, 
 - **Under Later:** runtime theme switching, a high-contrast theme, text scaling to 200%, and status icon art.
 - **Localisation.** Player-facing text is in code constants and data for now. Layouts leave room for longer strings.
 - **Controller glyphs.** Gameplay is mouse and keyboard only (KeyBindings.md).
-- **Audio.** The project has none yet. The feedback pattern gains a sound channel when it does.
+- **Audio.** Planned in [Audio.md](Audio.md) (adopted 2026-11-13): the feedback pattern gains its sound channel in its Phase 3, and Accessibility its audio rows (separate volumes, mono, nothing by sound alone) in its Phase 6.
 - **Debug tools:** gizmos and the IMGUI dev panels.
 
 ## Principles
@@ -81,7 +81,7 @@ Settled with the user on 2026-11-10 (Phase 1): the four drawn from the existing 
    - Information never depends on colour alone.
 3. **Direct control.** Click to move, with orders that cancel and buffer like a MOBA's. What the player sees is what the game will do.
 4. **Content is data.** Mechanics are assets composed from a small set of building blocks. A new idea first extends a block in its spec, then becomes content.
-5. **Made in the project.** Every sprite, effect and UI piece comes from a recipe in the editor or is drawn in Aseprite for the game. Fonts licensed for use in a game, and UI icons licensed for it and kept with their licence (UiRevamp.md's Phase 7), are the exceptions, for now.
+5. **Made in the project.** Every sprite, effect and UI piece comes from a recipe in the editor or is drawn in Aseprite for the game. Fonts licensed for use in a game, and UI icons licensed for it and kept with their licence (UiRevamp.md's Phase 7), are the exceptions, for now. Sounds and music come from a sound recipe in the editor or from a pack licensed for a game, kept with its licence (added with Audio.md on 2026-11-13, by the user's choice).
 
 ## Decisions
 

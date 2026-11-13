@@ -18,7 +18,7 @@ A milestone gathers many features toward a date. Where a phase grows into a syst
 - **The world.** The Overworld, 5 x 4 chunks, about a minute's walk across: six regions (the Clearing, where a new game starts, the Village Forest, the Lakeside, the Snowfield, the Coast and the Lava Fields), a waystone in each, roads and wilds between them, no exits and no buildings ([WorldGeneration.md](../WorldGeneration.md)). Regions have no names in game. Mobs stand where the area generators put them, all the same level of threat.
 - **Input.** Left click has no gameplay action; PlayerControls.md reserves it for selecting or interacting. D and F are free.
 - **Co-op.** Host and join by address, on a LAN or a virtual LAN (Tailscale, Multiplayer.md). Every player's place, waystones and weapon are saved in the host's session; a joined client keeps a copy of its own. Nobody has played it by hand across two machines (CLAUDE.md puts that in Roadmap.md's Later).
-- **Sound.** None. No `AudioSource` exists in the project.
+- **Sound.** None. No `AudioSource` exists in the project. [Audio.md](../Audio.md), adopted on 2026-11-13, builds the audio systems before Phase 1.
 - **UI.** UiRevamp.md is under way on `feature/ui-revamp`: Phases 1 and 2 (the HUD says why, the command bar) are done, and 3 to 11 (notices, players in the world, party frames, the in-game menu, the Character screen, the options screen, the main menu, saved games, the title view) are next.
 - **Builds.** Player builds have been made for benchmarks (WorldScale.md, `Builds/`), never a release build, a package or a readme. The version is `0.1.0-prealpha`.
 
@@ -136,9 +136,9 @@ A new Free play game starts in the Clearing at level 1 with every ability known,
 
 ### Sound
 
-- Recipes in the editor write the sounds as `.wav` assets (oscillators, noise, envelopes and filters, as sfxr does), regenerated on demand like the art.
-- Sounds for: each weapon's swing and hit, hits by damage type, each ability's cast and release, dashes, a mob's windup (the telegraph, heard as well as seen), mob and player deaths, a player hurt, respawn, level up, quest accepted and complete, waystone discovered, footsteps, and the UI's move, confirm and back.
-- Positioned around the local player, quieter with distance, pooled, with a limit per sound so ten hits in a frame stay one sound.
+- [Audio.md](../Audio.md) builds the systems before Phase 1: the mixer, the Audio options, cues played from events with limits and 2D hearing, music, ambience, footsteps and emitters, the sound recipe and licensed packs, each proven with placeholders. Sounds come from recipes in the editor or from packs licensed for a game (settled by the user on 2026-11-13).
+- Each phase here gives its new content its cues, placeholders until Phase 8.
+- Phase 8 puts this build's sounds in place of the placeholders: each weapon's swing and hit, hits by damage type, each ability's cast and release, dashes, a mob's windup (the telegraph, heard as well as seen), mob and player deaths, a player hurt, respawn, level up, quest accepted and complete, waystone discovered, footsteps, and the UI's move, confirm and back.
 
 ## Architecture
 
@@ -149,7 +149,7 @@ Sketched here and settled in each phase, which records what it built in Architec
 - **Abilities**: `AbilityCatalog`; the loadout replacing `PlayerClass` in `PlayerAbilities`; a `CasterMotion` for the movement abilities driven on the owner's machine.
 - **Mobs**: a ranged attack beside `MeleeDamageDealer`; a level on `MobSpawnPoint`, applied by the spawner; region mob tables in the World Generator's asset.
 - **Quests** (Gameplay, `Assets/Scripts/Quests`): `QuestDefinition` and objective blocks under `Assets/Data/Quests`; `QuestService` (host) turning game events (kills, drops, uses, discoveries, levels) into progress; `QuestLog`, a plain class per player; `NpcDefinition`, the `Npc` component and `Interactable`; the dialogue, tracker, Journal and pointer presenters in `Assets/Scripts/UI`.
-- **Sound** (Core for the mixer and settings, Gameplay for the cues): `SoundCue` assets, `SoundPlayer` (pooled sources), the event bindings, and the recipes and their writer in the Editor assembly.
+- **Sound**: Audio.md's systems. This build adds cues on its new content: the level up, the quests' moments, the NPCs' dialogue on the `Voice` bus, the archer's bow, the brute's slam, the dashes.
 
 ## Networking
 
@@ -194,7 +194,7 @@ Where both touch one screen (the main menu's New game, the command bar's XP bar,
 
 ## Phases
 
-Each phase ships on its own, keeps the game playable offline and hosted, and comes with tests. A phase whose look can change settles it on previews first, signed off before its tests and docs. An open question is settled with the user at the start of the phase named for it. Each phase updates Architecture.md, Roadmap.md and DesignSystem.md's vocabulary as it lands.
+Each phase ships on its own, keeps the game playable offline and hosted, and comes with tests. Each gives its new content its sound cues on Audio.md's systems, placeholders until Phase 8. A phase whose look can change settles it on previews first, signed off before its tests and docs. An open question is settled with the user at the start of the phase named for it. Each phase updates Architecture.md, Roadmap.md and DesignSystem.md's vocabulary as it lands.
 
 ```mermaid
 flowchart LR
@@ -210,16 +210,18 @@ flowchart LR
     P8 --> P9
 ```
 
+The dates are the user's goals, not deadlines. [Audio.md](../Audio.md) runs first, from 2026-11-14, and the phases move with it.
+
 | Phase | Target | |
 |---|---|---|
-| 1. Modes and a first build | 2026-11-11 to 11-13 | |
+| 1. Modes and a first build | 2026-11-11 to 11-13 | After Audio.md |
 | 2. Levels | 11-14 to 11-18 | |
 | 3. Abilities that move, the loadout | 11-18 to 11-22 | |
 | 4. Skill trees and weapons | 11-23 to 11-28 | |
 | 5. Mobs | 11-29 to 12-03 | |
 | 6. Quests | 12-04 to 12-09 | |
 | 7. The story slice | 12-10 to 12-12 | |
-| 8. Sound | 12-12 to 12-14 | Depends only on Phase 3; can run earlier in a session of its own |
+| 8. Sound | 12-12 to 12-14 | The build's sounds on Audio.md's systems; depends only on Phase 3, can run earlier in a session of its own |
 | Feature freeze | 12-14 | |
 | 9. Release | 12-14 to 12-31 | Release candidate 12-23, the week after as a buffer |
 
@@ -291,12 +293,13 @@ flowchart LR
 
 ### Phase 8: sound
 
-- [ ] Open question settled: the sound rule (generated only) and music.
-- [ ] Must: the recipe tool writing `.wav` assets, the mixer, `SoundCue`, `SoundPlayer` with pooling and limits.
-- [ ] Must: the sounds listed under Sound, on every machine from events.
-- [ ] Must: Master, Effects and Interface volumes in the options screen, saved in `settings.json`.
-- [ ] Should: footsteps by ground material.
-- [ ] EditMode: limits, pooling, no allocation once warm. PlayMode: a client hears the host's hit (a cue played on the client from the replicated event).
+- [ ] Open question settled: music in this build, and from where (a recipe or a licensed pack). The sound rule was settled with Audio.md: recipes or licensed packs.
+- [ ] Must: the sounds listed under Sound in place of Audio.md's placeholders, from recipes or licensed packs, each pack with its licence.
+- [ ] Must: the cues of this build's content (level up, quests, dashes, the archer and the brute) no longer placeholders; `Docs/Generated/Sounds.md` listing none left that this build plays.
+- [ ] Should: footsteps by ground material (Audio.md's surfaces with real sounds).
+- [ ] Should: dialogue's voice blips on the `Voice` bus, and Audio.md's Voices row.
+- [ ] Must: Audio.md's loudness rules and a mix pass by ear with the new sounds.
+- [ ] PlayMode: a client hears the host's level up (a cue played on the client from the replicated event).
 
 ### Phase 9: release
 
@@ -337,7 +340,7 @@ Filled in by Phase 1 and kept current: the build's settings, the steps from `mai
 - **The story** (before Phase 7, or the slice ships with placeholders): the premise, the NPCs, the quests' text.
 - **The skill trees** (Phase 4 for this build's placeholders; the full design Later): how many trees, what they are, whether ranks come from points or from use.
 - **The level numbers** (Phase 2): the growth per level and the XP curve, against Levels' targets.
-- **Sound** (Phase 8): does CLAUDE.md's art rule extend to sound, generated in the project or made for it only? Music in this build?
+- **Sound** (Phase 8): music in this build? Where sounds come from was settled on 2026-11-13 with Audio.md: recipes in the editor, or packs licensed for a game.
 - **The mode's name**: Free play, or Sandbox, which is also a test world's name.
 - **Interaction** (Phase 6): right click, as decided, or left click, as PlayerControls.md reserved.
 - **Distribution** (Phase 9): how testers get the zip, and who they are.
